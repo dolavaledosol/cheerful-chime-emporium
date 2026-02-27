@@ -40,7 +40,7 @@ const Index = () => {
     loadFilters();
   }, []);
 
-  // Load products with price from estoque_local + first image
+  // Load products - use produto.preco as the catalog price
   useEffect(() => {
     const loadProdutos = async () => {
       setLoading(true);
@@ -51,12 +51,12 @@ const Index = () => {
           produto_id,
           nome,
           slug,
+          preco,
           familia_id,
           fabricante_id,
           familia:familia_id (nome),
           fabricante:fabricante_id (nome),
-          produto_imagem (url_imagem, ordem),
-          estoque_local (preco, preco_promocional, quantidade_disponivel)
+          produto_imagem (url_imagem, ordem)
         `)
         .eq("ativo", true)
         .order("nome");
@@ -68,16 +68,12 @@ const Index = () => {
         query = query.eq("fabricante_id", selectedFabricante);
       }
 
-      const { data, error } = await query;
+      const { data } = await query;
 
       if (data) {
         const mapped: ProdutoComPreco[] = data.map((p: any) => {
           const imgs = p.produto_imagem || [];
           const sorted = [...imgs].sort((a: any, b: any) => a.ordem - b.ordem);
-          const estoques = p.estoque_local || [];
-          const bestPrice = estoques.length > 0
-            ? Math.min(...estoques.map((e: any) => e.preco_promocional ?? e.preco))
-            : 0;
 
           return {
             produto_id: p.produto_id,
@@ -87,7 +83,7 @@ const Index = () => {
             fabricante_id: p.fabricante_id,
             familia_nome: p.familia?.nome ?? null,
             fabricante_nome: p.fabricante?.nome ?? null,
-            preco: bestPrice,
+            preco: p.preco ?? 0,
             url_imagem: sorted[0]?.url_imagem ?? null,
           };
         });
@@ -115,7 +111,6 @@ const Index = () => {
       <CatalogHeader search={search} onSearchChange={setSearch} />
 
       <main className="container mx-auto px-4 py-6 flex-1">
-        {/* Filters */}
         <div className="mb-6">
           <CatalogFilters
             familias={familias}
@@ -127,12 +122,10 @@ const Index = () => {
           />
         </div>
 
-        {/* Results count */}
         <p className="text-sm text-muted-foreground mb-4">
           {loading ? "Carregando..." : `${filtered.length} produto(s) encontrado(s)`}
         </p>
 
-        {/* Product grid */}
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {Array.from({ length: 10 }).map((_, i) => (

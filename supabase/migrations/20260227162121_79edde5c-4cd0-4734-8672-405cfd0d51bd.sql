@@ -1,0 +1,1 @@
+ALTER TABLE public.produto ADD COLUMN preco numeric NOT NULL DEFAULT 0;
