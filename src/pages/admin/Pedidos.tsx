@@ -68,6 +68,7 @@ const Pedidos = () => {
   const [items, setItems] = useState<PedidoItem[]>([]);
   const [historico, setHistorico] = useState<StatusHistorico[]>([]);
   const [editStatus, setEditStatus] = useState("");
+  const [editFrete, setEditFrete] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -91,6 +92,7 @@ const Pedidos = () => {
   const openDetails = async (p: Pedido) => {
     setSelectedPedido(p);
     setEditStatus(p.status);
+    setEditFrete(Number(p.frete).toFixed(2));
     const [itemsRes, histRes] = await Promise.all([
       supabase
         .from("pedido_item")
@@ -107,16 +109,38 @@ const Pedidos = () => {
     setDialogOpen(true);
   };
 
-  const updateStatus = async () => {
+  const isEntrega = selectedPedido ? !selectedPedido.local_estoque_id : false;
+  const freteNum = parseFloat(editFrete) || 0;
+
+  const updatePedido = async () => {
     if (!selectedPedido) return;
+
+    // For delivery orders: require frete before leaving separacao
+    if (isEntrega && editStatus !== "separacao" && editStatus !== "carrinho" && editStatus !== "cancelado" && freteNum <= 0) {
+      toast({ title: "Informe o valor do frete para pedidos de entrega", variant: "destructive" });
+      return;
+    }
+
     setLoading(true);
-    const { error } = await supabase.from("pedido").update({ status: editStatus as any }).eq("pedido_id", selectedPedido.pedido_id);
+
+    // Calculate new total: sum of items + frete
+    const itemsTotal = items.reduce((sum, i) => sum + Number(i.preco_unitario) * Number(i.quantidade), 0);
+    const newTotal = itemsTotal + freteNum;
+
+    const updateData: any = { frete: freteNum, total: newTotal };
+    if (editStatus !== selectedPedido.status) {
+      updateData.status = editStatus;
+    }
+
+    const { error } = await supabase.from("pedido").update(updateData).eq("pedido_id", selectedPedido.pedido_id);
     if (!error) {
-      await supabase.from("pedido_status_historico").insert({
-        pedido_id: selectedPedido.pedido_id,
-        status: editStatus as any,
-      });
-      toast({ title: "Status atualizado" });
+      if (editStatus !== selectedPedido.status) {
+        await supabase.from("pedido_status_historico").insert({
+          pedido_id: selectedPedido.pedido_id,
+          status: editStatus as any,
+        });
+      }
+      toast({ title: "Pedido atualizado" });
       setDialogOpen(false);
       load();
     } else {
@@ -250,6 +274,26 @@ const Pedidos = () => {
                 </div>
               )}
 
+              {/* Frete (for delivery orders) */}
+              {isEntrega && (
+                <div className="space-y-2">
+                  <Label>Valor do Frete (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editFrete}
+                    onChange={(e) => setEditFrete(e.target.value)}
+                    placeholder="0.00"
+                  />
+                  {freteNum > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Novo total: R$ {(items.reduce((s, i) => s + Number(i.preco_unitario) * Number(i.quantidade), 0) + freteNum).toFixed(2)}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <Separator />
               <div className="space-y-2">
                 <Label>Alterar Status</Label>
@@ -264,8 +308,8 @@ const Pedidos = () => {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Fechar</Button>
-            <Button onClick={updateStatus} disabled={loading || editStatus === selectedPedido?.status}>
-              {loading ? "Salvando..." : "Atualizar Status"}
+            <Button onClick={updatePedido} disabled={loading || (editStatus === selectedPedido?.status && editFrete === Number(selectedPedido?.frete || 0).toFixed(2))}>
+              {loading ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </DialogFooter>
         </DialogContent>
