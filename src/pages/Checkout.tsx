@@ -91,6 +91,7 @@ const Checkout = () => {
   const [locais, setLocais] = useState<LocalEstoque[]>([]);
   const [localSelecionado, setLocalSelecionado] = useState("");
 
+  // Load locais and pre-fill CPF/CNPJ from cliente
   useEffect(() => {
     supabase
       .from("local_estoque")
@@ -99,7 +100,20 @@ const Checkout = () => {
       .then(({ data }) => {
         if (data) setLocais(data);
       });
-  }, []);
+
+    if (user) {
+      supabase
+        .from("cliente")
+        .select("cpf_cnpj")
+        .eq("user_id", user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.cpf_cnpj) {
+            setCpfCnpj(formatCpfCnpj(data.cpf_cnpj));
+          }
+        });
+    }
+  }, [user]);
 
   if (items.length === 0) {
     return (

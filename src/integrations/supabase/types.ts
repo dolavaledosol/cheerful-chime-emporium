@@ -19,18 +19,21 @@ export type Database = {
           ativo: boolean
           banco_id: string
           codigo: string | null
+          conta_corrente: string | null
           nome: string
         }
         Insert: {
           ativo?: boolean
           banco_id?: string
           codigo?: string | null
+          conta_corrente?: string | null
           nome: string
         }
         Update: {
           ativo?: boolean
           banco_id?: string
           codigo?: string | null
+          conta_corrente?: string | null
           nome?: string
         }
         Relationships: []

@@ -43,6 +43,8 @@ const Produtos = () => {
   const [fabricantes, setFabricantes] = useState<{ fabricante_id: string; nome: string }[]>([]);
   const [search, setSearch] = useState("");
   const [filterAtivo, setFilterAtivo] = useState<string>("all");
+  const [filterFamilia, setFilterFamilia] = useState<string>("all");
+  const [filterFabricante, setFilterFabricante] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -65,7 +67,9 @@ const Produtos = () => {
   const filtered = produtos.filter((p) => {
     const matchSearch = p.nome.toLowerCase().includes(search.toLowerCase());
     const matchAtivo = filterAtivo === "all" || (filterAtivo === "true" ? p.ativo : !p.ativo);
-    return matchSearch && matchAtivo;
+    const matchFamilia = filterFamilia === "all" || p.familia_id === filterFamilia;
+    const matchFabricante = filterFabricante === "all" || p.fabricante_id === filterFabricante;
+    return matchSearch && matchAtivo && matchFamilia && matchFabricante;
   });
 
   const openNew = () => { setEditId(null); setForm(emptyForm); setDialogOpen(true); };
@@ -146,11 +150,25 @@ const Produtos = () => {
           <Input placeholder="Buscar por nome..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
         <Select value={filterAtivo} onValueChange={setFilterAtivo}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="true">Ativos</SelectItem>
             <SelectItem value="false">Inativos</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterFamilia} onValueChange={setFilterFamilia}>
+          <SelectTrigger className="w-40"><SelectValue placeholder="Família" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas famílias</SelectItem>
+            {familias.map((f) => <SelectItem key={f.familia_id} value={f.familia_id}>{f.nome}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterFabricante} onValueChange={setFilterFabricante}>
+          <SelectTrigger className="w-40"><SelectValue placeholder="Fabricante" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos fabricantes</SelectItem>
+            {fabricantes.map((f) => <SelectItem key={f.fabricante_id} value={f.fabricante_id}>{f.nome}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
