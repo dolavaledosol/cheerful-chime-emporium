@@ -1,0 +1,1 @@
+ALTER TABLE public.cliente_telefone ADD COLUMN is_whatsapp boolean NOT NULL DEFAULT true;

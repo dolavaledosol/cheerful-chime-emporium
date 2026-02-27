@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Home, Plus, Pencil, Trash2, MapPin, Phone, User, Package, Loader2 } from "lucide-react";
+import { ArrowLeft, Home, Plus, Pencil, Trash2, MapPin, Phone, User, Package, Loader2, MessageCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCep } from "@/hooks/useCep";
+import { Switch } from "@/components/ui/switch";
 
 interface Cliente {
   cliente_id: string;
@@ -37,6 +38,7 @@ interface Endereco {
 interface Telefone {
   cliente_telefone_id: string;
   telefone: string;
+  is_whatsapp: boolean;
 }
 
 interface Pedido {
@@ -86,6 +88,7 @@ const Perfil = () => {
   const [telDialogOpen, setTelDialogOpen] = useState(false);
   const [editTelId, setEditTelId] = useState<string | null>(null);
   const [telForm, setTelForm] = useState("");
+  const [telWhatsapp, setTelWhatsapp] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
@@ -214,16 +217,16 @@ const Perfil = () => {
   };
 
   // Phone CRUD
-  const openNewTel = () => { setEditTelId(null); setTelForm(""); setTelDialogOpen(true); };
-  const openEditTel = (t: Telefone) => { setEditTelId(t.cliente_telefone_id); setTelForm(t.telefone); setTelDialogOpen(true); };
+  const openNewTel = () => { setEditTelId(null); setTelForm(""); setTelWhatsapp(true); setTelDialogOpen(true); };
+  const openEditTel = (t: Telefone) => { setEditTelId(t.cliente_telefone_id); setTelForm(t.telefone); setTelWhatsapp(t.is_whatsapp); setTelDialogOpen(true); };
 
   const saveTelefone = async () => {
     if (!cliente) return;
     setSaving(true);
     if (editTelId) {
-      await supabase.from("cliente_telefone").update({ telefone: telForm }).eq("cliente_telefone_id", editTelId);
+      await supabase.from("cliente_telefone").update({ telefone: telForm, is_whatsapp: telWhatsapp }).eq("cliente_telefone_id", editTelId);
     } else {
-      await supabase.from("cliente_telefone").insert({ cliente_id: cliente.cliente_id, telefone: telForm });
+      await supabase.from("cliente_telefone").insert({ cliente_id: cliente.cliente_id, telefone: telForm, is_whatsapp: telWhatsapp });
     }
     setSaving(false);
     setTelDialogOpen(false);
@@ -306,9 +309,14 @@ const Perfil = () => {
                     {telefones.map((t) => (
                       <div key={t.cliente_telefone_id} className="flex items-center justify-between border rounded-md px-3 py-2">
                         <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">{t.telefone}</span>
-                        </div>
+                           <Phone className="h-4 w-4 text-muted-foreground" />
+                           <span className="text-sm">{t.telefone}</span>
+                           {t.is_whatsapp && (
+                             <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">
+                               <MessageCircle className="h-3 w-3" /> WhatsApp
+                             </span>
+                           )}
+                         </div>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditTel(t)}><Pencil className="h-3 w-3" /></Button>
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteTelefone(t.cliente_telefone_id)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
@@ -476,9 +484,17 @@ const Perfil = () => {
       <Dialog open={telDialogOpen} onOpenChange={setTelDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editTelId ? "Editar Telefone" : "Novo Telefone"}</DialogTitle></DialogHeader>
-          <div className="space-y-2">
-            <Label>Telefone</Label>
-            <Input placeholder="(00) 00000-0000" value={telForm} onChange={(e) => setTelForm(e.target.value)} />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Telefone</Label>
+              <Input placeholder="(00) 00000-0000" value={telForm} onChange={(e) => setTelForm(e.target.value)} />
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={telWhatsapp} onCheckedChange={setTelWhatsapp} />
+              <Label className="flex items-center gap-1.5">
+                <MessageCircle className="h-4 w-4 text-green-600" /> É WhatsApp?
+              </Label>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTelDialogOpen(false)}>Cancelar</Button>

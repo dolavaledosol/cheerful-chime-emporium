@@ -175,16 +175,19 @@ export type Database = {
         Row: {
           cliente_id: string
           cliente_telefone_id: string
+          is_whatsapp: boolean
           telefone: string
         }
         Insert: {
           cliente_id: string
           cliente_telefone_id?: string
+          is_whatsapp?: boolean
           telefone: string
         }
         Update: {
           cliente_id?: string
           cliente_telefone_id?: string
+          is_whatsapp?: boolean
           telefone?: string
         }
         Relationships: [
