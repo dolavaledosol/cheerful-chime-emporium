@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import ProdutoImageUpload from "@/components/admin/ProdutoImageUpload";
 
 interface Produto {
   produto_id: string;
@@ -21,13 +22,19 @@ interface Produto {
   unidade_medida: string;
   peso_bruto: number | null;
   peso_liquido: number | null;
+  preco: number;
   familia?: { nome: string } | null;
   fabricante?: { nome: string } | null;
 }
 
+const unidadeLabels: Record<string, string> = {
+  un: "un", kg: "kg", g: "g", l: "l", ml: "ml",
+  cx: "cx", pct: "pct", par: "par", m: "m", cm: "cm",
+};
+
 const emptyForm = {
   nome: "", descricao: "", ativo: true, familia_id: "", fabricante_id: "",
-  unidade_medida: "un", peso_bruto: "", peso_liquido: "",
+  unidade_medida: "un", peso_bruto: "", peso_liquido: "", preco: "",
 };
 
 const Produtos = () => {
@@ -74,6 +81,7 @@ const Produtos = () => {
       unidade_medida: p.unidade_medida,
       peso_bruto: p.peso_bruto?.toString() || "",
       peso_liquido: p.peso_liquido?.toString() || "",
+      preco: p.preco?.toString() || "0",
     });
     setDialogOpen(true);
   };
@@ -89,20 +97,32 @@ const Produtos = () => {
       unidade_medida: form.unidade_medida,
       peso_bruto: form.peso_bruto ? Number(form.peso_bruto) : null,
       peso_liquido: form.peso_liquido ? Number(form.peso_liquido) : null,
+      preco: form.preco ? Number(form.preco) : 0,
     };
 
-    const { error } = editId
-      ? await supabase.from("produto").update(payload).eq("produto_id", editId)
-      : await supabase.from("produto").insert(payload);
+    let savedId = editId;
+
+    if (editId) {
+      const { error } = await supabase.from("produto").update(payload).eq("produto_id", editId);
+      if (error) {
+        toast({ title: "Erro", description: error.message, variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+    } else {
+      const { data, error } = await supabase.from("produto").insert(payload).select("produto_id").single();
+      if (error) {
+        toast({ title: "Erro", description: error.message, variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+      savedId = data.produto_id;
+      setEditId(savedId);
+    }
 
     setLoading(false);
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: editId ? "Produto atualizado" : "Produto criado" });
-      setDialogOpen(false);
-      load();
-    }
+    toast({ title: editId ? "Produto atualizado" : "Produto criado — adicione imagens abaixo" });
+    load();
   };
 
   const softDelete = async (id: string) => {
@@ -110,6 +130,8 @@ const Produtos = () => {
     toast({ title: "Produto desativado" });
     load();
   };
+
+  const weightUnit = unidadeLabels[form.unidade_medida] || form.unidade_medida;
 
   return (
     <div className="space-y-4">
@@ -140,18 +162,20 @@ const Produtos = () => {
               <TableHead>Nome</TableHead>
               <TableHead className="hidden md:table-cell">Família</TableHead>
               <TableHead className="hidden md:table-cell">Fabricante</TableHead>
+              <TableHead className="hidden sm:table-cell">Preço</TableHead>
               <TableHead className="hidden sm:table-cell">Status</TableHead>
               <TableHead className="w-24">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
             ) : filtered.map((p) => (
               <TableRow key={p.produto_id}>
                 <TableCell className="font-medium">{p.nome}</TableCell>
                 <TableCell className="hidden md:table-cell text-muted-foreground">{p.familia?.nome || "—"}</TableCell>
                 <TableCell className="hidden md:table-cell text-muted-foreground">{p.fabricante?.nome || "—"}</TableCell>
+                <TableCell className="hidden sm:table-cell font-medium">R$ {p.preco?.toFixed(2) || "0.00"}</TableCell>
                 <TableCell className="hidden sm:table-cell">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${p.ativo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                     {p.ativo ? "Ativo" : "Inativo"}
@@ -215,21 +239,32 @@ const Produtos = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-2 pt-6">
-                <Switch checked={form.ativo} onCheckedChange={(v) => setForm({ ...form, ativo: v })} />
-                <Label>Ativo</Label>
+              <div className="space-y-2">
+                <Label>Preço (R$)</Label>
+                <Input type="number" step="0.01" min="0" value={form.preco} onChange={(e) => setForm({ ...form, preco: e.target.value })} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Peso bruto (kg)</Label>
+                <Label>Peso bruto ({weightUnit})</Label>
                 <Input type="number" step="0.001" value={form.peso_bruto} onChange={(e) => setForm({ ...form, peso_bruto: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Peso líquido (kg)</Label>
+                <Label>Peso líquido ({weightUnit})</Label>
                 <Input type="number" step="0.001" value={form.peso_liquido} onChange={(e) => setForm({ ...form, peso_liquido: e.target.value })} />
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={form.ativo} onCheckedChange={(v) => setForm({ ...form, ativo: v })} />
+              <Label>Ativo</Label>
+            </div>
+
+            {/* Image upload - only after product is saved */}
+            {editId ? (
+              <ProdutoImageUpload produtoId={editId} />
+            ) : (
+              <p className="text-sm text-muted-foreground italic">Salve o produto primeiro para adicionar imagens.</p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>

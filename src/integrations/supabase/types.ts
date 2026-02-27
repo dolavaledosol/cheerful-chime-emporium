@@ -175,20 +175,26 @@ export type Database = {
         Row: {
           cliente_id: string
           cliente_telefone_id: string
+          from: string | null
           is_whatsapp: boolean
           telefone: string
+          verificado: boolean
         }
         Insert: {
           cliente_id: string
           cliente_telefone_id?: string
+          from?: string | null
           is_whatsapp?: boolean
           telefone: string
+          verificado?: boolean
         }
         Update: {
           cliente_id?: string
           cliente_telefone_id?: string
+          from?: string | null
           is_whatsapp?: boolean
           telefone?: string
+          verificado?: boolean
         }
         Relationships: [
           {
@@ -915,6 +921,7 @@ export type Database = {
           nome: string
           peso_bruto: number | null
           peso_liquido: number | null
+          preco: number
           produto_id: string
           profundidade: number | null
           slug: string | null
@@ -932,6 +939,7 @@ export type Database = {
           nome: string
           peso_bruto?: number | null
           peso_liquido?: number | null
+          preco?: number
           produto_id?: string
           profundidade?: number | null
           slug?: string | null
@@ -949,6 +957,7 @@ export type Database = {
           nome?: string
           peso_bruto?: number | null
           peso_liquido?: number | null
+          preco?: number
           produto_id?: string
           profundidade?: number | null
           slug?: string | null
