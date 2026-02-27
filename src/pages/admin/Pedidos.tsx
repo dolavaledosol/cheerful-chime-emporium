@@ -196,7 +196,7 @@ const Pedidos = () => {
           forma_pagamento_id: pagFormaId,
           banco_id: pagBancoId,
           data_pagamento: pagData!.toISOString(),
-          valor: parseFloat(pagValor) || newTotal,
+          valor: newTotal,
         });
       }
 
@@ -403,7 +403,7 @@ const Pedidos = () => {
                   </div>
                   <div className="space-y-2">
                     <Label>Valor (R$)</Label>
-                    <Input type="number" step="0.01" min="0" value={pagValor} onChange={(e) => setPagValor(e.target.value)} />
+                    <p className="text-sm font-medium">R$ {(items.reduce((s, i) => s + Number(i.preco_unitario) * Number(i.quantidade), 0) + freteNum).toFixed(2)}</p>
                   </div>
                 </div>
               )}
