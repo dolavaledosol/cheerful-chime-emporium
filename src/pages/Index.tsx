@@ -64,7 +64,15 @@ const Index = () => {
         .order("nome");
 
       if (selectedFamilia !== "all") {
-        query = query.eq("familia_id", selectedFamilia);
+        // Include subfamilies if a parent family is selected
+        const childIds = familias
+          .filter((f) => f.familia_pai_id === selectedFamilia)
+          .map((f) => f.id);
+        if (childIds.length > 0) {
+          query = query.in("familia_id", [selectedFamilia, ...childIds]);
+        } else {
+          query = query.eq("familia_id", selectedFamilia);
+        }
       }
       if (selectedFabricante !== "all") {
         query = query.eq("fabricante_id", selectedFabricante);
