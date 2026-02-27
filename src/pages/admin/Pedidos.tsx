@@ -357,35 +357,60 @@ const Pedidos = () => {
               <Separator />
               <div className="space-y-2">
                 <Label>Alterar Status</Label>
-                <Select value={editStatus} onValueChange={setEditStatus}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {allowedStatuses.map((s) => <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-wrap gap-2">
+                  {allowedStatuses.map((s) => (
+                    <Button
+                      key={s}
+                      type="button"
+                      size="sm"
+                      variant={editStatus === s ? "default" : "outline"}
+                      className={cn(
+                        editStatus === s && s !== "cancelado" && statusColors[s],
+                        s === "cancelado" && editStatus === s && "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+                      )}
+                      onClick={() => setEditStatus(s)}
+                    >
+                      {statusLabels[s]}
+                    </Button>
+                  ))}
+                </div>
               </div>
 
-              {/* Payment fields when moving to aguardando_pagamento */}
+              {/* Payment fields when moving past aguardando_pagamento */}
               {needsPaymentInfo && (
                 <div className="space-y-3 border rounded-lg p-3 bg-muted/30">
                   <Label className="font-semibold">Dados do Pagamento</Label>
                   <div className="space-y-2">
                     <Label>Forma de Pagamento *</Label>
-                    <Select value={pagFormaId} onValueChange={setPagFormaId}>
-                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                      <SelectContent>
-                        {formasPagamento.map((f) => <SelectItem key={f.forma_pagamento_id} value={f.forma_pagamento_id}>{f.nome}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex flex-wrap gap-2">
+                      {formasPagamento.map((f) => (
+                        <Button
+                          key={f.forma_pagamento_id}
+                          type="button"
+                          size="sm"
+                          variant={pagFormaId === f.forma_pagamento_id ? "default" : "outline"}
+                          onClick={() => setPagFormaId(f.forma_pagamento_id)}
+                        >
+                          {f.nome}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Banco *</Label>
-                    <Select value={pagBancoId} onValueChange={setPagBancoId}>
-                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                      <SelectContent>
-                        {bancos.map((b) => <SelectItem key={b.banco_id} value={b.banco_id}>{b.nome}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex flex-wrap gap-2">
+                      {bancos.map((b) => (
+                        <Button
+                          key={b.banco_id}
+                          type="button"
+                          size="sm"
+                          variant={pagBancoId === b.banco_id ? "default" : "outline"}
+                          onClick={() => setPagBancoId(b.banco_id)}
+                        >
+                          {b.nome}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Data do Pagamento *</Label>
