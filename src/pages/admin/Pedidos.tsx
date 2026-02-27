@@ -59,7 +59,7 @@ const Pedidos = () => {
   const load = async () => {
     const { data } = await supabase
       .from("pedido")
-      .select("pedido_id, data, total, frete, status, origem, observacao, cliente:cliente_id!pedido_cliente_id_fkey(nome)")
+      .select("pedido_id, data, total, frete, status, origem, observacao, cliente!pedido_cliente_id_fkey(nome)")
       .order("data", { ascending: false });
     if (data) setPedidos(data as any);
   };
