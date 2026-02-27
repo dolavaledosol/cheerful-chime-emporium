@@ -3,13 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Eye } from "lucide-react";
+import { Search, Eye, Truck, Store, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { Separator } from "@/components/ui/separator";
 
 const statusOptions = [
   "carrinho", "separacao", "aguardando_pagamento", "pago", "enviado", "entregue", "cancelado",
@@ -35,7 +36,9 @@ interface Pedido {
   status: string;
   origem: string;
   observacao: string | null;
+  local_estoque_id: string | null;
   cliente: { nome: string } | null;
+  local_estoque: { nome: string } | null;
 }
 
 interface PedidoItem {
@@ -45,6 +48,17 @@ interface PedidoItem {
   produto: { nome: string } | null;
 }
 
+interface StatusHistorico {
+  pedido_status_historico_id: string;
+  status: string;
+  data: string;
+}
+
+function getTipoEntrega(p: Pedido): { label: string; icon: typeof Truck } {
+  if (p.local_estoque_id) return { label: "Retirada", icon: Store };
+  return { label: "Entrega", icon: Truck };
+}
+
 const Pedidos = () => {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [search, setSearch] = useState("");
@@ -52,6 +66,7 @@ const Pedidos = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
   const [items, setItems] = useState<PedidoItem[]>([]);
+  const [historico, setHistorico] = useState<StatusHistorico[]>([]);
   const [editStatus, setEditStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -59,7 +74,7 @@ const Pedidos = () => {
   const load = async () => {
     const { data } = await supabase
       .from("pedido")
-      .select("pedido_id, data, total, frete, status, origem, observacao, cliente!pedido_cliente_id_fkey(nome)")
+      .select("pedido_id, data, total, frete, status, origem, observacao, local_estoque_id, cliente!pedido_cliente_id_fkey(nome), local_estoque(nome)")
       .order("data", { ascending: false });
     if (data) setPedidos(data as any);
   };
@@ -76,22 +91,30 @@ const Pedidos = () => {
   const openDetails = async (p: Pedido) => {
     setSelectedPedido(p);
     setEditStatus(p.status);
-    const { data } = await supabase
-      .from("pedido_item")
-      .select("pedido_item_id, quantidade, preco_unitario, produto(nome)")
-      .eq("pedido_id", p.pedido_id);
-    setItems((data as any) || []);
+    const [itemsRes, histRes] = await Promise.all([
+      supabase
+        .from("pedido_item")
+        .select("pedido_item_id, quantidade, preco_unitario, produto(nome)")
+        .eq("pedido_id", p.pedido_id),
+      supabase
+        .from("pedido_status_historico")
+        .select("pedido_status_historico_id, status, data")
+        .eq("pedido_id", p.pedido_id)
+        .order("data", { ascending: true }),
+    ]);
+    setItems((itemsRes.data as any) || []);
+    setHistorico((histRes.data as any) || []);
     setDialogOpen(true);
   };
 
   const updateStatus = async () => {
     if (!selectedPedido) return;
     setLoading(true);
-    const { error } = await supabase.from("pedido").update({ status: editStatus as "carrinho" | "separacao" | "aguardando_pagamento" | "pago" | "enviado" | "entregue" | "cancelado" }).eq("pedido_id", selectedPedido.pedido_id);
+    const { error } = await supabase.from("pedido").update({ status: editStatus as any }).eq("pedido_id", selectedPedido.pedido_id);
     if (!error) {
       await supabase.from("pedido_status_historico").insert({
         pedido_id: selectedPedido.pedido_id,
-        status: editStatus as "carrinho" | "separacao" | "aguardando_pagamento" | "pago" | "enviado" | "entregue" | "cancelado",
+        status: editStatus as any,
       });
       toast({ title: "Status atualizado" });
       setDialogOpen(false);
@@ -124,9 +147,10 @@ const Pedidos = () => {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-24">Pedido</TableHead>
               <TableHead>Data</TableHead>
               <TableHead>Cliente</TableHead>
-              <TableHead className="hidden sm:table-cell">Origem</TableHead>
+              <TableHead className="hidden sm:table-cell">Tipo</TableHead>
               <TableHead>Total</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-16">Ver</TableHead>
@@ -134,28 +158,40 @@ const Pedidos = () => {
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum pedido encontrado</TableCell></TableRow>
-            ) : filtered.map((p) => (
-              <TableRow key={p.pedido_id}>
-                <TableCell className="text-sm">{format(new Date(p.data), "dd/MM/yy HH:mm")}</TableCell>
-                <TableCell className="font-medium">{p.cliente?.nome || "—"}</TableCell>
-                <TableCell className="hidden sm:table-cell text-xs uppercase text-muted-foreground">{p.origem}</TableCell>
-                <TableCell>R$ {Number(p.total).toFixed(2)}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className={statusColors[p.status]}>{statusLabels[p.status]}</Badge>
-                </TableCell>
-                <TableCell>
-                  <Button variant="ghost" size="icon" onClick={() => openDetails(p)}><Eye className="h-4 w-4" /></Button>
-                </TableCell>
-              </TableRow>
-            ))}
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum pedido encontrado</TableCell></TableRow>
+            ) : filtered.map((p) => {
+              const tipo = getTipoEntrega(p);
+              const TipoIcon = tipo.icon;
+              return (
+                <TableRow key={p.pedido_id}>
+                  <TableCell className="text-xs font-mono text-muted-foreground">{p.pedido_id.slice(0, 8)}</TableCell>
+                  <TableCell className="text-sm">{format(new Date(p.data), "dd/MM/yy HH:mm")}</TableCell>
+                  <TableCell className="font-medium">{p.cliente?.nome || "—"}</TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <TipoIcon className="h-3 w-3" /> {tipo.label}
+                    </span>
+                  </TableCell>
+                  <TableCell>R$ {Number(p.total).toFixed(2)}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={statusColors[p.status]}>{statusLabels[p.status]}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon" onClick={() => openDetails(p)}><Eye className="h-4 w-4" /></Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Pedido</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Pedido {selectedPedido?.pedido_id.slice(0, 8)}</DialogTitle>
+            <DialogDescription>Detalhes e histórico do pedido</DialogDescription>
+          </DialogHeader>
           {selectedPedido && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-2 text-sm">
@@ -163,6 +199,19 @@ const Pedidos = () => {
                 <div><span className="text-muted-foreground">Data:</span> {format(new Date(selectedPedido.data), "dd/MM/yy HH:mm")}</div>
                 <div><span className="text-muted-foreground">Total:</span> R$ {Number(selectedPedido.total).toFixed(2)}</div>
                 <div><span className="text-muted-foreground">Frete:</span> R$ {Number(selectedPedido.frete).toFixed(2)}</div>
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">Tipo:</span>{" "}
+                  {(() => {
+                    const tipo = getTipoEntrega(selectedPedido);
+                    const TipoIcon = tipo.icon;
+                    return (
+                      <span className="inline-flex items-center gap-1">
+                        <TipoIcon className="h-3 w-3" /> {tipo.label}
+                        {selectedPedido.local_estoque?.nome && ` — ${selectedPedido.local_estoque.nome}`}
+                      </span>
+                    );
+                  })()}
+                </div>
               </div>
               {selectedPedido.observacao && <p className="text-sm text-muted-foreground">Obs: {selectedPedido.observacao}</p>}
 
@@ -181,6 +230,27 @@ const Pedidos = () => {
                 </Table>
               </div>
 
+              {/* Status History */}
+              {historico.length > 0 && (
+                <div className="space-y-2">
+                  <Separator />
+                  <Label className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Histórico de Status</Label>
+                  <div className="space-y-1.5">
+                    {historico.map((h) => (
+                      <div key={h.pedido_status_historico_id} className="flex items-center justify-between text-sm border rounded-md px-3 py-1.5">
+                        <Badge variant="outline" className={statusColors[h.status] || ""}>
+                          {statusLabels[h.status] || h.status}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(h.data), "dd/MM/yy HH:mm")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <Separator />
               <div className="space-y-2">
                 <Label>Alterar Status</Label>
                 <Select value={editStatus} onValueChange={setEditStatus}>
