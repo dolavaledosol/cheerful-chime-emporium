@@ -357,6 +357,11 @@ const Pedidos = () => {
           await supabase.from("estoque_local").insert({ produto_id: linha.produto_id, local_estoque_id: entradaLocal, quantidade_disponivel: qty, preco_custo: custoVal, preco: vendaVal });
         }
         await supabase.from("produto").update({ preco: vendaVal }).eq("produto_id", linha.produto_id);
+        // Registrar movimentação de estoque
+        await supabase.from("movimentacao_estoque").insert({
+          tipo: "entrada", produto_id: linha.produto_id, local_estoque_id: entradaLocal,
+          quantidade: qty, documento: entradaNF ? `NF ${entradaNF}` : null, fornecedor_id: entradaFornecedor || null,
+        });
       }
       const fornNome = entradaFornecedores.find((f) => f.fornecedor_id === entradaFornecedor)?.nome || "";
       if (totalNF > 0) {
