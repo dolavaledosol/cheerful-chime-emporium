@@ -33,7 +33,7 @@ interface ContaReceber {
   created_at: string;
   cliente_id: string | null; banco_id: string | null; pedido_id: string | null;
   cliente: { nome: string } | null; banco: { nome: string } | null;
-  pedido_pagamento: { forma_pagamento: { nome: string } | null; banco: { nome: string } | null }[] | null;
+  _forma: string; _banco_pag: string;
 }
 
 /* ── Empty forms ── */
@@ -144,9 +144,35 @@ const Financeiro = () => {
   const loadReceber = async () => {
     const { data } = await supabase
       .from("contas_receber")
-      .select("*, cliente(nome), banco(nome), pedido_pagamento:pedido_id(forma_pagamento:forma_pagamento_id(nome), banco:banco_id(nome))")
+      .select("*, cliente(nome), banco(nome)")
       .order("created_at", { ascending: false });
-    if (data) setReceber(data as any);
+    if (!data) { setReceber([]); return; }
+
+    // Enrich with payment info from pedido_pagamento for entries linked to orders
+    const pedidoIds = data.filter(d => d.pedido_id).map(d => d.pedido_id!);
+    let pagMap: Record<string, { forma: string; banco: string }> = {};
+    if (pedidoIds.length > 0) {
+      const { data: pags } = await supabase
+        .from("pedido_pagamento")
+        .select("pedido_id, forma_pagamento(nome), banco(nome)")
+        .in("pedido_id", pedidoIds);
+      if (pags) {
+        for (const p of pags as any[]) {
+          if (!pagMap[p.pedido_id]) {
+            pagMap[p.pedido_id] = {
+              forma: p.forma_pagamento?.nome || "—",
+              banco: p.banco?.nome || "—",
+            };
+          }
+        }
+      }
+    }
+
+    setReceber(data.map((d: any) => ({
+      ...d,
+      _forma: pagMap[d.pedido_id]?.forma || "—",
+      _banco_pag: pagMap[d.pedido_id]?.banco || d.banco?.nome || "—",
+    })) as any);
   };
 
   useEffect(() => { loadReceber(); }, []);
@@ -298,17 +324,14 @@ const Financeiro = () => {
                 {filteredReceber.length === 0 ? (
                   <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
                 ) : filteredReceber.map((c) => {
-                  const pag = c.pedido_pagamento?.[0];
-                  const formaNome = pag?.forma_pagamento?.nome || "—";
-                  const bancoNome = pag?.banco?.nome || c.banco?.nome || "—";
                   return (
                   <TableRow key={c.contas_receber_id}>
                     <TableCell className="font-medium">{c.descricao}</TableCell>
                     <TableCell className="hidden sm:table-cell text-muted-foreground">{c.cliente?.nome || "—"}</TableCell>
                     <TableCell className="text-xs">{format(new Date(c.created_at), "dd/MM/yy HH:mm")}</TableCell>
                     <TableCell>{fmtDate(c.data_vencimento)}</TableCell>
-                    <TableCell className="hidden md:table-cell text-muted-foreground">{formaNome}</TableCell>
-                    <TableCell className="hidden md:table-cell text-muted-foreground">{bancoNome}</TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">{c._forma}</TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">{c._banco_pag}</TableCell>
                     <TableCell>{fmtMoney(c.valor)}</TableCell>
                     <TableCell>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${c.recebido ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
