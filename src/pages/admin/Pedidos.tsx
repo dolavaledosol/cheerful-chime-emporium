@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +8,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Eye, Truck, Store, Clock, CalendarIcon, AlertTriangle, Split } from "lucide-react";
+import { Search, Eye, Truck, Store, Clock, CalendarIcon, AlertTriangle, Split, Plus, Minus, Trash2, UserPlus } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/hooks/useAuth";
 
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -48,6 +49,10 @@ const statusColors: Record<string, string> = {
   cancelado: "bg-red-100 text-red-700",
 };
 
+const origemLabels: Record<string, string> = {
+  web: "Web", whatsapp: "WhatsApp", admin: "Admin",
+};
+
 interface Pedido {
   pedido_id: string;
   cliente_id: string;
@@ -84,6 +89,13 @@ interface StockIssue {
   faltante: number;
 }
 
+interface NovoPedidoItem {
+  produto_id: string;
+  nome: string;
+  preco: number;
+  quantidade: number;
+}
+
 function getTipoEntrega(p: Pedido): { label: string; icon: typeof Truck } {
   if (p.local_estoque_id) return { label: "Retirada", icon: Store };
   return { label: "Entrega", icon: Truck };
@@ -92,7 +104,7 @@ function getTipoEntrega(p: Pedido): { label: string; icon: typeof Truck } {
 const Pedidos = () => {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("todos");
+  const [statusFilter, setStatusFilter] = useState("ativos");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
   const [items, setItems] = useState<PedidoItem[]>([]);
@@ -114,8 +126,24 @@ const Pedidos = () => {
   const [allowNegativeStock, setAllowNegativeStock] = useState(false);
   const [stockCheckPassed, setStockCheckPassed] = useState(false);
   const [splitSelectedItems, setSplitSelectedItems] = useState<Record<string, boolean>>({});
-  
+
+  // New order dialog
+  const [newOrderOpen, setNewOrderOpen] = useState(false);
+  const [newOrderClienteId, setNewOrderClienteId] = useState("");
+  const [newOrderItems, setNewOrderItems] = useState<NovoPedidoItem[]>([]);
+  const [newOrderObs, setNewOrderObs] = useState("");
+  const [clientes, setClientes] = useState<{ cliente_id: string; nome: string }[]>([]);
+  const [produtos, setProdutos] = useState<{ produto_id: string; nome: string; preco: number }[]>([]);
+  const [newOrderSearch, setNewOrderSearch] = useState("");
+  const [newOrderSaving, setNewOrderSaving] = useState(false);
+  // Inline new client
+  const [showNewClient, setShowNewClient] = useState(false);
+  const [newClientNome, setNewClientNome] = useState("");
+  const [newClientCpf, setNewClientCpf] = useState("");
+  const [newClientEmail, setNewClientEmail] = useState("");
+
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const load = async () => {
     const { data } = await supabase
@@ -142,7 +170,12 @@ const Pedidos = () => {
   const filtered = pedidos.filter((p) => {
     const term = search.toLowerCase();
     const matchSearch = !term || p.cliente?.nome?.toLowerCase().includes(term) || p.pedido_id.includes(term);
-    const matchStatus = statusFilter === "todos" || p.status === statusFilter;
+    let matchStatus = true;
+    if (statusFilter === "ativos") {
+      matchStatus = p.status !== "entregue" && p.status !== "cancelado";
+    } else if (statusFilter !== "todos") {
+      matchStatus = p.status === statusFilter;
+    }
     return matchSearch && matchStatus;
   });
 
@@ -189,13 +222,11 @@ const Pedidos = () => {
     if (s === "cancelado") {
       setConfirmCancelOpen(true);
     } else if (s === "pago" && selectedPedido?.status === "aguardando_pagamento") {
-      // Check stock before showing payment form
       setEditStatus(s);
       setStockCheckPassed(false);
       const issues = await checkStock();
       if (issues.length > 0) {
         setStockIssues(issues);
-        // Pre-select items with stock issues
         const preSelected: Record<string, boolean> = {};
         issues.forEach(i => { preSelected[i.produto_id] = true; });
         setSplitSelectedItems(preSelected);
@@ -214,13 +245,11 @@ const Pedidos = () => {
     setConfirmCancelOpen(false);
   };
 
-  // Check stock availability for all items
   const checkStock = async (): Promise<StockIssue[]> => {
     if (!selectedPedido) return [];
     const issues: StockIssue[] = [];
 
     for (const item of items) {
-      // Get available stock across all locations (or specific location for pickup)
       let query = supabase
         .from("estoque_local")
         .select("quantidade_disponivel")
@@ -246,7 +275,6 @@ const Pedidos = () => {
     return issues;
   };
 
-  // Deduct stock
   const deductStock = async () => {
     if (!selectedPedido) return;
 
@@ -278,7 +306,6 @@ const Pedidos = () => {
     }
   };
 
-  // Split order: create new order with selected items (full qty)
   const splitOrder = async (selectedProductIds: string[]) => {
     if (!selectedPedido || selectedProductIds.length === 0) return;
 
@@ -304,7 +331,6 @@ const Pedidos = () => {
       return;
     }
 
-    // Insert items into new order
     const newItems = splitItems.map(item => ({
       pedido_id: newOrder.pedido_id,
       produto_id: item.produto_id,
@@ -313,30 +339,24 @@ const Pedidos = () => {
     }));
     await supabase.from("pedido_item").insert(newItems);
 
-    // Add status history for new order
     await supabase.from("pedido_status_historico").insert({
       pedido_id: newOrder.pedido_id,
       status: "separacao" as any,
     });
 
-    // Remove split items from original order
     for (const item of splitItems) {
       await supabase.from("pedido_item").delete().eq("pedido_item_id", item.pedido_item_id);
     }
 
-    // Update local items state to reflect remaining
     const remainingItems = items.filter(i => !selectedProductIds.includes(i.produto_id));
     setItems(remainingItems);
 
-    // NOTE: Do NOT create conta_receber here. It will be created when the split order is marked as "pago".
     toast({ title: `Pedido desmembrado`, description: `Novo pedido criado com ${splitItems.length} item(ns) — R$ ${newOrderTotal.toFixed(2)}` });
   };
 
-  // Create contas_receber entry (with duplicate guard)
   const createContaReceber = async (pedidoId: string, clienteId: string, valor: number, dataPagamento: Date) => {
-    // Check if a conta_receber already exists for this pedido
     const { data: existing } = await supabase.from("contas_receber").select("contas_receber_id").eq("pedido_id", pedidoId).limit(1);
-    if (existing && existing.length > 0) return; // Already exists, skip
+    if (existing && existing.length > 0) return;
 
     await supabase.from("contas_receber").insert({
       pedido_id: pedidoId,
@@ -353,19 +373,16 @@ const Pedidos = () => {
   const updatePedido = async () => {
     if (!selectedPedido) return;
 
-    // For delivery orders: require frete before leaving separacao
     if (isEntrega && editStatus !== "separacao" && editStatus !== "carrinho" && editStatus !== "cancelado" && freteNum <= 0) {
       toast({ title: "Informe o valor do frete para pedidos de entrega", variant: "destructive" });
       return;
     }
 
-    // Block saving as "pago" if stock check hasn't passed yet (user clicked save before completing stock dialog)
     if (editStatus === "pago" && selectedPedido.status === "aguardando_pagamento" && !stockCheckPassed) {
       toast({ title: "Verifique o estoque antes de marcar como pago", variant: "destructive" });
       return;
     }
 
-    // Require payment info when moving to pago
     if (needsPaymentInfo) {
       if (!pagFormaId || !pagBancoId || !pagData) {
         toast({ title: "Preencha forma de pagamento, banco e data", variant: "destructive" });
@@ -392,10 +409,7 @@ const Pedidos = () => {
         });
       }
 
-      // Insert payment record and handle stock when moving to pago
       if (needsPaymentInfo) {
-        // Deduct stock
-
         await supabase.from("pedido_pagamento").insert({
           pedido_id: selectedPedido.pedido_id,
           forma_pagamento_id: pagFormaId,
@@ -404,11 +418,9 @@ const Pedidos = () => {
           valor: newTotal,
         });
 
-        // Create contas_receber for original order
         await createContaReceber(selectedPedido.pedido_id, selectedPedido.cliente_id, newTotal, pagData!);
       }
 
-      // Delete payments & contas_receber when going back to separacao
       if (shouldDeletePayment) {
         await supabase.from("pedido_pagamento").delete().eq("pedido_id", selectedPedido.pedido_id);
         await supabase.from("contas_receber").delete().eq("pedido_id", selectedPedido.pedido_id);
@@ -424,9 +436,144 @@ const Pedidos = () => {
     setLoading(false);
   };
 
+  // ===== NEW ORDER LOGIC =====
+  const openNewOrder = async () => {
+    setNewOrderClienteId("");
+    setNewOrderItems([]);
+    setNewOrderObs("");
+    setNewOrderSearch("");
+    setShowNewClient(false);
+    setNewClientNome("");
+    setNewClientCpf("");
+    setNewClientEmail("");
+
+    const [cRes, pRes] = await Promise.all([
+      supabase.from("cliente").select("cliente_id, nome").eq("ativo", true).order("nome"),
+      supabase.from("produto").select("produto_id, nome, preco").eq("ativo", true).order("nome"),
+    ]);
+    if (cRes.data) setClientes(cRes.data);
+    if (pRes.data) setProdutos(pRes.data);
+    setNewOrderOpen(true);
+  };
+
+  const filteredProdutos = useMemo(() => {
+    if (!newOrderSearch.trim()) return produtos;
+    const term = newOrderSearch.toLowerCase();
+    return produtos.filter(p => p.nome.toLowerCase().includes(term));
+  }, [produtos, newOrderSearch]);
+
+  const addProduct = (p: { produto_id: string; nome: string; preco: number }) => {
+    setNewOrderItems(prev => {
+      const existing = prev.find(i => i.produto_id === p.produto_id);
+      if (existing) return prev.map(i => i.produto_id === p.produto_id ? { ...i, quantidade: i.quantidade + 1 } : i);
+      return [...prev, { produto_id: p.produto_id, nome: p.nome, preco: p.preco, quantidade: 1 }];
+    });
+  };
+
+  const updateQty = (produtoId: string, delta: number) => {
+    setNewOrderItems(prev => prev.map(i => {
+      if (i.produto_id !== produtoId) return i;
+      const newQty = i.quantidade + delta;
+      return newQty > 0 ? { ...i, quantidade: newQty } : i;
+    }));
+  };
+
+  const removeItem = (produtoId: string) => {
+    setNewOrderItems(prev => prev.filter(i => i.produto_id !== produtoId));
+  };
+
+  const newOrderTotal = newOrderItems.reduce((s, i) => s + i.preco * i.quantidade, 0);
+
+  const getVendedorClienteId = async (): Promise<string | null> => {
+    if (!user) return null;
+    const { data } = await supabase.from("cliente").select("cliente_id").eq("user_id", user.id).limit(1).single();
+    return data?.cliente_id || null;
+  };
+
+  const saveNewOrder = async () => {
+    if (newOrderItems.length === 0) {
+      toast({ title: "Adicione ao menos um produto", variant: "destructive" });
+      return;
+    }
+
+    setNewOrderSaving(true);
+
+    let clienteId = newOrderClienteId;
+
+    // Create new client inline if needed
+    if (showNewClient && newClientNome) {
+      const { data: newCliente, error: clienteError } = await supabase
+        .from("cliente")
+        .insert({ nome: newClientNome, cpf_cnpj: newClientCpf || null, email: newClientEmail || null })
+        .select("cliente_id")
+        .single();
+      if (clienteError || !newCliente) {
+        toast({ title: "Erro ao criar cliente", description: clienteError?.message, variant: "destructive" });
+        setNewOrderSaving(false);
+        return;
+      }
+      clienteId = newCliente.cliente_id;
+    }
+
+    // If no client selected, use "venda sem cliente" — we need a fallback
+    // For "venda sem cliente", we'll still need a cliente_id since it's required.
+    // We'll create an anonymous entry or require selection.
+    if (!clienteId) {
+      toast({ title: "Selecione ou cadastre um cliente", variant: "destructive" });
+      setNewOrderSaving(false);
+      return;
+    }
+
+    // Get vendedor_id from current user
+    const vendedorId = await getVendedorClienteId();
+
+    const { data: pedido, error } = await supabase
+      .from("pedido")
+      .insert({
+        cliente_id: clienteId,
+        total: newOrderTotal,
+        frete: 0,
+        status: "separacao" as any,
+        origem: "admin" as any,
+        vendedor_id: vendedorId,
+        observacao: newOrderObs || null,
+      })
+      .select("pedido_id")
+      .single();
+
+    if (error || !pedido) {
+      toast({ title: "Erro ao criar pedido", description: error?.message, variant: "destructive" });
+      setNewOrderSaving(false);
+      return;
+    }
+
+    // Insert items
+    const pedidoItems = newOrderItems.map(i => ({
+      pedido_id: pedido.pedido_id,
+      produto_id: i.produto_id,
+      quantidade: i.quantidade,
+      preco_unitario: i.preco,
+    }));
+    await supabase.from("pedido_item").insert(pedidoItems);
+
+    // Insert status history
+    await supabase.from("pedido_status_historico").insert({
+      pedido_id: pedido.pedido_id,
+      status: "separacao" as any,
+    });
+
+    toast({ title: "Pedido criado com sucesso" });
+    setNewOrderOpen(false);
+    setNewOrderSaving(false);
+    load();
+  };
+
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Pedidos</h1>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Pedidos</h1>
+        <Button onClick={openNewOrder} className="gap-2"><Plus className="h-4 w-4" /> Novo Pedido</Button>
+      </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-md">
@@ -436,6 +583,7 @@ const Pedidos = () => {
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
           <SelectContent>
+            <SelectItem value="ativos">Ativos</SelectItem>
             <SelectItem value="todos">Todos os status</SelectItem>
             {statusOptions.map((s) => <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>)}
           </SelectContent>
@@ -450,6 +598,7 @@ const Pedidos = () => {
               <TableHead>Data</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead className="hidden sm:table-cell">Tipo</TableHead>
+              <TableHead className="hidden sm:table-cell">Origem</TableHead>
               <TableHead>Total</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-16">Ver</TableHead>
@@ -457,7 +606,7 @@ const Pedidos = () => {
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum pedido encontrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum pedido encontrado</TableCell></TableRow>
             ) : filtered.map((p) => {
               const tipo = getTipoEntrega(p);
               const TipoIcon = tipo.icon;
@@ -470,6 +619,9 @@ const Pedidos = () => {
                     <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                       <TipoIcon className="h-3 w-3" /> {tipo.label}
                     </span>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted">{origemLabels[p.origem] || p.origem}</span>
                   </TableCell>
                   <TableCell>R$ {Number(p.total).toFixed(2)}</TableCell>
                   <TableCell>
@@ -485,6 +637,7 @@ const Pedidos = () => {
         </Table>
       </div>
 
+      {/* Detail dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -498,7 +651,8 @@ const Pedidos = () => {
                 <div><span className="text-muted-foreground">Data:</span> {format(new Date(selectedPedido.data), "dd/MM/yy HH:mm")}</div>
                 <div><span className="text-muted-foreground">Total:</span> R$ {Number(selectedPedido.total).toFixed(2)}</div>
                 <div><span className="text-muted-foreground">Frete:</span> R$ {Number(selectedPedido.frete).toFixed(2)}</div>
-                <div className="col-span-2">
+                <div><span className="text-muted-foreground">Origem:</span> {origemLabels[selectedPedido.origem] || selectedPedido.origem}</div>
+                <div>
                   <span className="text-muted-foreground">Tipo:</span>{" "}
                   {(() => {
                     const tipo = getTipoEntrega(selectedPedido);
@@ -642,6 +796,7 @@ const Pedidos = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Cancel confirmation */}
       <AlertDialog open={confirmCancelOpen} onOpenChange={setConfirmCancelOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -659,6 +814,7 @@ const Pedidos = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Stock issues dialog */}
       <Dialog open={stockDialogOpen} onOpenChange={(open) => {
         if (!open) setEditStatus(selectedPedido?.status || "");
         setStockDialogOpen(open);
@@ -743,12 +899,10 @@ const Pedidos = () => {
                 }
                 setLoading(true);
                 await splitOrder(selected);
-                // Recalculate original order total (splitOrder already removed items from state)
                 const remainingItems = items.filter(i => !selected.includes(i.produto_id));
                 const remainingTotal = remainingItems.reduce((sum, i) => sum + Number(i.preco_unitario) * Number(i.quantidade), 0);
                 const newOriginalTotal = remainingTotal + freteNum;
                 await supabase.from("pedido").update({ total: newOriginalTotal }).eq("pedido_id", selectedPedido!.pedido_id);
-                // Keep order at aguardando_pagamento, don't go to payment form
                 setEditStatus(selectedPedido?.status || "aguardando_pagamento");
                 setStockCheckPassed(false);
                 setStockDialogOpen(false);
@@ -760,6 +914,135 @@ const Pedidos = () => {
               disabled={loading}
             >
               Desmembrar selecionados
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New order dialog */}
+      <Dialog open={newOrderOpen} onOpenChange={setNewOrderOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Novo Pedido</DialogTitle>
+            <DialogDescription>Crie um pedido pelo painel administrativo</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Client selection */}
+            <div className="space-y-2">
+              <Label>Cliente</Label>
+              {!showNewClient ? (
+                <div className="flex gap-2">
+                  <Select value={newOrderClienteId} onValueChange={setNewOrderClienteId}>
+                    <SelectTrigger className="flex-1"><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
+                    <SelectContent>
+                      {clientes.map(c => (
+                        <SelectItem key={c.cliente_id} value={c.cliente_id}>{c.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="outline" size="icon" onClick={() => setShowNewClient(true)} title="Cadastrar novo cliente">
+                    <UserPlus className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-semibold">Novo Cliente</Label>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => { setShowNewClient(false); setNewClientNome(""); }}>Cancelar</Button>
+                  </div>
+                  <div className="space-y-2">
+                    <Input placeholder="Nome *" value={newClientNome} onChange={e => setNewClientNome(e.target.value)} />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input placeholder="CPF/CNPJ" value={newClientCpf} onChange={e => setNewClientCpf(e.target.value)} />
+                      <Input placeholder="Email" value={newClientEmail} onChange={e => setNewClientEmail(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Product search and add */}
+            <div className="space-y-2">
+              <Label>Produtos</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Buscar produto..." value={newOrderSearch} onChange={e => setNewOrderSearch(e.target.value)} className="pl-10" />
+              </div>
+              {newOrderSearch.trim() && (
+                <div className="border rounded-lg max-h-40 overflow-y-auto">
+                  {filteredProdutos.slice(0, 20).map(p => (
+                    <button
+                      key={p.produto_id}
+                      type="button"
+                      className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-muted transition-colors"
+                      onClick={() => { addProduct(p); setNewOrderSearch(""); }}
+                    >
+                      <span>{p.nome}</span>
+                      <span className="text-muted-foreground">R$ {p.preco.toFixed(2)}</span>
+                    </button>
+                  ))}
+                  {filteredProdutos.length === 0 && <p className="text-sm text-muted-foreground p-3">Nenhum produto encontrado</p>}
+                </div>
+              )}
+            </div>
+
+            {/* Items list */}
+            {newOrderItems.length > 0 && (
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produto</TableHead>
+                      <TableHead className="w-32 text-center">Qtd</TableHead>
+                      <TableHead className="w-24 text-right">Preço</TableHead>
+                      <TableHead className="w-24 text-right">Subtotal</TableHead>
+                      <TableHead className="w-12"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {newOrderItems.map(i => (
+                      <TableRow key={i.produto_id}>
+                        <TableCell className="text-sm">{i.nome}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-center gap-1">
+                            <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQty(i.produto_id, -1)}>
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-8 text-center text-sm">{i.quantidade}</span>
+                            <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQty(i.produto_id, 1)}>
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right text-sm">R$ {i.preco.toFixed(2)}</TableCell>
+                        <TableCell className="text-right text-sm font-medium">R$ {(i.preco * i.quantidade).toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeItem(i.produto_id)}>
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="flex justify-end px-4 py-2 border-t bg-muted/30">
+                  <span className="font-semibold">Total: R$ {newOrderTotal.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Observation */}
+            <div className="space-y-2">
+              <Label>Observação</Label>
+              <Input placeholder="Observação (opcional)" value={newOrderObs} onChange={e => setNewOrderObs(e.target.value)} />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewOrderOpen(false)}>Cancelar</Button>
+            <Button onClick={saveNewOrder} disabled={newOrderSaving || newOrderItems.length === 0 || (!newOrderClienteId && !showNewClient) || (showNewClient && !newClientNome)}>
+              {newOrderSaving ? "Criando..." : "Criar Pedido"}
             </Button>
           </DialogFooter>
         </DialogContent>
