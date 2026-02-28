@@ -565,19 +565,30 @@ const Pedidos = () => {
       clienteId = newCliente.cliente_id;
     }
 
-    // If no client selected, create a "Consumidor Final" entry
+    // If no client selected, reuse existing "Consumidor Final" or create one
     if (!clienteId) {
-      const { data: anonCliente, error: anonError } = await supabase
+      const { data: existing } = await supabase
         .from("cliente")
-        .insert({ nome: "Consumidor Final" })
         .select("cliente_id")
+        .eq("nome", "Consumidor Final")
+        .eq("tipo_cliente", "cliente")
+        .limit(1)
         .single();
-      if (anonError || !anonCliente) {
-        toast({ title: "Erro ao criar cliente avulso", description: anonError?.message, variant: "destructive" });
-        setNewOrderSaving(false);
-        return;
+      if (existing) {
+        clienteId = existing.cliente_id;
+      } else {
+        const { data: anonCliente, error: anonError } = await supabase
+          .from("cliente")
+          .insert({ nome: "Consumidor Final" })
+          .select("cliente_id")
+          .single();
+        if (anonError || !anonCliente) {
+          toast({ title: "Erro ao criar cliente avulso", description: anonError?.message, variant: "destructive" });
+          setNewOrderSaving(false);
+          return;
+        }
+        clienteId = anonCliente.cliente_id;
       }
-      clienteId = anonCliente.cliente_id;
     }
 
     // Create new address if needed for entrega
