@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ShoppingBag, ArrowLeft, LogIn, Truck, Store, AlertCircle, Plus, MapPin, Loader2 } from "lucide-react";
+import { ShoppingBag, ArrowLeft, LogIn, Truck, Store, AlertCircle, Plus, MapPin, Loader2, Phone } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -61,6 +61,12 @@ function validateCnpj(cnpj: string): boolean {
   return parseInt(digits[13]) === d2;
 }
 
+function formatTelefone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length <= 10) return digits.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d)/, "$1-$2");
+  return digits.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
+}
+
 function validateCpfCnpj(value: string): string | null {
   const digits = value.replace(/\D/g, "");
   if (digits.length === 0) return "CPF ou CNPJ é obrigatório";
@@ -84,13 +90,23 @@ const Checkout = () => {
   const [endForm, setEndForm] = useState(emptyEndForm);
   const [savingEnd, setSavingEnd] = useState(false);
   const [clienteId, setClienteId] = useState<string | null>(null);
+  const [telefone, setTelefone] = useState("");
+  const [telefoneError, setTelefoneError] = useState<string | null>(null);
   const { fetchCep, loading: cepLoading } = useCep();
 
   useEffect(() => {
     // load client data only
     if (user) {
       supabase.from("cliente").select("cliente_id, cpf_cnpj").eq("user_id", user.id).maybeSingle().then(({ data }) => {
-        if (data) { setClienteId(data.cliente_id); if (data.cpf_cnpj) setCpfCnpj(formatCpfCnpj(data.cpf_cnpj)); loadEnderecos(data.cliente_id); }
+        if (data) {
+          setClienteId(data.cliente_id);
+          if (data.cpf_cnpj) setCpfCnpj(formatCpfCnpj(data.cpf_cnpj));
+          loadEnderecos(data.cliente_id);
+          // Load existing phone
+          supabase.from("cliente_telefone").select("telefone").eq("cliente_id", data.cliente_id).limit(1).then(({ data: tels }) => {
+            if (tels && tels.length > 0) setTelefone(formatTelefone(tels[0].telefone));
+          });
+        }
       });
     }
   }, [user]);
@@ -128,6 +144,7 @@ const Checkout = () => {
   }
 
   const handleCpfCnpjChange = (value: string) => { const digits = value.replace(/\D/g, "").slice(0, 14); setCpfCnpj(formatCpfCnpj(digits)); if (cpfCnpjError) setCpfCnpjError(null); };
+  const handleTelefoneChange = (value: string) => { const digits = value.replace(/\D/g, "").slice(0, 11); setTelefone(formatTelefone(digits)); if (telefoneError) setTelefoneError(null); };
 
   const handleCepBlur = async () => {
     const cep = endForm.cep.replace(/\D/g, "");
@@ -158,6 +175,8 @@ const Checkout = () => {
   const handleFinalize = async () => {
     const error = validateCpfCnpj(cpfCnpj);
     if (error) { setCpfCnpjError(error); return; }
+    const telDigits = telefone.replace(/\D/g, "");
+    if (telDigits.length < 10) { setTelefoneError("Telefone deve ter pelo menos 10 dígitos"); return; }
     if (!tipoEntrega) { toast({ title: "Selecione o tipo de entrega", variant: "destructive" }); return; }
     if (tipoEntrega === "entrega" && !enderecoSelecionado) { toast({ title: "Selecione ou cadastre um endereço de entrega", variant: "destructive" }); return; }
 
@@ -169,6 +188,14 @@ const Checkout = () => {
         const { data: newCliente, error: cErr } = await supabase.from("cliente").insert({ nome: user.email ?? "Cliente", email: user.email, user_id: user.id, cpf_cnpj: cleanCpfCnpj }).select("cliente_id").single();
         if (cErr) throw cErr; cId = newCliente.cliente_id;
       } else { await supabase.from("cliente").update({ cpf_cnpj: cleanCpfCnpj }).eq("cliente_id", cId); }
+
+      // Save/update phone
+      const { data: existingTel } = await supabase.from("cliente_telefone").select("cliente_telefone_id").eq("cliente_id", cId!).limit(1);
+      if (existingTel && existingTel.length > 0) {
+        await supabase.from("cliente_telefone").update({ telefone: telDigits }).eq("cliente_telefone_id", existingTel[0].cliente_telefone_id);
+      } else {
+        await supabase.from("cliente_telefone").insert({ cliente_id: cId!, telefone: telDigits, is_whatsapp: true });
+      }
 
       let observacao = "";
       if (tipoEntrega === "entrega") {
@@ -192,7 +219,7 @@ const Checkout = () => {
     finally { setLoading(false); }
   };
 
-  const canSubmit = !loading && cpfCnpj.length > 0 && tipoEntrega !== "" && (tipoEntrega === "retirada" || enderecoSelecionado !== "");
+  const canSubmit = !loading && cpfCnpj.length > 0 && telefone.replace(/\D/g, "").length >= 10 && tipoEntrega !== "" && (tipoEntrega === "retirada" || enderecoSelecionado !== "");
 
   return (
     <div className="min-h-screen bg-background">
@@ -228,6 +255,18 @@ const Checkout = () => {
               <Label htmlFor="cpfcnpj">Informe seu CPF ou CNPJ</Label>
               <Input id="cpfcnpj" placeholder="000.000.000-00 ou 00.000.000/0000-00" value={cpfCnpj} onChange={(e) => handleCpfCnpjChange(e.target.value)} className={cpfCnpjError ? "border-destructive" : ""} />
               {cpfCnpjError && (<p className="text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {cpfCnpjError}</p>)}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Telefone */}
+        <Card className="mb-6">
+          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Phone className="h-5 w-5" /> Telefone</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="telefone">Telefone para contato *</Label>
+              <Input id="telefone" placeholder="(00) 00000-0000" value={telefone} onChange={(e) => handleTelefoneChange(e.target.value)} className={telefoneError ? "border-destructive" : ""} />
+              {telefoneError && (<p className="text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {telefoneError}</p>)}
             </div>
           </CardContent>
         </Card>

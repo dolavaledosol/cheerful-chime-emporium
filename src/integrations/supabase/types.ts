@@ -119,6 +119,7 @@ export type Database = {
         Row: {
           ativo: boolean
           cliente_id: string
+          clientewhats_id: number | null
           cpf_cnpj: string | null
           created_at: string
           email: string | null
@@ -130,6 +131,7 @@ export type Database = {
         Insert: {
           ativo?: boolean
           cliente_id?: string
+          clientewhats_id?: number | null
           cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
@@ -141,6 +143,7 @@ export type Database = {
         Update: {
           ativo?: boolean
           cliente_id?: string
+          clientewhats_id?: number | null
           cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
@@ -149,7 +152,15 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cliente_clientewhats_id_fkey"
+            columns: ["clientewhats_id"]
+            isOneToOne: false
+            referencedRelation: "clientewhats"
+            referencedColumns: ["clientewhats_id"]
+          },
+        ]
       }
       cliente_endereco: {
         Row: {
@@ -209,6 +220,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "cliente_telefone_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "cliente"
+            referencedColumns: ["cliente_id"]
+          },
+        ]
+      }
+      clientewhats: {
+        Row: {
+          cliente_id: string | null
+          clientewhats_id: number
+          cpf_cnpj: string | null
+          created_at: string
+          dados_completos: boolean | null
+          from: string | null
+          nome: string | null
+          notifyName: string | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          clientewhats_id?: number
+          cpf_cnpj?: string | null
+          created_at?: string
+          dados_completos?: boolean | null
+          from?: string | null
+          nome?: string | null
+          notifyName?: string | null
+        }
+        Update: {
+          cliente_id?: string | null
+          clientewhats_id?: number
+          cpf_cnpj?: string | null
+          created_at?: string
+          dados_completos?: boolean | null
+          from?: string | null
+          nome?: string | null
+          notifyName?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientewhats_cliente_id_fkey"
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "cliente"
