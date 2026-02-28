@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Package, Layers, Factory, Users, ShoppingCart,
   DollarSign, Settings, LogOut, Truck, Warehouse, Boxes, Landmark, CreditCard,
-  ChevronDown, FolderOpen,
+  ChevronDown, FolderOpen, UserCog,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -107,6 +107,7 @@ const AdminSidebar = () => {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
+              {menuLink({ title: "Usuários", url: "/admin/usuarios", icon: UserCog })}
               {menuLink({ title: "Configurações", url: "/admin/configuracoes", icon: Settings })}
             </SidebarMenu>
           </SidebarGroupContent>

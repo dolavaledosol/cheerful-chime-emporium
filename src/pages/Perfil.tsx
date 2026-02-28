@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, MapPin, Phone, User, Package, Loader2, MessageCircle, Eye } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Phone, User, Package, Loader2, MessageCircle, Eye, Shield } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCep } from "@/hooks/useCep";
 import { Switch } from "@/components/ui/switch";
@@ -82,6 +82,7 @@ const Perfil = () => {
   const [telefones, setTelefones] = useState<Telefone[]>([]);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [editNome, setEditNome] = useState("");
   const [editCpf, setEditCpf] = useState("");
@@ -107,6 +108,7 @@ const Perfil = () => {
     if (authLoading) return;
     if (!user) { navigate("/auth", { replace: true }); return; }
     loadAll();
+    supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => { if (data) setIsAdmin(true); });
   }, [user, authLoading]);
 
   const loadAll = async () => {
@@ -206,6 +208,11 @@ const Perfil = () => {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader backTo="/" backLabel="Catálogo">
+        {isAdmin && (
+          <Button size="sm" variant="secondary" className="gap-1.5 bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80" onClick={() => navigate("/admin")}>
+            <Shield className="h-4 w-4" /> Admin
+          </Button>
+        )}
         <Button variant="ghost" size="sm" className="text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent" onClick={async () => { await signOut(); navigate("/"); }}>
           Sair
         </Button>
