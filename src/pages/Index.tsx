@@ -17,6 +17,9 @@ interface ProdutoComPreco {
   fabricante_nome: string | null;
   preco: number;
   url_imagem: string | null;
+  peso_bruto: number | null;
+  peso_liquido: number | null;
+  unidade_medida: string;
 }
 
 const Index = () => {
@@ -54,6 +57,9 @@ const Index = () => {
           slug,
           descricao,
           preco,
+          peso_bruto,
+          peso_liquido,
+          unidade_medida,
           familia_id,
           fabricante_id,
           familia:familia_id (nome),
@@ -96,6 +102,9 @@ const Index = () => {
             fabricante_nome: p.fabricante?.nome ?? null,
             preco: p.preco ?? 0,
             url_imagem: sorted[0]?.url_imagem ?? null,
+            peso_bruto: p.peso_bruto,
+            peso_liquido: p.peso_liquido,
+            unidade_medida: p.unidade_medida || "un",
           };
         });
         setProdutos(mapped);
@@ -117,6 +126,13 @@ const Index = () => {
     );
   }, [produtos, search]);
 
+  // Fabricantes filtered to only those present in current products (filtered by family)
+  const filteredFabricantes = useMemo(() => {
+    if (selectedFamilia === "all") return fabricantes;
+    const fabIdsInProducts = new Set(produtos.map((p) => p.fabricante_id).filter(Boolean));
+    return fabricantes.filter((f) => fabIdsInProducts.has(f.id));
+  }, [fabricantes, produtos, selectedFamilia]);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <CatalogHeader search={search} onSearchChange={setSearch} />
@@ -125,10 +141,10 @@ const Index = () => {
         <div className="mb-6">
           <CatalogFilters
             familias={familias}
-            fabricantes={fabricantes}
+            fabricantes={filteredFabricantes}
             selectedFamilia={selectedFamilia}
             selectedFabricante={selectedFabricante}
-            onFamiliaChange={setSelectedFamilia}
+            onFamiliaChange={(v) => { setSelectedFamilia(v); setSelectedFabricante("all"); }}
             onFabricanteChange={setSelectedFabricante}
           />
         </div>
@@ -165,6 +181,9 @@ const Index = () => {
                 url_imagem={p.url_imagem ?? undefined}
                 familia_nome={p.familia_nome ?? undefined}
                 fabricante_nome={p.fabricante_nome ?? undefined}
+                peso_bruto={p.peso_bruto ?? undefined}
+                peso_liquido={p.peso_liquido ?? undefined}
+                unidade_medida={p.unidade_medida}
               />
             ))}
           </div>
