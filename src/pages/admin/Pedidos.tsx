@@ -333,18 +333,16 @@ const Pedidos = () => {
     setItems(remainingItems);
 
     // Create conta a receber for the new split order
-    if (pagData) {
-      await supabase.from("contas_receber").insert({
-        pedido_id: newOrder.pedido_id,
-        cliente_id: selectedPedido.cliente_id,
-        descricao: `Pedido ${newOrder.pedido_id.slice(0, 8)} (desmembrado)`,
-        valor: newOrderTotal,
-        data_vencimento: pagData.toISOString().slice(0, 10),
-        recebido: false,
-        data_recebimento: null,
-        banco_id: pagBancoId || null,
-      });
-    }
+    const today = new Date().toISOString().slice(0, 10);
+    await supabase.from("contas_receber").insert({
+      pedido_id: newOrder.pedido_id,
+      cliente_id: selectedPedido.cliente_id,
+      descricao: `Pedido ${newOrder.pedido_id.slice(0, 8)} (desmembrado)`,
+      valor: newOrderTotal,
+      data_vencimento: today,
+      recebido: false,
+      data_recebimento: null,
+    });
 
     toast({ title: `Pedido desmembrado`, description: `Novo pedido ${newOrder.pedido_id.slice(0, 8)} criado com ${splitItems.length} item(ns)` });
   };
@@ -401,17 +399,7 @@ const Pedidos = () => {
 
       // Insert payment record and handle stock when moving to pago
       if (needsPaymentInfo) {
-        // Handle stock first (split may change totals)
-        const selectedSplitIds = Object.keys(splitSelectedItems).filter(k => splitSelectedItems[k]);
-        const shouldSplit = selectedSplitIds.length > 0 && !allowNegativeStock;
-        if (shouldSplit) {
-          await splitOrder(selectedSplitIds);
-          // Recalculate total after split (items state already updated by splitOrder)
-          const remainingItems = items.filter(i => !selectedSplitIds.includes(i.produto_id));
-          const remainingTotal = remainingItems.reduce((sum, i) => sum + Number(i.preco_unitario) * Number(i.quantidade), 0);
-          newTotal = remainingTotal + freteNum;
-        }
-        await deductStock();
+        // Deduct stock
 
         await supabase.from("pedido_pagamento").insert({
           pedido_id: selectedPedido.pedido_id,
@@ -748,7 +736,7 @@ const Pedidos = () => {
               Permitir negativo
             </Button>
             <Button
-              onClick={() => {
+              onClick={async () => {
                 const selected = Object.keys(splitSelectedItems).filter(k => splitSelectedItems[k]);
                 if (selected.length === 0) {
                   toast({ title: "Selecione ao menos um item para desmembrar", variant: "destructive" });
@@ -758,8 +746,20 @@ const Pedidos = () => {
                   toast({ title: "Não é possível mover todos os itens", variant: "destructive" });
                   return;
                 }
-                setStockCheckPassed(true);
+                setLoading(true);
+                await splitOrder(selected);
+                // Recalculate original order total
+                const remainingItems = items.filter(i => !selected.includes(i.produto_id));
+                const remainingTotal = remainingItems.reduce((sum, i) => sum + Number(i.preco_unitario) * Number(i.quantidade), 0);
+                await supabase.from("pedido").update({ total: remainingTotal + freteNum }).eq("pedido_id", selectedPedido!.pedido_id);
+                // Keep order at aguardando_pagamento, don't go to payment form
+                setEditStatus(selectedPedido?.status || "aguardando_pagamento");
+                setStockCheckPassed(false);
                 setStockDialogOpen(false);
+                setDialogOpen(false);
+                setLoading(false);
+                load();
+                toast({ title: "Pedido desmembrado. Verifique o estoque novamente ao pagar." });
               }}
               disabled={loading}
             >
