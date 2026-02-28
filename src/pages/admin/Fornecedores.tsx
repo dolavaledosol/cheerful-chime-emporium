@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Pencil, Trash2, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 interface Fornecedor {
   fornecedor_id: string;
@@ -230,7 +230,24 @@ const Fornecedores = () => {
                 </Select>
               </div>
 
-              <ScrollArea className="flex-1 border rounded-md h-[300px]">
+              <div className="flex items-center gap-3 px-2 py-1.5 border rounded-md bg-muted/30">
+                <Checkbox
+                  checked={filteredProdutos.length > 0 && filteredProdutos.every((p) => selectedProdutoIds.has(p.produto_id))}
+                  onCheckedChange={(checked) => {
+                    setSelectedProdutoIds((prev) => {
+                      const next = new Set(prev);
+                      filteredProdutos.forEach((p) => {
+                        if (checked) next.add(p.produto_id);
+                        else next.delete(p.produto_id);
+                      });
+                      return next;
+                    });
+                  }}
+                />
+                <span className="text-sm font-medium">Marcar todos ({filteredProdutos.length})</span>
+              </div>
+
+              <div className="border rounded-md h-[300px] overflow-y-auto">
                 <div className="p-2 space-y-1">
                   {filteredProdutos.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">Nenhum produto encontrado</p>
@@ -247,7 +264,7 @@ const Fornecedores = () => {
                     </label>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
           </div>
           <DialogFooter>
