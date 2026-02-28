@@ -268,6 +268,27 @@ export type Database = {
           },
         ]
       }
+      clientewhats_interesse: {
+        Row: {
+          created_at: string
+          from: string | null
+          interesse: string | null
+          interesse_id: number
+        }
+        Insert: {
+          created_at?: string
+          from?: string | null
+          interesse?: string | null
+          interesse_id?: number
+        }
+        Update: {
+          created_at?: string
+          from?: string | null
+          interesse?: string | null
+          interesse_id?: number
+        }
+        Relationships: []
+      }
       configuracao: {
         Row: {
           chave: string
@@ -412,6 +433,27 @@ export type Database = {
             referencedColumns: ["pedido_id"]
           },
         ]
+      }
+      documents: {
+        Row: {
+          content: string | null
+          embedding: string | null
+          id: number
+          metadata: Json | null
+        }
+        Insert: {
+          content?: string | null
+          embedding?: string | null
+          id?: number
+          metadata?: Json | null
+        }
+        Update: {
+          content?: string | null
+          embedding?: string | null
+          id?: number
+          metadata?: Json | null
+        }
+        Relationships: []
       }
       endereco: {
         Row: {
@@ -1243,6 +1285,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      match_documents: {
+        Args: { filter?: Json; match_count?: number; query_embedding: string }
+        Returns: {
+          content: string
+          id: number
+          metadata: Json
+          similarity: number
+        }[]
       }
       refresh_produtos_catalogo: { Args: never; Returns: undefined }
     }
