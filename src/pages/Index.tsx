@@ -70,16 +70,12 @@ const Index = () => {
         .order("nome");
 
       if (selectedFamilia !== "all") {
-        // Check if selected is a child family
         const selectedFam = familias.find((f) => f.id === selectedFamilia);
         const isChild = selectedFam?.familia_pai_id != null;
 
         if (isChild) {
-          // Include both child and parent products (products may be assigned to parent)
-          const siblingIds = familias
-            .filter((f) => f.familia_pai_id === selectedFam.familia_pai_id)
-            .map((f) => f.id);
-          query = query.in("familia_id", [selectedFam.familia_pai_id, ...siblingIds]);
+          // Subfamily selected — only show products assigned to this subfamily
+          query = query.eq("familia_id", selectedFamilia);
         } else {
           // Parent selected — include parent + all children
           const childIds = familias
