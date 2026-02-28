@@ -133,7 +133,7 @@ const Pedidos = () => {
   const [newOrderItems, setNewOrderItems] = useState<NovoPedidoItem[]>([]);
   const [newOrderObs, setNewOrderObs] = useState("");
   const [clientes, setClientes] = useState<{ cliente_id: string; nome: string }[]>([]);
-  const [produtos, setProdutos] = useState<{ produto_id: string; nome: string; preco: number }[]>([]);
+  const [produtos, setProdutos] = useState<{ produto_id: string; nome: string; preco: number; fabricante_nome: string | null; peso_bruto: number | null; unidade_medida: string }[]>([]);
   const [newOrderSearch, setNewOrderSearch] = useState("");
   const [newOrderSaving, setNewOrderSaving] = useState(false);
   // Inline new client
@@ -449,17 +449,17 @@ const Pedidos = () => {
 
     const [cRes, pRes] = await Promise.all([
       supabase.from("cliente").select("cliente_id, nome").eq("ativo", true).order("nome"),
-      supabase.from("produto").select("produto_id, nome, preco").eq("ativo", true).order("nome"),
+      supabase.from("produto").select("produto_id, nome, preco, peso_bruto, unidade_medida, fabricante:fabricante_id(nome)").eq("ativo", true).order("nome"),
     ]);
     if (cRes.data) setClientes(cRes.data);
-    if (pRes.data) setProdutos(pRes.data);
+    if (pRes.data) setProdutos(pRes.data.map((p: any) => ({ ...p, fabricante_nome: p.fabricante?.nome ?? null })));
     setNewOrderOpen(true);
   };
 
   const filteredProdutos = useMemo(() => {
     if (!newOrderSearch.trim()) return produtos;
     const term = newOrderSearch.toLowerCase();
-    return produtos.filter(p => p.nome.toLowerCase().includes(term));
+    return produtos.filter(p => p.nome.toLowerCase().includes(term) || p.fabricante_nome?.toLowerCase().includes(term));
   }, [produtos, newOrderSearch]);
 
   const addProduct = (p: { produto_id: string; nome: string; preco: number }) => {
@@ -975,11 +975,17 @@ const Pedidos = () => {
                     <button
                       key={p.produto_id}
                       type="button"
-                      className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-muted transition-colors"
+                      className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-muted transition-colors gap-2"
                       onClick={() => { addProduct(p); setNewOrderSearch(""); }}
                     >
-                      <span>{p.nome}</span>
-                      <span className="text-muted-foreground">R$ {p.preco.toFixed(2)}</span>
+                      <div className="flex flex-col items-start text-left min-w-0">
+                        <span className="font-medium truncate w-full">{p.nome}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {p.fabricante_nome || "—"}
+                          {p.peso_bruto != null && ` · ${p.peso_bruto}${p.unidade_medida}`}
+                        </span>
+                      </div>
+                      <span className="text-muted-foreground whitespace-nowrap">R$ {p.preco.toFixed(2)}</span>
                     </button>
                   ))}
                   {filteredProdutos.length === 0 && <p className="text-sm text-muted-foreground p-3">Nenhum produto encontrado</p>}
