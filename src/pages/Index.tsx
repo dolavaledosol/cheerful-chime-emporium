@@ -128,10 +128,10 @@ const Index = () => {
 
   // Fabricantes filtered to only those present in current products (filtered by family)
   const filteredFabricantes = useMemo(() => {
-    if (selectedFamilia === "all") return fabricantes;
+    if (selectedFamilia === "all" || loading) return fabricantes;
     const fabIdsInProducts = new Set(produtos.map((p) => p.fabricante_id).filter(Boolean));
     return fabricantes.filter((f) => fabIdsInProducts.has(f.id));
-  }, [fabricantes, produtos, selectedFamilia]);
+  }, [fabricantes, produtos, selectedFamilia, loading]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

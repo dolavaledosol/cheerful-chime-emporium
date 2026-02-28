@@ -24,12 +24,12 @@ const CatalogHeader = ({ search, onSearchChange }: CatalogHeaderProps) => {
     <header className="sticky top-0 z-40 border-b bg-sidebar text-sidebar-foreground">
       <div className="px-4">
         {/* Top bar */}
-        <div className="flex h-14 items-center justify-between gap-4">
+        <div className="flex h-20 items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-2 shrink-0">
             <img
               src="/images/logo-cozinha-dodola-branco.png"
               alt="CozinhaDoDola"
-              className="h-14 w-auto"
+              className="h-20 w-auto"
             />
           </Link>
 
