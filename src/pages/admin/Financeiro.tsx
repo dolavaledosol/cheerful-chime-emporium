@@ -30,8 +30,10 @@ interface ContaReceber {
   contas_receber_id: string; descricao: string; valor: number;
   data_vencimento: string; data_recebimento: string | null;
   recebido: boolean; observacao: string | null;
+  created_at: string;
   cliente_id: string | null; banco_id: string | null; pedido_id: string | null;
   cliente: { nome: string } | null; banco: { nome: string } | null;
+  pedido_pagamento: { forma_pagamento: { nome: string } | null; banco: { nome: string } | null }[] | null;
 }
 
 /* ── Empty forms ── */
@@ -141,8 +143,8 @@ const Financeiro = () => {
   const loadReceber = async () => {
     const { data } = await supabase
       .from("contas_receber")
-      .select("*, cliente(nome), banco(nome)")
-      .order("data_vencimento", { ascending: false });
+      .select("*, cliente(nome), banco(nome), pedido_pagamento:pedido_id(forma_pagamento:forma_pagamento_id(nome), banco:banco_id(nome))")
+      .order("created_at", { ascending: false });
     if (data) setReceber(data as any);
   };
 
@@ -270,7 +272,10 @@ const Financeiro = () => {
                 <TableRow>
                   <TableHead>Descrição</TableHead>
                   <TableHead className="hidden sm:table-cell">Cliente</TableHead>
+                  <TableHead>Criação</TableHead>
                   <TableHead>Vencimento</TableHead>
+                  <TableHead className="hidden md:table-cell">Forma</TableHead>
+                  <TableHead className="hidden md:table-cell">Banco</TableHead>
                   <TableHead>Valor</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-28">Ações</TableHead>
@@ -278,12 +283,19 @@ const Financeiro = () => {
               </TableHeader>
               <TableBody>
                 {filteredReceber.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
-                ) : filteredReceber.map((c) => (
+                  <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
+                ) : filteredReceber.map((c) => {
+                  const pag = c.pedido_pagamento?.[0];
+                  const formaNome = pag?.forma_pagamento?.nome || "—";
+                  const bancoNome = pag?.banco?.nome || c.banco?.nome || "—";
+                  return (
                   <TableRow key={c.contas_receber_id}>
                     <TableCell className="font-medium">{c.descricao}</TableCell>
                     <TableCell className="hidden sm:table-cell text-muted-foreground">{c.cliente?.nome || "—"}</TableCell>
+                    <TableCell className="text-xs">{format(new Date(c.created_at), "dd/MM/yy HH:mm")}</TableCell>
                     <TableCell>{fmtDate(c.data_vencimento)}</TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">{formaNome}</TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">{bancoNome}</TableCell>
                     <TableCell>{fmtMoney(c.valor)}</TableCell>
                     <TableCell>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${c.recebido ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
@@ -297,7 +309,8 @@ const Financeiro = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
