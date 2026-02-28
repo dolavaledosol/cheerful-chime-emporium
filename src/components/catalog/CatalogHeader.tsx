@@ -22,7 +22,7 @@ const CatalogHeader = ({ search, onSearchChange }: CatalogHeaderProps) => {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-sidebar text-sidebar-foreground">
-      <div className="container mx-auto px-4">
+      <div className="px-4">
         {/* Top bar */}
         <div className="flex h-14 items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-2 shrink-0">
