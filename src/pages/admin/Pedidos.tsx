@@ -147,6 +147,8 @@ const Pedidos = () => {
   const [historico, setHistorico] = useState<StatusHistorico[]>([]);
   const [editStatus, setEditStatus] = useState("");
   const [editFrete, setEditFrete] = useState("");
+  const [editLocalEstoqueId, setEditLocalEstoqueId] = useState<string | null>(null);
+  const [editLocaisEstoque, setEditLocaisEstoque] = useState<{ local_estoque_id: string; nome: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   // Payment fields
@@ -171,6 +173,8 @@ const Pedidos = () => {
   const [clientes, setClientes] = useState<{ cliente_id: string; nome: string }[]>([]);
   const [produtos, setProdutos] = useState<{ produto_id: string; nome: string; preco: number; fabricante_nome: string | null; peso_bruto: number | null; unidade_medida: string }[]>([]);
   const [newOrderSearch, setNewOrderSearch] = useState("");
+  const [clienteSearch, setClienteSearch] = useState("");
+  const [clienteDropdownOpen, setClienteDropdownOpen] = useState(false);
   const [newOrderSaving, setNewOrderSaving] = useState(false);
   // Inline new client
   const [showNewClient, setShowNewClient] = useState(false);
@@ -229,7 +233,14 @@ const Pedidos = () => {
     setSelectedPedido(p);
     setEditStatus(p.status);
     setEditFrete(Number(p.frete).toFixed(2));
+    setEditLocalEstoqueId(p.local_estoque_id);
     setPagFormaId("");
+    setPagBancoId("");
+    setPagData(new Date());
+
+    // Load locais estoque for editing
+    const leRes = await supabase.from("local_estoque").select("local_estoque_id, nome").eq("ativo", true).order("nome");
+    if (leRes.data) setEditLocaisEstoque(leRes.data);
     setPagBancoId("");
     setPagData(new Date());
     
@@ -419,6 +430,12 @@ const Pedidos = () => {
   const updatePedido = async () => {
     if (!selectedPedido) return;
 
+    // Require local_estoque when moving to aguardando_pagamento
+    if (editStatus === "aguardando_pagamento" && !editLocalEstoqueId) {
+      toast({ title: "Selecione o local de estoque antes de passar para Aguardando Pagamento", variant: "destructive" });
+      return;
+    }
+
     if (isEntrega && editStatus !== "separacao" && editStatus !== "carrinho" && editStatus !== "cancelado" && freteNum <= 0) {
       toast({ title: "Informe o valor do frete para pedidos de entrega", variant: "destructive" });
       return;
@@ -444,6 +461,10 @@ const Pedidos = () => {
     const updateData: any = isAfterPago ? {} : { frete: freteNum, total: newTotal };
     if (editStatus !== selectedPedido.status) {
       updateData.status = editStatus;
+    }
+    // Update local_estoque_id if changed during separacao
+    if (selectedPedido.status === "separacao" && editLocalEstoqueId !== selectedPedido.local_estoque_id) {
+      updateData.local_estoque_id = editLocalEstoqueId || null;
     }
 
     const { error } = await supabase.from("pedido").update(updateData).eq("pedido_id", selectedPedido.pedido_id);
@@ -488,6 +509,8 @@ const Pedidos = () => {
     setNewOrderItems([]);
     setNewOrderObs("");
     setNewOrderSearch("");
+    setClienteSearch("");
+    setClienteDropdownOpen(false);
     setShowNewClient(false);
     setNewClientNome("");
     setNewClientCpf("");
@@ -524,6 +547,12 @@ const Pedidos = () => {
       setClienteEnderecos(data.map((d: any) => d.endereco).filter(Boolean));
     }
   };
+
+  const filteredClientes = useMemo(() => {
+    if (!clienteSearch.trim()) return clientes;
+    const term = clienteSearch.toLowerCase();
+    return clientes.filter(c => c.nome.toLowerCase().includes(term));
+  }, [clientes, clienteSearch]);
 
   const filteredProdutos = useMemo(() => {
     if (!newOrderSearch.trim()) return produtos;
@@ -854,6 +883,24 @@ const Pedidos = () => {
                 </div>
               )}
 
+              {/* Local de Estoque - editable only during separacao */}
+              {selectedPedido.status === "separacao" && (
+                <div className="space-y-2">
+                  <Label>Local de Estoque</Label>
+                  <Select value={editLocalEstoqueId || ""} onValueChange={(v) => setEditLocalEstoqueId(v || null)}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o local de estoque" /></SelectTrigger>
+                    <SelectContent>
+                      {editLocaisEstoque.map(l => (
+                        <SelectItem key={l.local_estoque_id} value={l.local_estoque_id}>{l.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!editLocalEstoqueId && (
+                    <p className="text-xs text-destructive">Obrigatório para avançar para Aguardando Pagamento</p>
+                  )}
+                </div>
+              )}
+
               <Separator />
               <div className="space-y-2">
                 <Label>Alterar Status</Label>
@@ -923,7 +970,7 @@ const Pedidos = () => {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Fechar</Button>
-            <Button onClick={() => updatePedido()} disabled={loading || (editStatus === selectedPedido?.status && editFrete === Number(selectedPedido?.frete || 0).toFixed(2))}>
+            <Button onClick={() => updatePedido()} disabled={loading || (editStatus === selectedPedido?.status && editFrete === Number(selectedPedido?.frete || 0).toFixed(2) && editLocalEstoqueId === selectedPedido?.local_estoque_id)}>
               {loading ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </DialogFooter>
@@ -1067,15 +1114,50 @@ const Pedidos = () => {
               <Label>Cliente</Label>
               {!showNewClient ? (
                 <div className="flex gap-2">
-                  <Select value={newOrderClienteId} onValueChange={(v) => { setNewOrderClienteId(v); loadClienteEnderecos(v); setNewOrderEnderecoId(""); setShowNewEndereco(false); }}>
-                    <SelectTrigger className="flex-1"><SelectValue placeholder="Sem cliente (Consumidor Final)" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none">Sem cliente (Consumidor Final)</SelectItem>
-                      {clientes.map(c => (
-                        <SelectItem key={c.cliente_id} value={c.cliente_id}>{c.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex-1 relative">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar cliente por nome..."
+                        value={clienteSearch}
+                        onChange={e => { setClienteSearch(e.target.value); setClienteDropdownOpen(true); }}
+                        onFocus={() => setClienteDropdownOpen(true)}
+                        className="pl-10"
+                      />
+                    </div>
+                    {newOrderClienteId && newOrderClienteId !== "__none" && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <Badge variant="secondary" className="text-xs">
+                          {clientes.find(c => c.cliente_id === newOrderClienteId)?.nome || "Cliente selecionado"}
+                        </Badge>
+                        <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => { setNewOrderClienteId("__none"); setClienteEnderecos([]); setNewOrderEnderecoId(""); }}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                    {clienteDropdownOpen && (
+                      <div className="absolute z-50 w-full mt-1 border rounded-lg bg-popover shadow-md max-h-40 overflow-y-auto">
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors text-muted-foreground"
+                          onClick={() => { setNewOrderClienteId("__none"); setClienteSearch(""); setClienteDropdownOpen(false); setClienteEnderecos([]); }}
+                        >
+                          Sem cliente (Consumidor Final)
+                        </button>
+                        {filteredClientes.slice(0, 20).map(c => (
+                          <button
+                            key={c.cliente_id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors"
+                            onClick={() => { setNewOrderClienteId(c.cliente_id); setClienteSearch(""); setClienteDropdownOpen(false); loadClienteEnderecos(c.cliente_id); setNewOrderEnderecoId(""); setShowNewEndereco(false); }}
+                          >
+                            {c.nome}
+                          </button>
+                        ))}
+                        {filteredClientes.length === 0 && <p className="text-sm text-muted-foreground p-3">Nenhum cliente encontrado</p>}
+                      </div>
+                    )}
+                  </div>
                   <Button type="button" variant="outline" size="icon" onClick={() => setShowNewClient(true)} title="Cadastrar novo cliente">
                     <UserPlus className="h-4 w-4" />
                   </Button>
