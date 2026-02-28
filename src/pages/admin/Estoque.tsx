@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 
-interface EstoqueLocal {
+interface EstoqueRow {
   estoque_local_id: string;
   produto_id: string;
   local_estoque_id: string;
@@ -17,11 +17,22 @@ interface EstoqueLocal {
   preco_promocional: number | null;
   quantidade_disponivel: number;
   quantidade_pedida_nao_separada: number;
-  produto: { nome: string } | null;
+  produto: { nome: string; fabricante: { nome: string } | null; familia: { nome: string } | null } | null;
   local_estoque: { nome: string } | null;
 }
 
+interface LocalEstoque { local_estoque_id: string; nome: string; }
 interface SelectOption { id: string; nome: string; }
+
+interface ProdutoAgrupado {
+  produto_id: string;
+  nome: string;
+  fabricante: string;
+  familia: string;
+  locais: Record<string, { estoque: number; pedidos: number; estoque_local_id: string }>;
+  totalEstoque: number;
+  totalPedidos: number;
+}
 
 const emptyForm = {
   produto_id: "", local_estoque_id: "", preco: "", preco_promocional: "",
@@ -29,9 +40,9 @@ const emptyForm = {
 };
 
 const Estoque = () => {
-  const [items, setItems] = useState<EstoqueLocal[]>([]);
+  const [items, setItems] = useState<EstoqueRow[]>([]);
   const [produtos, setProdutos] = useState<SelectOption[]>([]);
-  const [locais, setLocais] = useState<SelectOption[]>([]);
+  const [locais, setLocais] = useState<LocalEstoque[]>([]);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -41,24 +52,55 @@ const Estoque = () => {
 
   const load = async () => {
     const [{ data: est }, { data: prod }, { data: loc }] = await Promise.all([
-      supabase.from("estoque_local").select("*, produto(nome), local_estoque(nome)").order("produto_id"),
+      supabase.from("estoque_local").select("*, produto(nome, fabricante(nome), familia(nome)), local_estoque(nome)").order("produto_id"),
       supabase.from("produto").select("produto_id, nome").eq("ativo", true).order("nome"),
       supabase.from("local_estoque").select("local_estoque_id, nome").eq("ativo", true).order("nome"),
     ]);
     if (est) setItems(est as any);
     if (prod) setProdutos(prod.map((p) => ({ id: p.produto_id, nome: p.nome })));
-    if (loc) setLocais(loc.map((l) => ({ id: l.local_estoque_id, nome: l.nome })));
+    if (loc) setLocais(loc as LocalEstoque[]);
   };
 
   useEffect(() => { load(); }, []);
 
-  const filtered = items.filter((i) => {
+  const agrupados = useMemo(() => {
+    const map = new Map<string, ProdutoAgrupado>();
+    items.forEach((e) => {
+      let grupo = map.get(e.produto_id);
+      if (!grupo) {
+        grupo = {
+          produto_id: e.produto_id,
+          nome: e.produto?.nome || "—",
+          fabricante: e.produto?.fabricante?.nome || "—",
+          familia: e.produto?.familia?.nome || "—",
+          locais: {},
+          totalEstoque: 0,
+          totalPedidos: 0,
+        };
+        map.set(e.produto_id, grupo);
+      }
+      grupo.locais[e.local_estoque_id] = {
+        estoque: e.quantidade_disponivel,
+        pedidos: e.quantidade_pedida_nao_separada,
+        estoque_local_id: e.estoque_local_id,
+      };
+      grupo.totalEstoque += Number(e.quantidade_disponivel);
+      grupo.totalPedidos += Number(e.quantidade_pedida_nao_separada);
+    });
+    return Array.from(map.values());
+  }, [items]);
+
+  const filtered = agrupados.filter((g) => {
     const term = search.toLowerCase();
-    return !term || i.produto?.nome?.toLowerCase().includes(term) || i.local_estoque?.nome?.toLowerCase().includes(term);
+    if (!term) return true;
+    return g.nome.toLowerCase().includes(term) ||
+      g.fabricante.toLowerCase().includes(term) ||
+      g.familia.toLowerCase().includes(term) ||
+      g.produto_id.toLowerCase().includes(term);
   });
 
   const openNew = () => { setEditId(null); setForm(emptyForm); setDialogOpen(true); };
-  const openEdit = (e: EstoqueLocal) => {
+  const openEdit = (e: EstoqueRow) => {
     setEditId(e.estoque_local_id);
     setForm({
       produto_id: e.produto_id, local_estoque_id: e.local_estoque_id,
@@ -67,6 +109,11 @@ const Estoque = () => {
       quantidade_pedida_nao_separada: String(e.quantidade_pedida_nao_separada),
     });
     setDialogOpen(true);
+  };
+
+  const openEditById = (estoque_local_id: string) => {
+    const item = items.find((i) => i.estoque_local_id === estoque_local_id);
+    if (item) openEdit(item);
   };
 
   const save = async () => {
@@ -106,36 +153,69 @@ const Estoque = () => {
       </div>
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar produto ou local..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+        <Input placeholder="Buscar produto, fabricante, família..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
       </div>
-      <div className="border rounded-lg overflow-hidden">
+      <div className="border rounded-lg overflow-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Produto</TableHead>
-              <TableHead className="hidden sm:table-cell">Local</TableHead>
-              <TableHead>Preço</TableHead>
-              <TableHead className="hidden md:table-cell">Promo</TableHead>
-              <TableHead>Disp.</TableHead>
-              <TableHead className="w-24">Ações</TableHead>
+              <TableHead className="whitespace-nowrap">Cód</TableHead>
+              <TableHead className="whitespace-nowrap">Produto</TableHead>
+              <TableHead className="whitespace-nowrap">Fabricante</TableHead>
+              <TableHead className="whitespace-nowrap">Família</TableHead>
+              {locais.map((l) => (
+                <TableHead key={l.local_estoque_id} className="text-center whitespace-nowrap" colSpan={2}>
+                  {l.nome}
+                </TableHead>
+              ))}
+              <TableHead className="text-center whitespace-nowrap" colSpan={2}>Total</TableHead>
+            </TableRow>
+            <TableRow>
+              <TableHead />
+              <TableHead />
+              <TableHead />
+              <TableHead />
+              {locais.map((l) => (
+                <>
+                  <TableHead key={`${l.local_estoque_id}-est`} className="text-center text-xs whitespace-nowrap">Est.</TableHead>
+                  <TableHead key={`${l.local_estoque_id}-ped`} className="text-center text-xs whitespace-nowrap">Ped.</TableHead>
+                </>
+              ))}
+              <TableHead className="text-center text-xs whitespace-nowrap">Est.</TableHead>
+              <TableHead className="text-center text-xs whitespace-nowrap">Ped.</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum registro encontrado</TableCell></TableRow>
-            ) : filtered.map((e) => (
-              <TableRow key={e.estoque_local_id}>
-                <TableCell className="font-medium">{e.produto?.nome || "—"}</TableCell>
-                <TableCell className="hidden sm:table-cell text-muted-foreground">{e.local_estoque?.nome || "—"}</TableCell>
-                <TableCell>R$ {Number(e.preco).toFixed(2)}</TableCell>
-                <TableCell className="hidden md:table-cell">{e.preco_promocional != null ? `R$ ${Number(e.preco_promocional).toFixed(2)}` : "—"}</TableCell>
-                <TableCell>{e.quantidade_disponivel}</TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(e)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => remove(e.estoque_local_id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                  </div>
-                </TableCell>
+              <TableRow><TableCell colSpan={4 + locais.length * 2 + 2} className="text-center py-8 text-muted-foreground">Nenhum registro encontrado</TableCell></TableRow>
+            ) : filtered.map((g) => (
+              <TableRow key={g.produto_id}>
+                <TableCell className="text-xs text-muted-foreground font-mono whitespace-nowrap">{g.produto_id.substring(0, 8)}</TableCell>
+                <TableCell className="font-medium whitespace-nowrap">{g.nome}</TableCell>
+                <TableCell className="text-muted-foreground whitespace-nowrap">{g.fabricante}</TableCell>
+                <TableCell className="text-muted-foreground whitespace-nowrap">{g.familia}</TableCell>
+                {locais.map((l) => {
+                  const data = g.locais[l.local_estoque_id];
+                  return (
+                    <>
+                      <TableCell
+                        key={`${g.produto_id}-${l.local_estoque_id}-est`}
+                        className={`text-center cursor-pointer hover:bg-muted/50 ${data ? "" : "text-muted-foreground"}`}
+                        onClick={() => data && openEditById(data.estoque_local_id)}
+                      >
+                        {data ? data.estoque : "—"}
+                      </TableCell>
+                      <TableCell
+                        key={`${g.produto_id}-${l.local_estoque_id}-ped`}
+                        className={`text-center ${data ? "" : "text-muted-foreground"}`}
+                      >
+                        {data ? data.pedidos : "—"}
+                      </TableCell>
+                    </>
+                  );
+                })}
+                <TableCell className="text-center font-semibold">{g.totalEstoque}</TableCell>
+                <TableCell className="text-center font-semibold">{g.totalPedidos}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -156,7 +236,7 @@ const Estoque = () => {
               <Label>Local de Estoque *</Label>
               <Select value={form.local_estoque_id} onValueChange={(v) => setForm({ ...form, local_estoque_id: v })}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>{locais.map((l) => <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>)}</SelectContent>
+                <SelectContent>{locais.map((l) => <SelectItem key={l.local_estoque_id} value={l.local_estoque_id}>{l.nome}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
