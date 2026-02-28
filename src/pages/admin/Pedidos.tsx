@@ -63,8 +63,10 @@ interface Pedido {
   origem: string;
   observacao: string | null;
   local_estoque_id: string | null;
+  vendedor_id: string | null;
   cliente: { nome: string } | null;
   local_estoque: { nome: string } | null;
+  vendedor: { nome: string } | null;
 }
 
 interface PedidoItem {
@@ -148,7 +150,7 @@ const Pedidos = () => {
   const load = async () => {
     const { data } = await supabase
       .from("pedido")
-      .select("pedido_id, cliente_id, data, total, frete, status, origem, observacao, local_estoque_id, cliente!pedido_cliente_id_fkey(nome), local_estoque(nome)")
+      .select("pedido_id, cliente_id, data, total, frete, status, origem, observacao, local_estoque_id, vendedor_id, cliente!pedido_cliente_id_fkey(nome), local_estoque(nome), vendedor:cliente!pedido_vendedor_id_fkey(nome)")
       .order("data", { ascending: false });
     if (data) setPedidos(data as any);
   };
@@ -498,7 +500,7 @@ const Pedidos = () => {
 
     setNewOrderSaving(true);
 
-    let clienteId = newOrderClienteId;
+    let clienteId = newOrderClienteId === "__none" ? "" : newOrderClienteId;
 
     // Create new client inline if needed
     if (showNewClient && newClientNome) {
@@ -515,13 +517,19 @@ const Pedidos = () => {
       clienteId = newCliente.cliente_id;
     }
 
-    // If no client selected, use "venda sem cliente" — we need a fallback
-    // For "venda sem cliente", we'll still need a cliente_id since it's required.
-    // We'll create an anonymous entry or require selection.
+    // If no client selected, create a "Consumidor Final" entry
     if (!clienteId) {
-      toast({ title: "Selecione ou cadastre um cliente", variant: "destructive" });
-      setNewOrderSaving(false);
-      return;
+      const { data: anonCliente, error: anonError } = await supabase
+        .from("cliente")
+        .insert({ nome: "Consumidor Final" })
+        .select("cliente_id")
+        .single();
+      if (anonError || !anonCliente) {
+        toast({ title: "Erro ao criar cliente avulso", description: anonError?.message, variant: "destructive" });
+        setNewOrderSaving(false);
+        return;
+      }
+      clienteId = anonCliente.cliente_id;
     }
 
     // Get vendedor_id from current user
@@ -621,7 +629,10 @@ const Pedidos = () => {
                     </span>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted">{origemLabels[p.origem] || p.origem}</span>
+                    <div className="text-xs">
+                      <span className="px-2 py-0.5 rounded-full bg-muted">{origemLabels[p.origem] || p.origem}</span>
+                      {p.vendedor?.nome && <div className="text-muted-foreground mt-0.5">{p.vendedor.nome}</div>}
+                    </div>
                   </TableCell>
                   <TableCell>R$ {Number(p.total).toFixed(2)}</TableCell>
                   <TableCell>
@@ -651,7 +662,7 @@ const Pedidos = () => {
                 <div><span className="text-muted-foreground">Data:</span> {format(new Date(selectedPedido.data), "dd/MM/yy HH:mm")}</div>
                 <div><span className="text-muted-foreground">Total:</span> R$ {Number(selectedPedido.total).toFixed(2)}</div>
                 <div><span className="text-muted-foreground">Frete:</span> R$ {Number(selectedPedido.frete).toFixed(2)}</div>
-                <div><span className="text-muted-foreground">Origem:</span> {origemLabels[selectedPedido.origem] || selectedPedido.origem}</div>
+                <div><span className="text-muted-foreground">Origem:</span> {origemLabels[selectedPedido.origem] || selectedPedido.origem}{selectedPedido.vendedor?.nome && ` — ${selectedPedido.vendedor.nome}`}</div>
                 <div>
                   <span className="text-muted-foreground">Tipo:</span>{" "}
                   {(() => {
@@ -934,8 +945,9 @@ const Pedidos = () => {
               {!showNewClient ? (
                 <div className="flex gap-2">
                   <Select value={newOrderClienteId} onValueChange={setNewOrderClienteId}>
-                    <SelectTrigger className="flex-1"><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
+                    <SelectTrigger className="flex-1"><SelectValue placeholder="Sem cliente (Consumidor Final)" /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="__none">Sem cliente (Consumidor Final)</SelectItem>
                       {clientes.map(c => (
                         <SelectItem key={c.cliente_id} value={c.cliente_id}>{c.nome}</SelectItem>
                       ))}
@@ -1047,7 +1059,7 @@ const Pedidos = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewOrderOpen(false)}>Cancelar</Button>
-            <Button onClick={saveNewOrder} disabled={newOrderSaving || newOrderItems.length === 0 || (!newOrderClienteId && !showNewClient) || (showNewClient && !newClientNome)}>
+            <Button onClick={saveNewOrder} disabled={newOrderSaving || newOrderItems.length === 0 || (showNewClient && !newClientNome)}>
               {newOrderSaving ? "Criando..." : "Criar Pedido"}
             </Button>
           </DialogFooter>
