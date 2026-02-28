@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,13 +6,28 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Package } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Fornecedor {
   fornecedor_id: string;
   nome: string;
   ativo: boolean;
+}
+
+interface Produto {
+  produto_id: string;
+  nome: string;
+  fabricante_id: string | null;
+}
+
+interface Fabricante {
+  fabricante_id: string;
+  nome: string;
 }
 
 const Fornecedores = () => {
@@ -24,31 +39,111 @@ const Fornecedores = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  // Produtos tab state
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [fabricantes, setFabricantes] = useState<Fabricante[]>([]);
+  const [produtoSearch, setProdutoSearch] = useState("");
+  const [fabricanteFilter, setFabricanteFilter] = useState<string>("all");
+  const [selectedProdutoIds, setSelectedProdutoIds] = useState<Set<string>>(new Set());
+  const [initialProdutoIds, setInitialProdutoIds] = useState<Set<string>>(new Set());
+
   const load = async () => {
     const { data } = await supabase.from("fornecedor").select("*").order("nome");
     if (data) setItems(data as any);
   };
 
-  useEffect(() => { load(); }, []);
+  const loadProdutosAndFabricantes = async () => {
+    const [pRes, fRes] = await Promise.all([
+      supabase.from("produto").select("produto_id, nome, fabricante_id").eq("ativo", true).order("nome"),
+      supabase.from("fabricante").select("fabricante_id, nome").eq("ativo", true).order("nome"),
+    ]);
+    if (pRes.data) setProdutos(pRes.data);
+    if (fRes.data) setFabricantes(fRes.data);
+  };
+
+  const loadFornecedorProdutos = async (fornecedorId: string) => {
+    const { data } = await supabase.from("fornecedor_produto").select("produto_id").eq("fornecedor_id", fornecedorId);
+    const ids = new Set((data || []).map((d: any) => d.produto_id as string));
+    setSelectedProdutoIds(ids);
+    setInitialProdutoIds(new Set(ids));
+  };
+
+  useEffect(() => { load(); loadProdutosAndFabricantes(); }, []);
 
   const filtered = items.filter((f) => f.nome.toLowerCase().includes(search.toLowerCase()));
 
-  const openNew = () => { setEditId(null); setForm({ nome: "", ativo: true }); setDialogOpen(true); };
-  const openEdit = (f: Fornecedor) => { setEditId(f.fornecedor_id); setForm({ nome: f.nome, ativo: f.ativo }); setDialogOpen(true); };
+  const filteredProdutos = useMemo(() => {
+    return produtos.filter((p) => {
+      const matchSearch = p.nome.toLowerCase().includes(produtoSearch.toLowerCase());
+      const matchFab = fabricanteFilter === "all" || p.fabricante_id === fabricanteFilter;
+      return matchSearch && matchFab;
+    });
+  }, [produtos, produtoSearch, fabricanteFilter]);
+
+  const openNew = () => {
+    setEditId(null);
+    setForm({ nome: "", ativo: true });
+    setSelectedProdutoIds(new Set());
+    setInitialProdutoIds(new Set());
+    setProdutoSearch("");
+    setFabricanteFilter("all");
+    setDialogOpen(true);
+  };
+
+  const openEdit = (f: Fornecedor) => {
+    setEditId(f.fornecedor_id);
+    setForm({ nome: f.nome, ativo: f.ativo });
+    setProdutoSearch("");
+    setFabricanteFilter("all");
+    loadFornecedorProdutos(f.fornecedor_id);
+    setDialogOpen(true);
+  };
+
+  const toggleProduto = (produtoId: string) => {
+    setSelectedProdutoIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(produtoId)) next.delete(produtoId);
+      else next.add(produtoId);
+      return next;
+    });
+  };
 
   const save = async () => {
     setLoading(true);
-    const { error } = editId
-      ? await supabase.from("fornecedor").update(form).eq("fornecedor_id", editId)
-      : await supabase.from("fornecedor").insert(form);
-    setLoading(false);
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    let fornecedorId = editId;
+
+    if (editId) {
+      const { error } = await supabase.from("fornecedor").update(form).eq("fornecedor_id", editId);
+      if (error) {
+        toast({ title: "Erro", description: error.message, variant: "destructive" });
+        setLoading(false);
+        return;
+      }
     } else {
-      toast({ title: editId ? "Fornecedor atualizado" : "Fornecedor criado" });
-      setDialogOpen(false);
-      load();
+      const { data, error } = await supabase.from("fornecedor").insert(form).select("fornecedor_id").single();
+      if (error) {
+        toast({ title: "Erro", description: error.message, variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+      fornecedorId = data.fornecedor_id;
     }
+
+    // Sync fornecedor_produto
+    const toAdd = [...selectedProdutoIds].filter((id) => !initialProdutoIds.has(id));
+    const toRemove = [...initialProdutoIds].filter((id) => !selectedProdutoIds.has(id));
+
+    if (toRemove.length > 0) {
+      await supabase.from("fornecedor_produto").delete().eq("fornecedor_id", fornecedorId!).in("produto_id", toRemove);
+    }
+    if (toAdd.length > 0) {
+      await supabase.from("fornecedor_produto").insert(toAdd.map((produto_id) => ({ fornecedor_id: fornecedorId!, produto_id })));
+    }
+
+    setLoading(false);
+    toast({ title: editId ? "Fornecedor atualizado" : "Fornecedor criado" });
+    setDialogOpen(false);
+    load();
   };
 
   const softDelete = async (id: string) => {
@@ -56,6 +151,12 @@ const Fornecedores = () => {
     toast({ title: "Fornecedor desativado" });
     load();
   };
+
+  const fabricanteMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    fabricantes.forEach((f) => (m[f.fabricante_id] = f.nome));
+    return m;
+  }, [fabricantes]);
 
   return (
     <div className="space-y-4">
@@ -92,12 +193,62 @@ const Fornecedores = () => {
           </TableBody>
         </Table>
       </div>
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader><DialogTitle>{editId ? "Editar Fornecedor" : "Novo Fornecedor"}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2"><Label>Nome *</Label><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></div>
-            <div className="flex items-center gap-2"><Switch checked={form.ativo} onCheckedChange={(v) => setForm({ ...form, ativo: v })} /><Label>Ativo</Label></div>
+          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+            {/* Basic info */}
+            <div className="space-y-4">
+              <div className="space-y-2"><Label>Nome *</Label><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></div>
+              <div className="flex items-center gap-2"><Switch checked={form.ativo} onCheckedChange={(v) => setForm({ ...form, ativo: v })} /><Label>Ativo</Label></div>
+            </div>
+
+            {/* Produtos section */}
+            <div className="space-y-3 flex-1 overflow-hidden flex flex-col">
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-muted-foreground" />
+                <Label className="text-base font-semibold">Produtos Fornecidos</Label>
+                <Badge variant="secondary">{selectedProdutoIds.size} selecionado(s)</Badge>
+              </div>
+
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Buscar produto..." value={produtoSearch} onChange={(e) => setProdutoSearch(e.target.value)} className="pl-10" />
+                </div>
+                <Select value={fabricanteFilter} onValueChange={setFabricanteFilter}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Fabricante" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos fabricantes</SelectItem>
+                    {fabricantes.map((f) => (
+                      <SelectItem key={f.fabricante_id} value={f.fabricante_id}>{f.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <ScrollArea className="flex-1 border rounded-md max-h-[300px]">
+                <div className="p-2 space-y-1">
+                  {filteredProdutos.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">Nenhum produto encontrado</p>
+                  ) : filteredProdutos.map((p) => (
+                    <label key={p.produto_id} className="flex items-center gap-3 px-2 py-1.5 rounded hover:bg-accent cursor-pointer">
+                      <Checkbox
+                        checked={selectedProdutoIds.has(p.produto_id)}
+                        onCheckedChange={() => toggleProduto(p.produto_id)}
+                      />
+                      <span className="text-sm flex-1">{p.nome}</span>
+                      {p.fabricante_id && fabricanteMap[p.fabricante_id] && (
+                        <Badge variant="outline" className="text-xs">{fabricanteMap[p.fabricante_id]}</Badge>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
