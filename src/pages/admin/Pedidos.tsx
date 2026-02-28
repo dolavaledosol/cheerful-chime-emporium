@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Eye, Truck, Store, Clock, CalendarIcon, AlertTriangle, Split, Plus, Minus, Trash2, UserPlus, MapPin, PackagePlus } from "lucide-react";
+import { Search, Eye, Truck, Store, Clock, CalendarIcon, AlertTriangle, Split, Plus, Minus, Trash2, UserPlus, MapPin, PackagePlus, Share2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { useCep } from "@/hooks/useCep";
@@ -974,6 +974,151 @@ const Pedidos = () => {
     load();
   };
 
+  const shareOrderStatus = async (pedido: Pedido) => {
+    const canvas = document.createElement("canvas");
+    const w = 600, h = 700;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d")!;
+
+    // Background
+    ctx.fillStyle = "#FFF8F0";
+    ctx.fillRect(0, 0, w, h);
+
+    // Header bar
+    ctx.fillStyle = "#5D4037";
+    ctx.fillRect(0, 0, w, 6);
+    ctx.fillRect(0, h - 6, w, 6);
+
+    // Load logo
+    const logo = new Image();
+    logo.crossOrigin = "anonymous";
+    logo.src = "/images/logo-cozinha-dodola.png";
+    await new Promise<void>((resolve) => {
+      logo.onload = () => resolve();
+      logo.onerror = () => resolve();
+    });
+
+    if (logo.complete && logo.naturalWidth > 0) {
+      const logoSize = 120;
+      ctx.drawImage(logo, (w - logoSize) / 2, 30, logoSize, logoSize);
+    }
+
+    // Title
+    ctx.fillStyle = "#5D4037";
+    ctx.font = "bold 22px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Status do Pedido", w / 2, 185);
+
+    // Divider
+    ctx.strokeStyle = "#D7CCC8";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(60, 200);
+    ctx.lineTo(w - 60, 200);
+    ctx.stroke();
+
+    // Order info
+    ctx.textAlign = "left";
+    ctx.font = "14px sans-serif";
+    ctx.fillStyle = "#795548";
+    let y = 230;
+    const gap = 30;
+
+    const drawField = (label: string, value: string) => {
+      ctx.font = "bold 14px sans-serif";
+      ctx.fillStyle = "#5D4037";
+      ctx.fillText(label, 60, y);
+      ctx.font = "14px sans-serif";
+      ctx.fillStyle = "#795548";
+      ctx.fillText(value, 200, y);
+      y += gap;
+    };
+
+    drawField("Pedido:", `#${pedido.pedido_id.slice(0, 8)}`);
+    drawField("Cliente:", pedido.cliente?.nome || "—");
+    drawField("Data:", format(new Date(pedido.data), "dd/MM/yyyy HH:mm"));
+    drawField("Status:", statusLabels[pedido.status] || pedido.status);
+    drawField("Total:", `R$ ${Number(pedido.total).toFixed(2)}`);
+
+    if (pedido.frete > 0) drawField("Frete:", `R$ ${Number(pedido.frete).toFixed(2)}`);
+    if (pedido.local_estoque?.nome) drawField("Local:", pedido.local_estoque.nome);
+
+    // Items
+    y += 10;
+    ctx.strokeStyle = "#D7CCC8";
+    ctx.beginPath();
+    ctx.moveTo(60, y);
+    ctx.lineTo(w - 60, y);
+    ctx.stroke();
+    y += 25;
+
+    ctx.font = "bold 14px sans-serif";
+    ctx.fillStyle = "#5D4037";
+    ctx.fillText("Itens do Pedido", 60, y);
+    y += 20;
+
+    ctx.font = "13px sans-serif";
+    ctx.fillStyle = "#795548";
+    for (const item of items.slice(0, 8)) {
+      const name = item.produto?.nome || "—";
+      const truncName = name.length > 30 ? name.slice(0, 28) + "…" : name;
+      ctx.fillText(`• ${truncName}  —  ${item.quantidade}x  R$ ${Number(item.preco_unitario).toFixed(2)}`, 70, y);
+      y += 22;
+    }
+    if (items.length > 8) {
+      ctx.fillText(`... e mais ${items.length - 8} itens`, 70, y);
+    }
+
+    // Convert to blob and share
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+
+      // Try fetching client phone
+      let phone = "";
+      if (pedido.cliente_id) {
+        const { data: phones } = await supabase
+          .from("cliente_telefone")
+          .select("telefone")
+          .eq("cliente_id", pedido.cliente_id)
+          .limit(1);
+        if (phones && phones.length > 0) {
+          phone = phones[0].telefone.replace(/\D/g, "");
+          if (!phone.startsWith("55")) phone = "55" + phone;
+        }
+      }
+
+      const text = `*Cozinha DoDola*%0APedido: %23${pedido.pedido_id.slice(0, 8)}%0AStatus: ${statusLabels[pedido.status] || pedido.status}%0ATotal: R$ ${Number(pedido.total).toFixed(2)}`;
+
+      // Try Web Share API first (mobile)
+      if (navigator.share && navigator.canShare) {
+        const file = new File([blob], "pedido-status.png", { type: "image/png" });
+        const shareData = { files: [file], text: `Cozinha DoDola\nPedido: #${pedido.pedido_id.slice(0, 8)}\nStatus: ${statusLabels[pedido.status] || pedido.status}\nTotal: R$ ${Number(pedido.total).toFixed(2)}` };
+        if (navigator.canShare(shareData)) {
+          try {
+            await navigator.share(shareData);
+            return;
+          } catch { /* user cancelled */ }
+        }
+      }
+
+      // Fallback: download image + open WhatsApp
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `pedido-${pedido.pedido_id.slice(0, 8)}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      const whatsUrl = phone
+        ? `https://wa.me/${phone}?text=${text}`
+        : `https://wa.me/?text=${text}`;
+      window.open(whatsUrl, "_blank");
+
+      toast({ title: "Imagem gerada e WhatsApp aberto" });
+    }, "image/png");
+  };
+
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Pedidos</h1>
@@ -1227,11 +1372,16 @@ const Pedidos = () => {
               )}
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Fechar</Button>
-            <Button onClick={() => updatePedido()} disabled={loading || (editStatus === selectedPedido?.status && editFrete === Number(selectedPedido?.frete || 0).toFixed(2) && editLocalEstoqueId === selectedPedido?.local_estoque_id)}>
-              {loading ? "Salvando..." : "Salvar Alterações"}
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => shareOrderStatus(selectedPedido)}>
+              <Share2 className="h-4 w-4" /> Compartilhar
             </Button>
+            <div className="flex gap-2 ml-auto">
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>Fechar</Button>
+              <Button onClick={() => updatePedido()} disabled={loading || (editStatus === selectedPedido?.status && editFrete === Number(selectedPedido?.frete || 0).toFixed(2) && editLocalEstoqueId === selectedPedido?.local_estoque_id)}>
+                {loading ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
