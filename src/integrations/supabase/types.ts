@@ -106,6 +106,13 @@ export type Database = {
             referencedRelation: "produto"
             referencedColumns: ["produto_id"]
           },
+          {
+            foreignKeyName: "carrinho_item_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_produtos_catalogo"
+            referencedColumns: ["produto_id"]
+          },
         ]
       }
       cliente: {
@@ -442,6 +449,13 @@ export type Database = {
             referencedRelation: "produto"
             referencedColumns: ["produto_id"]
           },
+          {
+            foreignKeyName: "estoque_local_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_produtos_catalogo"
+            referencedColumns: ["produto_id"]
+          },
         ]
       }
       fabricante: {
@@ -636,6 +650,13 @@ export type Database = {
             referencedRelation: "produto"
             referencedColumns: ["produto_id"]
           },
+          {
+            foreignKeyName: "fornecedor_produto_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_produtos_catalogo"
+            referencedColumns: ["produto_id"]
+          },
         ]
       }
       integracao_log: {
@@ -785,6 +806,13 @@ export type Database = {
             referencedRelation: "produto"
             referencedColumns: ["produto_id"]
           },
+          {
+            foreignKeyName: "movimentacao_estoque_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_produtos_catalogo"
+            referencedColumns: ["produto_id"]
+          },
         ]
       }
       pedido: {
@@ -889,6 +917,13 @@ export type Database = {
             columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "produto"
+            referencedColumns: ["produto_id"]
+          },
+          {
+            foreignKeyName: "pedido_item_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_produtos_catalogo"
             referencedColumns: ["produto_id"]
           },
         ]
@@ -1082,6 +1117,13 @@ export type Database = {
             referencedRelation: "produto"
             referencedColumns: ["produto_id"]
           },
+          {
+            foreignKeyName: "produto_imagem_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_produtos_catalogo"
+            referencedColumns: ["produto_id"]
+          },
         ]
       }
       profiles: {
@@ -1128,7 +1170,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vw_produtos_catalogo: {
+        Row: {
+          descricao: string | null
+          estoques: Json | null
+          fabricante: string | null
+          familia: string | null
+          nome: string | null
+          peso_liquido: number | null
+          produto_id: string | null
+          unidade_medida: Database["public"]["Enums"]["unidade_medida"] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
@@ -1138,6 +1192,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      refresh_produtos_catalogo: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "vendedor" | "cliente"
