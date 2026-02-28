@@ -70,14 +70,26 @@ const Index = () => {
         .order("nome");
 
       if (selectedFamilia !== "all") {
-        // Include subfamilies if a parent family is selected
-        const childIds = familias
-          .filter((f) => f.familia_pai_id === selectedFamilia)
-          .map((f) => f.id);
-        if (childIds.length > 0) {
-          query = query.in("familia_id", [selectedFamilia, ...childIds]);
+        // Check if selected is a child family
+        const selectedFam = familias.find((f) => f.id === selectedFamilia);
+        const isChild = selectedFam?.familia_pai_id != null;
+
+        if (isChild) {
+          // Include both child and parent products (products may be assigned to parent)
+          const siblingIds = familias
+            .filter((f) => f.familia_pai_id === selectedFam.familia_pai_id)
+            .map((f) => f.id);
+          query = query.in("familia_id", [selectedFam.familia_pai_id, ...siblingIds]);
         } else {
-          query = query.eq("familia_id", selectedFamilia);
+          // Parent selected — include parent + all children
+          const childIds = familias
+            .filter((f) => f.familia_pai_id === selectedFamilia)
+            .map((f) => f.id);
+          if (childIds.length > 0) {
+            query = query.in("familia_id", [selectedFamilia, ...childIds]);
+          } else {
+            query = query.eq("familia_id", selectedFamilia);
+          }
         }
       }
       if (selectedFabricante !== "all") {
