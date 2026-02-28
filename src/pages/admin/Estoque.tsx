@@ -204,10 +204,15 @@ const Estoque = () => {
     setEntradaLinhas((prev) => prev.map((l) => l.produto_id === produto_id ? { ...l, [field]: value } : l));
   };
 
-  const filteredEntradaLinhas = entradaLinhas.filter((l) => {
-    if (!entradaSearchProd) return true;
-    return l.nome.toLowerCase().includes(entradaSearchProd.toLowerCase());
-  });
+  const filteredEntradaLinhas = entradaLinhas
+    .filter((l) => {
+      if (!entradaSearchProd) return true;
+      return l.nome.toLowerCase().includes(entradaSearchProd.toLowerCase());
+    })
+    .sort((a, b) => {
+      if (a.checked !== b.checked) return a.checked ? -1 : 1;
+      return a.nome.localeCompare(b.nome, "pt-BR");
+    });
 
   const checkedLinhas = entradaLinhas.filter((l) => l.checked);
   const totalNF = checkedLinhas.reduce((sum, l) => sum + Number(l.preco_custo) * Number(l.quantidade), 0);
