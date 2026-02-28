@@ -41,6 +41,7 @@ interface TransferLinha {
   checked: boolean;
   quantidade: string;
   disponivel: number;
+  estoqueDestino: number;
 }
 
 /* ── Movimentação row ── */
@@ -173,20 +174,50 @@ const Estoque = () => {
     setTransferLinhas([]); setTransferSearchProd(""); setTransferOpen(true);
   };
 
+  const buildTransferLinhas = (origemId: string, destinoId: string) => {
+    const produtosNoLocal = items.filter((e) => e.local_estoque_id === origemId && e.quantidade_disponivel > 0);
+    setTransferLinhas(
+      produtosNoLocal.map((e) => {
+        const destItem = destinoId ? items.find((i) => i.produto_id === e.produto_id && i.local_estoque_id === destinoId) : null;
+        return {
+          produto_id: e.produto_id,
+          nome: e.produto?.nome || "—",
+          familia: e.produto?.familia?.nome || "—",
+          checked: false,
+          quantidade: "1",
+          disponivel: Number(e.quantidade_disponivel),
+          estoqueDestino: destItem ? Number(destItem.quantidade_disponivel) : 0,
+        };
+      })
+    );
+  };
+
   const onOrigemChange = (localId: string) => {
     setTransferOrigem(localId);
-    // Load products in this location
-    const produtosNoLocal = items.filter((e) => e.local_estoque_id === localId && e.quantidade_disponivel > 0);
-    setTransferLinhas(
-      produtosNoLocal.map((e) => ({
-        produto_id: e.produto_id,
-        nome: e.produto?.nome || "—",
-        familia: e.produto?.familia?.nome || "—",
-        checked: false,
-        quantidade: "1",
-        disponivel: Number(e.quantidade_disponivel),
-      }))
-    );
+    buildTransferLinhas(localId, transferDestino);
+  };
+
+  const onDestinoChange = (localId: string) => {
+    setTransferDestino(localId);
+    if (transferOrigem) {
+      // Rebuild to update estoqueDestino without losing checked state
+      setTransferLinhas((prev) => {
+        const produtosNoLocal = items.filter((e) => e.local_estoque_id === transferOrigem && e.quantidade_disponivel > 0);
+        return produtosNoLocal.map((e) => {
+          const existing = prev.find((p) => p.produto_id === e.produto_id);
+          const destItem = items.find((i) => i.produto_id === e.produto_id && i.local_estoque_id === localId);
+          return {
+            produto_id: e.produto_id,
+            nome: e.produto?.nome || "—",
+            familia: e.produto?.familia?.nome || "—",
+            checked: existing?.checked || false,
+            quantidade: existing?.quantidade || "1",
+            disponivel: Number(e.quantidade_disponivel),
+            estoqueDestino: destItem ? Number(destItem.quantidade_disponivel) : 0,
+          };
+        });
+      });
+    }
   };
 
   const toggleAllTransfer = (checked: boolean) => {
@@ -478,7 +509,7 @@ const Estoque = () => {
               </div>
               <div className="space-y-2">
                 <Label>Local de Destino *</Label>
-                <Select value={transferDestino} onValueChange={setTransferDestino}>
+                <Select value={transferDestino} onValueChange={onDestinoChange}>
                   <SelectTrigger><SelectValue placeholder="Selecione o destino" /></SelectTrigger>
                   <SelectContent>{locais.filter((l) => l.local_estoque_id !== transferOrigem).map((l) => <SelectItem key={l.local_estoque_id} value={l.local_estoque_id}>{l.nome}</SelectItem>)}</SelectContent>
                 </Select>
@@ -503,7 +534,8 @@ const Estoque = () => {
                         </TableHead>
                         <TableHead>Produto</TableHead>
                         <TableHead>Família</TableHead>
-                        <TableHead className="text-center w-24">Disponível</TableHead>
+                        <TableHead className="text-center w-24">Est. Origem</TableHead>
+                        <TableHead className="text-center w-24">Est. Destino</TableHead>
                         <TableHead className="w-24">Qtd Transferir</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -515,7 +547,8 @@ const Estoque = () => {
                           </TableCell>
                           <TableCell className="font-medium">{l.nome}</TableCell>
                           <TableCell className="text-muted-foreground">{l.familia}</TableCell>
-                          <TableCell className="text-center text-muted-foreground">{l.disponivel}</TableCell>
+                          <TableCell className="text-center font-semibold">{l.disponivel}</TableCell>
+                          <TableCell className="text-center text-muted-foreground">{transferDestino ? l.estoqueDestino : "—"}</TableCell>
                           <TableCell>
                             <Input type="number" min="1" max={l.disponivel} value={l.quantidade} onChange={(e) => updateTransferLinha(l.produto_id, "quantidade", e.target.value)} className="h-8" disabled={!l.checked} />
                           </TableCell>
