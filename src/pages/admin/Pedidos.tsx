@@ -8,9 +8,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Eye, Truck, Store, Clock, CalendarIcon, AlertTriangle, Split, Plus, Minus, Trash2, UserPlus } from "lucide-react";
+import { Search, Eye, Truck, Store, Clock, CalendarIcon, AlertTriangle, Split, Plus, Minus, Trash2, UserPlus, MapPin } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
+import { useCep } from "@/hooks/useCep";
 
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -143,9 +144,19 @@ const Pedidos = () => {
   const [newClientNome, setNewClientNome] = useState("");
   const [newClientCpf, setNewClientCpf] = useState("");
   const [newClientEmail, setNewClientEmail] = useState("");
+  // Delivery type
+  const [newOrderTipoEntrega, setNewOrderTipoEntrega] = useState<"entrega" | "retirada">("retirada");
+  const [locaisEstoque, setLocaisEstoque] = useState<{ local_estoque_id: string; nome: string }[]>([]);
+  const [newOrderLocalEstoqueId, setNewOrderLocalEstoqueId] = useState("");
+  // Address for entrega
+  const [clienteEnderecos, setClienteEnderecos] = useState<{ endereco_id: string; logradouro: string; numero: string | null; bairro: string | null; cidade: string; estado: string; cep: string | null }[]>([]);
+  const [newOrderEnderecoId, setNewOrderEnderecoId] = useState("");
+  const [showNewEndereco, setShowNewEndereco] = useState(false);
+  const [newEndereco, setNewEndereco] = useState({ cep: "", logradouro: "", numero: "", bairro: "", cidade: "", estado: "", complemento: "" });
 
   const { toast } = useToast();
   const { user } = useAuth();
+  const { fetchCep, loading: cepLoading } = useCep();
 
   const load = async () => {
     const { data } = await supabase
@@ -448,14 +459,37 @@ const Pedidos = () => {
     setNewClientNome("");
     setNewClientCpf("");
     setNewClientEmail("");
+    setNewOrderTipoEntrega("retirada");
+    setNewOrderLocalEstoqueId("");
+    setClienteEnderecos([]);
+    setNewOrderEnderecoId("");
+    setShowNewEndereco(false);
+    setNewEndereco({ cep: "", logradouro: "", numero: "", bairro: "", cidade: "", estado: "", complemento: "" });
 
-    const [cRes, pRes] = await Promise.all([
+    const [cRes, pRes, leRes] = await Promise.all([
       supabase.from("cliente").select("cliente_id, nome").eq("ativo", true).order("nome"),
       supabase.from("produto").select("produto_id, nome, preco, peso_bruto, unidade_medida, fabricante:fabricante_id(nome)").eq("ativo", true).order("nome"),
+      supabase.from("local_estoque").select("local_estoque_id, nome").eq("ativo", true).order("nome"),
     ]);
     if (cRes.data) setClientes(cRes.data);
     if (pRes.data) setProdutos(pRes.data.map((p: any) => ({ ...p, fabricante_nome: p.fabricante?.nome ?? null })));
+    if (leRes.data) setLocaisEstoque(leRes.data);
     setNewOrderOpen(true);
+  };
+
+  // Load client addresses when client changes
+  const loadClienteEnderecos = async (clienteId: string) => {
+    if (!clienteId || clienteId === "__none") {
+      setClienteEnderecos([]);
+      return;
+    }
+    const { data } = await supabase
+      .from("cliente_endereco")
+      .select("endereco_id, endereco:endereco_id(endereco_id, logradouro, numero, bairro, cidade, estado, cep)")
+      .eq("cliente_id", clienteId);
+    if (data) {
+      setClienteEnderecos(data.map((d: any) => d.endereco).filter(Boolean));
+    }
   };
 
   const filteredProdutos = useMemo(() => {
@@ -498,6 +532,20 @@ const Pedidos = () => {
       return;
     }
 
+    // Validate entrega requires a real client
+    if (newOrderTipoEntrega === "entrega") {
+      const hasClient = newOrderClienteId && newOrderClienteId !== "__none";
+      if (!hasClient && !showNewClient) {
+        toast({ title: "Para entrega, selecione ou cadastre um cliente", variant: "destructive" });
+        return;
+      }
+    }
+
+    if (newOrderTipoEntrega === "retirada" && !newOrderLocalEstoqueId) {
+      toast({ title: "Selecione o local de retirada", variant: "destructive" });
+      return;
+    }
+
     setNewOrderSaving(true);
 
     let clienteId = newOrderClienteId === "__none" ? "" : newOrderClienteId;
@@ -532,6 +580,27 @@ const Pedidos = () => {
       clienteId = anonCliente.cliente_id;
     }
 
+    // Create new address if needed for entrega
+    if (newOrderTipoEntrega === "entrega" && showNewEndereco && newEndereco.logradouro) {
+      const { data: endData, error: endError } = await supabase
+        .from("endereco")
+        .insert({
+          logradouro: newEndereco.logradouro,
+          numero: newEndereco.numero || null,
+          bairro: newEndereco.bairro || null,
+          cidade: newEndereco.cidade,
+          estado: newEndereco.estado,
+          cep: newEndereco.cep || null,
+          complemento: newEndereco.complemento || null,
+        })
+        .select("endereco_id")
+        .single();
+      if (!endError && endData) {
+        // Link address to client
+        await supabase.from("cliente_endereco").insert({ cliente_id: clienteId, endereco_id: endData.endereco_id });
+      }
+    }
+
     // Get vendedor_id from current user
     const vendedorId = await getVendedorClienteId();
 
@@ -544,6 +613,7 @@ const Pedidos = () => {
         status: "separacao" as any,
         origem: "admin" as any,
         vendedor_id: vendedorId,
+        local_estoque_id: newOrderTipoEntrega === "retirada" ? newOrderLocalEstoqueId : null,
         observacao: newOrderObs || null,
       })
       .select("pedido_id")
@@ -944,7 +1014,7 @@ const Pedidos = () => {
               <Label>Cliente</Label>
               {!showNewClient ? (
                 <div className="flex gap-2">
-                  <Select value={newOrderClienteId} onValueChange={setNewOrderClienteId}>
+                  <Select value={newOrderClienteId} onValueChange={(v) => { setNewOrderClienteId(v); loadClienteEnderecos(v); setNewOrderEnderecoId(""); setShowNewEndereco(false); }}>
                     <SelectTrigger className="flex-1"><SelectValue placeholder="Sem cliente (Consumidor Final)" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none">Sem cliente (Consumidor Final)</SelectItem>
@@ -970,6 +1040,122 @@ const Pedidos = () => {
                       <Input placeholder="Email" value={newClientEmail} onChange={e => setNewClientEmail(e.target.value)} />
                     </div>
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Delivery type */}
+            <div className="space-y-2">
+              <Label>Tipo de Entrega</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={newOrderTipoEntrega === "retirada" ? "default" : "outline"}
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => setNewOrderTipoEntrega("retirada")}
+                >
+                  <Store className="h-3.5 w-3.5" /> Retirada
+                </Button>
+                <Button
+                  type="button"
+                  variant={newOrderTipoEntrega === "entrega" ? "default" : "outline"}
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => {
+                    if (!newOrderClienteId || newOrderClienteId === "__none") {
+                      if (!showNewClient) {
+                        toast({ title: "Para entrega, selecione ou cadastre um cliente", variant: "destructive" });
+                        return;
+                      }
+                    }
+                    setNewOrderTipoEntrega("entrega");
+                  }}
+                >
+                  <Truck className="h-3.5 w-3.5" /> Entrega
+                </Button>
+              </div>
+
+              {newOrderTipoEntrega === "retirada" && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Local de Retirada *</Label>
+                  <Select value={newOrderLocalEstoqueId} onValueChange={setNewOrderLocalEstoqueId}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o local" /></SelectTrigger>
+                    <SelectContent>
+                      {locaisEstoque.map(l => (
+                        <SelectItem key={l.local_estoque_id} value={l.local_estoque_id}>{l.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {newOrderTipoEntrega === "entrega" && (
+                <div className="space-y-2">
+                  <Label className="text-sm flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Endereço de Entrega</Label>
+                  {!showNewEndereco ? (
+                    <div className="space-y-2">
+                      {clienteEnderecos.length > 0 ? (
+                        <Select value={newOrderEnderecoId} onValueChange={setNewOrderEnderecoId}>
+                          <SelectTrigger><SelectValue placeholder="Selecione o endereço" /></SelectTrigger>
+                          <SelectContent>
+                            {clienteEnderecos.map(e => (
+                              <SelectItem key={e.endereco_id} value={e.endereco_id}>
+                                {e.logradouro}{e.numero ? `, ${e.numero}` : ""} — {e.cidade}/{e.estado}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Nenhum endereço cadastrado para este cliente.</p>
+                      )}
+                      <Button type="button" variant="outline" size="sm" onClick={() => setShowNewEndereco(true)} className="gap-1.5">
+                        <Plus className="h-3 w-3" /> Cadastrar novo endereço
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+                      <div className="flex items-center justify-between">
+                        <Label className="font-semibold">Novo Endereço</Label>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewEndereco(false)}>Cancelar</Button>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="CEP"
+                            value={newEndereco.cep}
+                            onChange={e => setNewEndereco({ ...newEndereco, cep: e.target.value })}
+                            className="w-32"
+                            onBlur={async () => {
+                              const data = await fetchCep(newEndereco.cep);
+                              if (data) {
+                                setNewEndereco(prev => ({
+                                  ...prev,
+                                  logradouro: data.street || prev.logradouro,
+                                  bairro: data.neighborhood || prev.bairro,
+                                  cidade: data.city || prev.cidade,
+                                  estado: data.state || prev.estado,
+                                }));
+                              }
+                            }}
+                          />
+                          {cepLoading && <span className="text-xs text-muted-foreground self-center">Buscando...</span>}
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <Input placeholder="Logradouro *" value={newEndereco.logradouro} onChange={e => setNewEndereco({ ...newEndereco, logradouro: e.target.value })} className="col-span-2" />
+                          <Input placeholder="Número" value={newEndereco.numero} onChange={e => setNewEndereco({ ...newEndereco, numero: e.target.value })} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input placeholder="Bairro" value={newEndereco.bairro} onChange={e => setNewEndereco({ ...newEndereco, bairro: e.target.value })} />
+                          <Input placeholder="Complemento" value={newEndereco.complemento} onChange={e => setNewEndereco({ ...newEndereco, complemento: e.target.value })} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input placeholder="Cidade *" value={newEndereco.cidade} onChange={e => setNewEndereco({ ...newEndereco, cidade: e.target.value })} />
+                          <Input placeholder="Estado *" value={newEndereco.estado} onChange={e => setNewEndereco({ ...newEndereco, estado: e.target.value })} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
