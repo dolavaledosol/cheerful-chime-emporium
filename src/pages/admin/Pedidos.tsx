@@ -1474,15 +1474,11 @@ const Pedidos = () => {
                       <TableRow key={i.produto_id}>
                         <TableCell className="text-sm">{i.nome}</TableCell>
                         <TableCell>
-                          <div className="flex items-center justify-center gap-1">
-                            <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQty(i.produto_id, -1)}>
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="w-8 text-center text-sm">{i.quantidade}</span>
-                            <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQty(i.produto_id, 1)}>
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
+                          <Input type="number" min="1" className="h-8 w-20 text-sm text-center" value={i.quantidade}
+                            onChange={(e) => {
+                              const val = Math.max(1, parseInt(e.target.value) || 1);
+                              setNewOrderItems(prev => prev.map(item => item.produto_id === i.produto_id ? { ...item, quantidade: val } : item));
+                            }} />
                         </TableCell>
                         <TableCell className="text-right text-sm">R$ {i.preco.toFixed(2)}</TableCell>
                         <TableCell className="text-right text-sm font-medium">R$ {(i.preco * i.quantidade).toFixed(2)}</TableCell>
