@@ -29,7 +29,7 @@ const CatalogHeader = ({ search, onSearchChange }: CatalogHeaderProps) => {
             <img
               src="/images/logo-cozinha-dodola-branco.png"
               alt="CozinhaDoDola"
-              className="h-9 w-auto"
+              className="h-14 w-auto"
             />
           </Link>
 
