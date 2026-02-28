@@ -14,7 +14,7 @@ const AppHeader = ({ backTo, backLabel, children }: AppHeaderProps) => {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-sidebar text-sidebar-foreground">
-      <div className="container mx-auto px-4 h-16 flex items-center gap-3">
+      <div className="px-4 h-16 flex items-center gap-3">
         <Link to="/" className="flex items-center gap-2 shrink-0">
           <img
             src="/images/logo-cozinha-dodola-branco.png"
