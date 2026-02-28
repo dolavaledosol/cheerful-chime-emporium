@@ -64,14 +64,44 @@ const Clientes = () => {
       tipo_cliente: form.tipo_cliente,
       ativo: form.ativo,
     };
-    const { error } = editId
-      ? await supabase.from("cliente").update(payload).eq("cliente_id", editId)
-      : await supabase.from("cliente").insert(payload);
+
+    let error: any = null;
+    let actionLabel = "";
+
+    if (editId) {
+      // Editando diretamente
+      const res = await supabase.from("cliente").update(payload).eq("cliente_id", editId);
+      error = res.error;
+      actionLabel = "Cliente atualizado";
+    } else if (form.cpf_cnpj) {
+      // Novo: buscar por CPF/CNPJ se existir
+      const { data: existing } = await supabase
+        .from("cliente")
+        .select("cliente_id")
+        .eq("cpf_cnpj", form.cpf_cnpj)
+        .maybeSingle();
+
+      if (existing) {
+        // CPF já existe — atualiza o registro (inclusive o email)
+        const res = await supabase.from("cliente").update(payload).eq("cliente_id", existing.cliente_id);
+        error = res.error;
+        actionLabel = "Cliente encontrado por CPF/CNPJ e atualizado";
+      } else {
+        const res = await supabase.from("cliente").insert(payload);
+        error = res.error;
+        actionLabel = "Cliente criado";
+      }
+    } else {
+      const res = await supabase.from("cliente").insert(payload);
+      error = res.error;
+      actionLabel = "Cliente criado";
+    }
+
     setLoading(false);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: editId ? "Cliente atualizado" : "Cliente criado" });
+      toast({ title: actionLabel });
       setDialogOpen(false);
       load();
     }
