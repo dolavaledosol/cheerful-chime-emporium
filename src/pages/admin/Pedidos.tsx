@@ -637,6 +637,72 @@ const Pedidos = () => {
         });
       }
 
+      // Handle quantidade_pedida_nao_separada
+      const localId = editLocalEstoqueId || selectedPedido.local_estoque_id;
+
+      // When moving to aguardando_pagamento and local was just set, increment pedida_nao_separada
+      if (editStatus === "aguardando_pagamento" && selectedPedido.status === "separacao" && localId) {
+        for (const item of items) {
+          const { data: el } = await supabase.from("estoque_local")
+            .select("estoque_local_id, quantidade_pedida_nao_separada")
+            .eq("produto_id", item.produto_id).eq("local_estoque_id", localId).maybeSingle();
+          if (el) {
+            await supabase.from("estoque_local").update({
+              quantidade_pedida_nao_separada: Number(el.quantidade_pedida_nao_separada) + Number(item.quantidade),
+            }).eq("estoque_local_id", el.estoque_local_id);
+          } else {
+            await supabase.from("estoque_local").insert({
+              produto_id: item.produto_id, local_estoque_id: localId,
+              quantidade_disponivel: 0, quantidade_pedida_nao_separada: Number(item.quantidade),
+            });
+          }
+        }
+      }
+
+      // When moving to pago, decrement pedida_nao_separada
+      if (editStatus === "pago" && selectedPedido.status === "aguardando_pagamento" && localId) {
+        for (const item of items) {
+          const { data: el } = await supabase.from("estoque_local")
+            .select("estoque_local_id, quantidade_pedida_nao_separada")
+            .eq("produto_id", item.produto_id).eq("local_estoque_id", localId).maybeSingle();
+          if (el) {
+            await supabase.from("estoque_local").update({
+              quantidade_pedida_nao_separada: Math.max(0, Number(el.quantidade_pedida_nao_separada) - Number(item.quantidade)),
+            }).eq("estoque_local_id", el.estoque_local_id);
+          }
+        }
+        await deductStock();
+      }
+
+      // When canceling, decrement pedida_nao_separada if was in aguardando_pagamento or separacao with local
+      if (editStatus === "cancelado" && localId && 
+          (selectedPedido.status === "aguardando_pagamento" || (selectedPedido.status === "separacao" && selectedPedido.local_estoque_id))) {
+        for (const item of items) {
+          const { data: el } = await supabase.from("estoque_local")
+            .select("estoque_local_id, quantidade_pedida_nao_separada")
+            .eq("produto_id", item.produto_id).eq("local_estoque_id", localId).maybeSingle();
+          if (el) {
+            await supabase.from("estoque_local").update({
+              quantidade_pedida_nao_separada: Math.max(0, Number(el.quantidade_pedida_nao_separada) - Number(item.quantidade)),
+            }).eq("estoque_local_id", el.estoque_local_id);
+          }
+        }
+      }
+
+      // When going back from aguardando_pagamento to separacao, decrement pedida_nao_separada
+      if (editStatus === "separacao" && selectedPedido.status === "aguardando_pagamento" && localId) {
+        for (const item of items) {
+          const { data: el } = await supabase.from("estoque_local")
+            .select("estoque_local_id, quantidade_pedida_nao_separada")
+            .eq("produto_id", item.produto_id).eq("local_estoque_id", localId).maybeSingle();
+          if (el) {
+            await supabase.from("estoque_local").update({
+              quantidade_pedida_nao_separada: Math.max(0, Number(el.quantidade_pedida_nao_separada) - Number(item.quantidade)),
+            }).eq("estoque_local_id", el.estoque_local_id);
+          }
+        }
+      }
+
       if (needsPaymentInfo) {
         await supabase.from("pedido_pagamento").insert({
           pedido_id: selectedPedido.pedido_id,
@@ -872,6 +938,29 @@ const Pedidos = () => {
       preco_unitario: i.preco,
     }));
     await supabase.from("pedido_item").insert(pedidoItems);
+
+    // Increment quantidade_pedida_nao_separada for vendor orders with local
+    if (newOrderTipoEntrega === "retirada" && newOrderLocalEstoqueId) {
+      for (const item of newOrderItems) {
+        const { data: existing } = await supabase.from("estoque_local")
+          .select("estoque_local_id, quantidade_pedida_nao_separada")
+          .eq("produto_id", item.produto_id)
+          .eq("local_estoque_id", newOrderLocalEstoqueId)
+          .maybeSingle();
+        if (existing) {
+          await supabase.from("estoque_local").update({
+            quantidade_pedida_nao_separada: Number(existing.quantidade_pedida_nao_separada) + item.quantidade,
+          }).eq("estoque_local_id", existing.estoque_local_id);
+        } else {
+          await supabase.from("estoque_local").insert({
+            produto_id: item.produto_id,
+            local_estoque_id: newOrderLocalEstoqueId,
+            quantidade_disponivel: 0,
+            quantidade_pedida_nao_separada: item.quantidade,
+          });
+        }
+      }
+    }
 
     // Insert status history
     await supabase.from("pedido_status_historico").insert({

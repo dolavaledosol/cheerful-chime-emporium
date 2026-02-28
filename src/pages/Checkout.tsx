@@ -269,10 +269,7 @@ const Checkout = () => {
       toast({ title: "Selecione o tipo de entrega", variant: "destructive" });
       return;
     }
-    if (tipoEntrega === "retirada" && !localSelecionado) {
-      toast({ title: "Selecione o local de retirada", variant: "destructive" });
-      return;
-    }
+    // Retirada não exige local — será definido na separação
     if (tipoEntrega === "entrega" && !enderecoSelecionado) {
       toast({ title: "Selecione ou cadastre um endereço de entrega", variant: "destructive" });
       return;
@@ -302,8 +299,7 @@ const Checkout = () => {
         const endStr = end ? `${end.logradouro}${end.numero ? `, ${end.numero}` : ""} — ${end.cidade}/${end.estado}` : "";
         observacao = `Entrega — frete sem compromisso, será calculado e informado posteriormente. Endereço: ${endStr}`;
       } else {
-        const local = locais.find((l) => l.local_estoque_id === localSelecionado);
-        observacao = `Retirada no local: ${local?.nome || ""}`;
+        observacao = `Retirada — local será definido na separação`;
       }
 
       const { data: pedido, error: pErr } = await supabase
@@ -313,7 +309,7 @@ const Checkout = () => {
           total,
           status: "separacao",
           origem: "web",
-          local_estoque_id: tipoEntrega === "retirada" ? localSelecionado : null,
+          local_estoque_id: null,
           observacao,
         })
         .select("pedido_id")
@@ -350,7 +346,7 @@ const Checkout = () => {
     !loading &&
     cpfCnpj.length > 0 &&
     tipoEntrega !== "" &&
-    (tipoEntrega === "retirada" ? localSelecionado !== "" : enderecoSelecionado !== "");
+    (tipoEntrega === "retirada" || enderecoSelecionado !== "");
 
   return (
     <div className="min-h-screen bg-background">
@@ -492,20 +488,11 @@ const Checkout = () => {
             )}
 
             {tipoEntrega === "retirada" && (
-              <div className="space-y-2">
-                <Label>Local de retirada</Label>
-                <Select value={localSelecionado} onValueChange={setLocalSelecionado}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o local..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locais.map((l) => (
-                      <SelectItem key={l.local_estoque_id} value={l.local_estoque_id}>
-                        {l.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="rounded-lg bg-muted/50 border border-border p-3 flex items-start gap-2">
+                <Store className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                <p className="text-sm text-muted-foreground">
+                  O local de retirada será definido pela nossa equipe durante a separação do pedido.
+                </p>
               </div>
             )}
           </CardContent>
