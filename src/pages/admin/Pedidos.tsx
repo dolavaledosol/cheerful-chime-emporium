@@ -147,7 +147,7 @@ const Pedidos = () => {
     setEditFrete(Number(p.frete).toFixed(2));
     setPagFormaId("");
     setPagBancoId("");
-    setPagData(undefined);
+    setPagData(new Date());
     
     setStockIssues([]);
     setAllowNegativeStock(false);
@@ -333,8 +333,8 @@ const Pedidos = () => {
       descricao: `Pedido ${pedidoId.slice(0, 8)}`,
       valor,
       data_vencimento: dataPagamento.toISOString().slice(0, 10),
-      recebido: true,
-      data_recebimento: dataPagamento.toISOString().slice(0, 10),
+      recebido: false,
+      data_recebimento: null,
       banco_id: pagBancoId || null,
     });
   };

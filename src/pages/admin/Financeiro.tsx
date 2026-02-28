@@ -354,15 +354,15 @@ const Financeiro = () => {
         <DialogContent>
           <DialogHeader><DialogTitle>{editReceberId ? "Editar Conta a Receber" : "Nova Conta a Receber"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2"><Label>Descrição *</Label><Input value={formReceber.descricao} onChange={(e) => setFormReceber({ ...formReceber, descricao: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Descrição *</Label><Input value={formReceber.descricao} onChange={(e) => setFormReceber({ ...formReceber, descricao: e.target.value })} disabled={!!editReceberId} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Valor *</Label><Input type="number" step="0.01" value={formReceber.valor} onChange={(e) => setFormReceber({ ...formReceber, valor: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Valor *</Label><Input type="number" step="0.01" value={formReceber.valor} onChange={(e) => setFormReceber({ ...formReceber, valor: e.target.value })} disabled={!!editReceberId} /></div>
               <div className="space-y-2"><Label>Vencimento *</Label><Input type="date" value={formReceber.data_vencimento} onChange={(e) => setFormReceber({ ...formReceber, data_vencimento: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Cliente</Label>
-                <Select value={formReceber.cliente_id} onValueChange={(v) => setFormReceber({ ...formReceber, cliente_id: v })}>
+                <Select value={formReceber.cliente_id} onValueChange={(v) => setFormReceber({ ...formReceber, cliente_id: v })} disabled={!!editReceberId}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>{clientes.map((c) => <SelectItem key={c.cliente_id} value={c.cliente_id}>{c.nome}</SelectItem>)}</SelectContent>
                 </Select>
