@@ -1270,6 +1270,7 @@ export type Database = {
           estoques: Json | null
           fabricante: string | null
           familia: string | null
+          imagem_principal: string | null
           nome: string | null
           peso_liquido: number | null
           produto_id: string | null
