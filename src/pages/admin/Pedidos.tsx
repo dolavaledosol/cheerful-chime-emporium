@@ -99,6 +99,39 @@ interface NovoPedidoItem {
   quantidade: number;
 }
 
+function validateCpfCnpj(value: string): boolean {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 11) {
+    // CPF validation
+    if (/^(\d)\1{10}$/.test(digits)) return false;
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(digits[i]) * (10 - i);
+    let check = 11 - (sum % 11);
+    if (check >= 10) check = 0;
+    if (parseInt(digits[9]) !== check) return false;
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(digits[i]) * (11 - i);
+    check = 11 - (sum % 11);
+    if (check >= 10) check = 0;
+    return parseInt(digits[10]) === check;
+  }
+  if (digits.length === 14) {
+    // CNPJ validation
+    if (/^(\d)\1{13}$/.test(digits)) return false;
+    const weights1 = [5,4,3,2,9,8,7,6,5,4,3,2];
+    let sum = 0;
+    for (let i = 0; i < 12; i++) sum += parseInt(digits[i]) * weights1[i];
+    let check = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    if (parseInt(digits[12]) !== check) return false;
+    const weights2 = [6,5,4,3,2,9,8,7,6,5,4,3,2];
+    sum = 0;
+    for (let i = 0; i < 13; i++) sum += parseInt(digits[i]) * weights2[i];
+    check = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    return parseInt(digits[13]) === check;
+  }
+  return false;
+}
+
 function getTipoEntrega(p: Pedido): { label: string; icon: typeof Truck } {
   if (p.local_estoque_id) return { label: "Retirada", icon: Store };
   return { label: "Entrega", icon: Truck };
@@ -552,6 +585,11 @@ const Pedidos = () => {
 
     // Create new client inline if needed
     if (showNewClient && newClientNome) {
+      if (newClientCpf && !validateCpfCnpj(newClientCpf)) {
+        toast({ title: "CPF/CNPJ inválido", description: "Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido", variant: "destructive" });
+        setNewOrderSaving(false);
+        return;
+      }
       const { data: newCliente, error: clienteError } = await supabase
         .from("cliente")
         .insert({ nome: newClientNome, cpf_cnpj: newClientCpf || null, email: newClientEmail || null })
@@ -687,6 +725,7 @@ const Pedidos = () => {
               <TableHead>Data</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead className="hidden sm:table-cell">Tipo</TableHead>
+              <TableHead className="hidden md:table-cell">Local</TableHead>
               <TableHead className="hidden sm:table-cell">Origem</TableHead>
               <TableHead>Total</TableHead>
               <TableHead>Status</TableHead>
@@ -695,7 +734,7 @@ const Pedidos = () => {
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum pedido encontrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhum pedido encontrado</TableCell></TableRow>
             ) : filtered.map((p) => {
               const tipo = getTipoEntrega(p);
               const TipoIcon = tipo.icon;
@@ -708,6 +747,9 @@ const Pedidos = () => {
                     <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                       <TipoIcon className="h-3 w-3" /> {tipo.label}
                     </span>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                    {p.local_estoque?.nome || "—"}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <div className="text-xs">
