@@ -8,7 +8,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Eye, Truck, Store, Clock, CalendarIcon, AlertTriangle, Split, Plus, Minus, Trash2, UserPlus, MapPin } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, Eye, Truck, Store, Clock, CalendarIcon, AlertTriangle, Split, Plus, Minus, Trash2, UserPlus, MapPin, PackagePlus } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { useCep } from "@/hooks/useCep";
@@ -97,6 +98,17 @@ interface NovoPedidoItem {
   nome: string;
   preco: number;
   quantidade: number;
+}
+
+/* ── Compras types ── */
+interface ContaPagarCompra {
+  contas_pagar_id: string; descricao: string; valor: number;
+  data_vencimento: string; data_pagamento: string | null;
+  pago: boolean; fornecedor: { nome: string } | null;
+}
+interface EntradaLinha {
+  produto_id: string; nome: string; checked: boolean;
+  quantidade: string; preco_venda: string; preco_custo: string;
 }
 
 function validateCpfCnpj(value: string): boolean {
@@ -216,6 +228,115 @@ const Pedidos = () => {
     };
     loadAux();
   }, []);
+
+  /* ═══════════════ COMPRAS STATE ═══════════════ */
+  const [compras, setCompras] = useState<ContaPagarCompra[]>([]);
+  const [searchCompras, setSearchCompras] = useState("");
+  const [entradaOpen, setEntradaOpen] = useState(false);
+  const [entradaFornecedores, setEntradaFornecedores] = useState<{ fornecedor_id: string; nome: string }[]>([]);
+  const [entradaFornecedor, setEntradaFornecedor] = useState("");
+  const [entradaNF, setEntradaNF] = useState("");
+  const [entradaFrete, setEntradaFrete] = useState("");
+  const [entradaLocal, setEntradaLocal] = useState("");
+  const [entradaLocais, setEntradaLocais] = useState<{ local_estoque_id: string; nome: string }[]>([]);
+  const [entradaLinhas, setEntradaLinhas] = useState<EntradaLinha[]>([]);
+  const [entradaLoading, setEntradaLoading] = useState(false);
+  const [entradaSearchProd, setEntradaSearchProd] = useState("");
+
+  const loadCompras = async () => {
+    const { data } = await supabase
+      .from("contas_pagar")
+      .select("contas_pagar_id, descricao, valor, data_vencimento, data_pagamento, pago, fornecedor(nome)")
+      .order("data_vencimento", { ascending: false });
+    if (data) setCompras(data as any);
+  };
+
+  useEffect(() => { loadCompras(); }, []);
+
+  const filteredCompras = compras.filter((c) => {
+    const t = searchCompras.toLowerCase();
+    return !t || c.descricao.toLowerCase().includes(t) || c.fornecedor?.nome?.toLowerCase().includes(t);
+  });
+
+  const fmtDate = (d: string | null) => d ? format(new Date(d + "T00:00:00"), "dd/MM/yyyy") : "—";
+  const fmtMoney = (v: number) => `R$ ${Number(v).toFixed(2)}`;
+
+  /* ── Entrada logic ── */
+  const openEntrada = async () => {
+    setEntradaFornecedor(""); setEntradaNF(""); setEntradaFrete(""); setEntradaLocal("");
+    setEntradaLinhas([]); setEntradaSearchProd("");
+    const [fRes, lRes] = await Promise.all([
+      supabase.from("fornecedor").select("fornecedor_id, nome").eq("ativo", true).order("nome"),
+      supabase.from("local_estoque").select("local_estoque_id, nome").eq("ativo", true).order("nome"),
+    ]);
+    if (fRes.data) setEntradaFornecedores(fRes.data);
+    if (lRes.data) setEntradaLocais(lRes.data);
+    setEntradaOpen(true);
+  };
+
+  const onEntradaFornecedorChange = async (fornecedorId: string) => {
+    setEntradaFornecedor(fornecedorId);
+    const { data: links } = await supabase.from("fornecedor_produto").select("produto_id").eq("fornecedor_id", fornecedorId);
+    if (!links || links.length === 0) { setEntradaLinhas([]); return; }
+    const prodIds = links.map((l) => l.produto_id);
+    const { data: prods } = await supabase.from("produto").select("produto_id, nome, preco").in("produto_id", prodIds).eq("ativo", true).order("nome");
+    const { data: existingEstoque } = await supabase.from("estoque_local").select("produto_id, preco_custo").in("produto_id", prodIds);
+    const custoMap: Record<string, number> = {};
+    if (existingEstoque) { for (const e of existingEstoque as any[]) { if (e.preco_custo && !custoMap[e.produto_id]) custoMap[e.produto_id] = e.preco_custo; } }
+    if (prods) {
+      setEntradaLinhas(prods.map((p) => ({
+        produto_id: p.produto_id, nome: p.nome, checked: false, quantidade: "1",
+        preco_venda: String(p.preco || 0), preco_custo: String(custoMap[p.produto_id] || 0),
+      })));
+    }
+  };
+
+  const toggleAllEntrada = (checked: boolean) => {
+    const ids = new Set(filteredEntradaLinhas.map((l) => l.produto_id));
+    setEntradaLinhas((prev) => prev.map((l) => ids.has(l.produto_id) ? { ...l, checked } : l));
+  };
+
+  const updateLinha = (produto_id: string, field: keyof EntradaLinha, value: any) => {
+    setEntradaLinhas((prev) => prev.map((l) => l.produto_id === produto_id ? { ...l, [field]: value } : l));
+  };
+
+  const filteredEntradaLinhas = entradaLinhas
+    .filter((l) => !entradaSearchProd || l.nome.toLowerCase().includes(entradaSearchProd.toLowerCase()))
+    .sort((a, b) => { if (a.checked !== b.checked) return a.checked ? -1 : 1; return a.nome.localeCompare(b.nome, "pt-BR"); });
+
+  const checkedLinhas = entradaLinhas.filter((l) => l.checked);
+  const totalNF = checkedLinhas.reduce((sum, l) => sum + Number(l.preco_custo) * Number(l.quantidade), 0);
+
+  const saveEntrada = async () => {
+    if (!entradaLocal) { toast({ title: "Selecione o local de estoque", variant: "destructive" }); return; }
+    if (checkedLinhas.length === 0) { toast({ title: "Marque ao menos um produto", variant: "destructive" }); return; }
+    setEntradaLoading(true);
+    try {
+      for (const linha of checkedLinhas) {
+        const qty = Number(linha.quantidade); const custoVal = Number(linha.preco_custo); const vendaVal = Number(linha.preco_venda);
+        const { data: existing } = await supabase.from("estoque_local").select("estoque_local_id, quantidade_disponivel")
+          .eq("produto_id", linha.produto_id).eq("local_estoque_id", entradaLocal).maybeSingle();
+        if (existing) {
+          await supabase.from("estoque_local").update({ quantidade_disponivel: Number(existing.quantidade_disponivel) + qty, preco_custo: custoVal, preco: vendaVal }).eq("estoque_local_id", existing.estoque_local_id);
+        } else {
+          await supabase.from("estoque_local").insert({ produto_id: linha.produto_id, local_estoque_id: entradaLocal, quantidade_disponivel: qty, preco_custo: custoVal, preco: vendaVal });
+        }
+        await supabase.from("produto").update({ preco: vendaVal }).eq("produto_id", linha.produto_id);
+      }
+      const fornNome = entradaFornecedores.find((f) => f.fornecedor_id === entradaFornecedor)?.nome || "";
+      if (totalNF > 0) {
+        await supabase.from("contas_pagar").insert({ descricao: `NF ${entradaNF || "s/n"} - ${fornNome}`, valor: totalNF, data_vencimento: new Date().toISOString().slice(0, 10), fornecedor_id: entradaFornecedor });
+      }
+      const freteVal = Number(entradaFrete);
+      if (freteVal > 0) {
+        await supabase.from("contas_pagar").insert({ descricao: `Frete NF ${entradaNF || "s/n"} - ${fornNome}`, valor: freteVal, data_vencimento: new Date().toISOString().slice(0, 10), fornecedor_id: entradaFornecedor });
+      }
+      toast({ title: "Entrada registrada com sucesso!" });
+      setEntradaOpen(false);
+      loadCompras();
+    } catch (err: any) { toast({ title: "Erro", description: err.message, variant: "destructive" }); }
+    finally { setEntradaLoading(false); }
+  };
 
   const filtered = pedidos.filter((p) => {
     const term = search.toLowerCase();
@@ -726,8 +847,17 @@ const Pedidos = () => {
 
   return (
     <div className="space-y-4">
+      <h1 className="text-2xl font-bold">Pedidos</h1>
+
+      <Tabs defaultValue="vendas">
+        <TabsList>
+          <TabsTrigger value="vendas">Vendas</TabsTrigger>
+          <TabsTrigger value="compras">Compras</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="vendas" className="space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Pedidos</h1>
+        <div />
         <Button onClick={openNewOrder} className="gap-2"><Plus className="h-4 w-4" /> Novo Pedido</Button>
       </div>
 
@@ -1382,6 +1512,122 @@ const Pedidos = () => {
             <Button variant="outline" onClick={() => setNewOrderOpen(false)}>Cancelar</Button>
             <Button onClick={saveNewOrder} disabled={newOrderSaving || newOrderItems.length === 0 || (showNewClient && !newClientNome)}>
               {newOrderSaving ? "Criando..." : "Criar Pedido"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+        </TabsContent>
+
+        {/* ══════════ TAB COMPRAS ══════════ */}
+        <TabsContent value="compras" className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar por descrição ou fornecedor..." value={searchCompras} onChange={(e) => setSearchCompras(e.target.value)} className="pl-10" />
+            </div>
+            <Button onClick={openEntrada} className="gap-2"><PackagePlus className="h-4 w-4" /> Entrada</Button>
+          </div>
+
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead className="hidden sm:table-cell">Fornecedor</TableHead>
+                  <TableHead>Vencimento</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCompras.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum pedido de compra encontrado</TableCell></TableRow>
+                ) : filteredCompras.map((c) => (
+                  <TableRow key={c.contas_pagar_id}>
+                    <TableCell className="font-medium">{c.descricao}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-muted-foreground">{c.fornecedor?.nome || "—"}</TableCell>
+                    <TableCell>{fmtDate(c.data_vencimento)}</TableCell>
+                    <TableCell>{fmtMoney(c.valor)}</TableCell>
+                    <TableCell>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${c.pago ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
+                        {c.pago ? "Pago" : "Pendente"}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* ── Entrada dialog ── */}
+      <Dialog open={entradaOpen} onOpenChange={setEntradaOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Entrada de Mercadoria</DialogTitle><DialogDescription>Registre a entrada de produtos no estoque</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Fornecedor *</Label>
+                <Select value={entradaFornecedor} onValueChange={onEntradaFornecedorChange}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>{entradaFornecedores.map((f) => <SelectItem key={f.fornecedor_id} value={f.fornecedor_id}>{f.nome}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2"><Label>Nota Fiscal</Label><Input value={entradaNF} onChange={(e) => setEntradaNF(e.target.value)} placeholder="Número NF" /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>Valor Frete (R$)</Label><Input type="number" step="0.01" value={entradaFrete} onChange={(e) => setEntradaFrete(e.target.value)} placeholder="0.00" /></div>
+              <div className="space-y-2">
+                <Label>Local de Estoque *</Label>
+                <Select value={entradaLocal} onValueChange={setEntradaLocal}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>{entradaLocais.map((l) => <SelectItem key={l.local_estoque_id} value={l.local_estoque_id}>{l.nome}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {entradaLinhas.length > 0 && (
+              <>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Filtrar produtos..." value={entradaSearchProd} onChange={(e) => setEntradaSearchProd(e.target.value)} className="pl-10" />
+                  </div>
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">{checkedLinhas.length} selecionado(s)</span>
+                </div>
+                <div className="border rounded-lg overflow-auto max-h-64">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10"><Checkbox checked={filteredEntradaLinhas.length > 0 && filteredEntradaLinhas.every((l) => l.checked)} onCheckedChange={(c) => toggleAllEntrada(!!c)} /></TableHead>
+                        <TableHead>Produto</TableHead>
+                        <TableHead className="w-20">Qtd</TableHead>
+                        <TableHead className="w-28">Custo</TableHead>
+                        <TableHead className="w-28">Venda</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredEntradaLinhas.map((l) => (
+                        <TableRow key={l.produto_id} className={l.checked ? "bg-primary/5" : ""}>
+                          <TableCell><Checkbox checked={l.checked} onCheckedChange={(c) => updateLinha(l.produto_id, "checked", !!c)} /></TableCell>
+                          <TableCell className="text-sm">{l.nome}</TableCell>
+                          <TableCell><Input type="number" min="1" className="h-8 text-sm" value={l.quantidade} onChange={(e) => updateLinha(l.produto_id, "quantidade", e.target.value)} /></TableCell>
+                          <TableCell><Input type="number" step="0.01" className="h-8 text-sm" value={l.preco_custo} onChange={(e) => updateLinha(l.produto_id, "preco_custo", e.target.value)} /></TableCell>
+                          <TableCell><Input type="number" step="0.01" className="h-8 text-sm" value={l.preco_venda} onChange={(e) => updateLinha(l.produto_id, "preco_venda", e.target.value)} /></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="flex justify-end text-sm font-semibold">Total NF: R$ {totalNF.toFixed(2)}</div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEntradaOpen(false)}>Cancelar</Button>
+            <Button onClick={saveEntrada} disabled={entradaLoading || checkedLinhas.length === 0}>
+              {entradaLoading ? "Salvando..." : "Confirmar Entrada"}
             </Button>
           </DialogFooter>
         </DialogContent>
