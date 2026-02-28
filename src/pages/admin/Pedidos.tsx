@@ -324,27 +324,25 @@ const Pedidos = () => {
       await supabase.from("pedido_item").delete().eq("pedido_item_id", item.pedido_item_id);
     }
 
-    // Recalculate original order total
-    const remainingItems = items.filter(i => !selectedProductIds.includes(i.produto_id));
-    const remainingTotal = remainingItems.reduce((sum, i) => sum + Number(i.preco_unitario) * Number(i.quantidade), 0);
-    await supabase.from("pedido").update({ total: remainingTotal + freteNum }).eq("pedido_id", selectedPedido.pedido_id);
-
     // Update local items state to reflect remaining
+    const remainingItems = items.filter(i => !selectedProductIds.includes(i.produto_id));
     setItems(remainingItems);
 
     // Create conta a receber for the new split order
     const today = new Date().toISOString().slice(0, 10);
+    const splitItemNames = splitItems.map(i => i.produto?.nome || "Produto").join(", ");
+    const descricao = `Desmembrado: ${splitItemNames}`.slice(0, 200);
     await supabase.from("contas_receber").insert({
       pedido_id: newOrder.pedido_id,
       cliente_id: selectedPedido.cliente_id,
-      descricao: `Pedido ${newOrder.pedido_id.slice(0, 8)} (desmembrado)`,
+      descricao,
       valor: newOrderTotal,
       data_vencimento: today,
       recebido: false,
       data_recebimento: null,
     });
 
-    toast({ title: `Pedido desmembrado`, description: `Novo pedido ${newOrder.pedido_id.slice(0, 8)} criado com ${splitItems.length} item(ns)` });
+    toast({ title: `Pedido desmembrado`, description: `Novo pedido criado com ${splitItems.length} item(ns) — R$ ${newOrderTotal.toFixed(2)}` });
   };
 
   // Create contas_receber entry
@@ -748,10 +746,11 @@ const Pedidos = () => {
                 }
                 setLoading(true);
                 await splitOrder(selected);
-                // Recalculate original order total
+                // Recalculate original order total (splitOrder already removed items from state)
                 const remainingItems = items.filter(i => !selected.includes(i.produto_id));
                 const remainingTotal = remainingItems.reduce((sum, i) => sum + Number(i.preco_unitario) * Number(i.quantidade), 0);
-                await supabase.from("pedido").update({ total: remainingTotal + freteNum }).eq("pedido_id", selectedPedido!.pedido_id);
+                const newOriginalTotal = remainingTotal + freteNum;
+                await supabase.from("pedido").update({ total: newOriginalTotal }).eq("pedido_id", selectedPedido!.pedido_id);
                 // Keep order at aguardando_pagamento, don't go to payment form
                 setEditStatus(selectedPedido?.status || "aguardando_pagamento");
                 setStockCheckPassed(false);
