@@ -135,6 +135,7 @@ const Financeiro = () => {
   /* ═══════════════════════  CONTAS A RECEBER  ═══════════════════════ */
   const [receber, setReceber] = useState<ContaReceber[]>([]);
   const [searchReceber, setSearchReceber] = useState("");
+  const [statusFilterReceber, setStatusFilterReceber] = useState<"pendente" | "recebido" | "todos">("pendente");
   const [dialogReceber, setDialogReceber] = useState(false);
   const [editReceberId, setEditReceberId] = useState<string | null>(null);
   const [formReceber, setFormReceber] = useState(emptyReceber);
@@ -152,7 +153,9 @@ const Financeiro = () => {
 
   const filteredReceber = receber.filter((c) => {
     const t = searchReceber.toLowerCase();
-    return !t || c.descricao.toLowerCase().includes(t) || c.cliente?.nome?.toLowerCase().includes(t);
+    const matchSearch = !t || c.descricao.toLowerCase().includes(t) || c.cliente?.nome?.toLowerCase().includes(t);
+    const matchStatus = statusFilterReceber === "todos" || (statusFilterReceber === "recebido" ? c.recebido : !c.recebido);
+    return matchSearch && matchStatus;
   });
 
   const openNewReceber = () => { setEditReceberId(null); setFormReceber(emptyReceber); setDialogReceber(true); };
@@ -260,9 +263,19 @@ const Financeiro = () => {
         {/* ══════════ TAB RECEBER ══════════ */}
         <TabsContent value="receber" className="space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar..." value={searchReceber} onChange={(e) => setSearchReceber(e.target.value)} className="pl-10" />
+            <div className="flex flex-1 gap-2 items-center max-w-lg">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Buscar..." value={searchReceber} onChange={(e) => setSearchReceber(e.target.value)} className="pl-10" />
+              </div>
+              <Select value={statusFilterReceber} onValueChange={(v) => setStatusFilterReceber(v as any)}>
+                <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="recebido">Recebido</SelectItem>
+                  <SelectItem value="todos">Todos</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <Button onClick={openNewReceber} className="gap-2"><Plus className="h-4 w-4" /> Nova Conta</Button>
           </div>
