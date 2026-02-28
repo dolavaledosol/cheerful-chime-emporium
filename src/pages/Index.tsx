@@ -74,15 +74,15 @@ const Index = () => {
         const isChild = selectedFam?.familia_pai_id != null;
 
         if (isChild) {
-          // Subfamily selected — include both this subfamily and its parent
-          query = query.in("familia_id", [selectedFamilia, selectedFam.familia_pai_id!]);
+          // Subfamily selected — show only products of this subfamily
+          query = query.eq("familia_id", selectedFamilia);
         } else {
-          // Parent selected — include parent + all children
+          // Parent selected — show products from all children only (parent has no products itself)
           const childIds = familias
             .filter((f) => f.familia_pai_id === selectedFamilia)
             .map((f) => f.id);
           if (childIds.length > 0) {
-            query = query.in("familia_id", [selectedFamilia, ...childIds]);
+            query = query.in("familia_id", childIds);
           } else {
             query = query.eq("familia_id", selectedFamilia);
           }
