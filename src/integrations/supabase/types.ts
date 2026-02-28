@@ -719,6 +719,74 @@ export type Database = {
           },
         ]
       }
+      movimentacao_estoque: {
+        Row: {
+          created_at: string
+          documento: string | null
+          fornecedor_id: string | null
+          local_estoque_destino_id: string | null
+          local_estoque_id: string
+          movimentacao_estoque_id: string
+          observacao: string | null
+          produto_id: string
+          quantidade: number
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          documento?: string | null
+          fornecedor_id?: string | null
+          local_estoque_destino_id?: string | null
+          local_estoque_id: string
+          movimentacao_estoque_id?: string
+          observacao?: string | null
+          produto_id: string
+          quantidade?: number
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          documento?: string | null
+          fornecedor_id?: string | null
+          local_estoque_destino_id?: string | null
+          local_estoque_id?: string
+          movimentacao_estoque_id?: string
+          observacao?: string | null
+          produto_id?: string
+          quantidade?: number
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimentacao_estoque_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedor"
+            referencedColumns: ["fornecedor_id"]
+          },
+          {
+            foreignKeyName: "movimentacao_estoque_local_estoque_destino_id_fkey"
+            columns: ["local_estoque_destino_id"]
+            isOneToOne: false
+            referencedRelation: "local_estoque"
+            referencedColumns: ["local_estoque_id"]
+          },
+          {
+            foreignKeyName: "movimentacao_estoque_local_estoque_id_fkey"
+            columns: ["local_estoque_id"]
+            isOneToOne: false
+            referencedRelation: "local_estoque"
+            referencedColumns: ["local_estoque_id"]
+          },
+          {
+            foreignKeyName: "movimentacao_estoque_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produto"
+            referencedColumns: ["produto_id"]
+          },
+        ]
+      }
       pedido: {
         Row: {
           cliente_id: string
