@@ -183,7 +183,7 @@ const Pedidos = () => {
   const editIdx = statusOrder.indexOf(editStatus);
   const isGoingBack = editIdx !== -1 && currentIdx !== -1 && editIdx < currentIdx;
   const isAfterPago = currentIdx >= statusOrder.indexOf("pago");
-  const shouldDeletePayment = isGoingBack && editIdx <= statusOrder.indexOf("separacao") && currentIdx >= statusOrder.indexOf("aguardando_pagamento");
+  const shouldDeletePayment = isGoingBack && currentIdx >= statusOrder.indexOf("pago") && editIdx < statusOrder.indexOf("pago");
 
   const handleStatusClick = async (s: string) => {
     if (s === "cancelado") {
