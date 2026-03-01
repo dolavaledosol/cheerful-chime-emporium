@@ -26,6 +26,7 @@ import FormasPagamento from "./pages/admin/FormasPagamento";
 import Financeiro from "./pages/admin/Financeiro";
 import Configuracoes from "./pages/admin/Configuracoes";
 import Usuarios from "./pages/admin/Usuarios";
+import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/perfil" element={<Perfil />} />
               <Route path="/checkout" element={<Checkout />} />
+              <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
 
               {/* Admin routes */}
               <Route path="/admin" element={<AdminLayout><Dashboard /></AdminLayout>} />

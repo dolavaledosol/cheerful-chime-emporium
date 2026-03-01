@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import CatalogHeader from "@/components/catalog/CatalogHeader";
 import CatalogFilters from "@/components/catalog/CatalogFilters";
@@ -197,6 +198,14 @@ const Index = () => {
           </div>
         )}
       </main>
+
+      {/* Floating privacy policy button */}
+      <Link
+        to="/politica-de-privacidade"
+        className="fixed bottom-4 right-4 z-50 text-xs text-muted-foreground/60 hover:text-muted-foreground bg-background/80 backdrop-blur-sm border rounded-full px-3 py-1.5 shadow-sm transition-colors"
+      >
+        Política de Privacidade
+      </Link>
 
       <footer className="border-t py-6 text-center text-sm text-muted-foreground">
         © {new Date().getFullYear()} CozinhaDoDola — Todos os direitos reservados
