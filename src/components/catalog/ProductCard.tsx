@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ShoppingCart, Package, Weight } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ShoppingCart, Package, Weight, Share2 } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/use-toast";
 
@@ -49,6 +50,18 @@ const ProductCard = ({
     e?.stopPropagation();
     addItem({ produto_id, nome, preco, url_imagem });
     toast({ title: "Adicionado ao carrinho", description: nome });
+  };
+
+  const handleShare = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const url = `${window.location.origin}/?produto=${produto_id}`;
+    const shareData = { title: nome, text: `Confira: ${nome} - R$ ${preco.toFixed(2)}`, url };
+    if (navigator.share) {
+      try { await navigator.share(shareData); } catch {}
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link copiado!", description: nome });
+    }
   };
 
   const pesoStr = formatPeso(peso_liquido, unidade_medida) || formatPeso(peso_bruto, unidade_medida);
@@ -112,7 +125,19 @@ const ProductCard = ({
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{nome}</DialogTitle>
+            <div className="flex items-center justify-between pr-6">
+              <DialogTitle>{nome}</DialogTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={handleShare} className="shrink-0 h-8 w-8">
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Compartilhar produto</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </DialogHeader>
           <div className="space-y-4">
             {url_imagem && (

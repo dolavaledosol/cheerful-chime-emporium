@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ShoppingCart, User, Menu, Search } from "lucide-react";
+import { ShoppingCart, User, Menu, Search, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
@@ -47,6 +47,25 @@ const CatalogHeader = ({ search, onSearchChange }: CatalogHeaderProps) => {
           </div>
 
           <div className="flex items-center gap-1">
+            {/* Share catalog */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-sidebar-foreground hover:bg-sidebar-accent"
+              onClick={async () => {
+                const url = window.location.origin;
+                const shareData = { title: "CozinhaDoDola - Catálogo", text: "Confira nosso catálogo de produtos!", url };
+                if (navigator.share) {
+                  try { await navigator.share(shareData); } catch {}
+                } else {
+                  await navigator.clipboard.writeText(url);
+                  alert("Link copiado!");
+                }
+              }}
+            >
+              <Share2 className="h-5 w-5" />
+            </Button>
+
             {/* Cart */}
             <Sheet open={cartOpen} onOpenChange={setCartOpen}>
               <SheetTrigger asChild>
