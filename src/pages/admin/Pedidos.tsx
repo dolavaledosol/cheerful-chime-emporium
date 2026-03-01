@@ -184,7 +184,9 @@ const Pedidos = () => {
   const [newOrderClienteId, setNewOrderClienteId] = useState("");
   const [newOrderItems, setNewOrderItems] = useState<NovoPedidoItem[]>([]);
   const [newOrderObs, setNewOrderObs] = useState("");
-  const [clientes, setClientes] = useState<{ cliente_id: string; nome: string }[]>([]);
+  const [clientes, setClientes] = useState<{ cliente_id: string; nome: string; cpf_cnpj: string | null }[]>([]);
+  const [selectedClienteCpf, setSelectedClienteCpf] = useState("");
+  const [cpfCnpjError, setCpfCnpjError] = useState<string | null>(null);
   const [produtos, setProdutos] = useState<{ produto_id: string; nome: string; preco: number; fabricante_nome: string | null; peso_bruto: number | null; unidade_medida: string }[]>([]);
   const [newOrderSearch, setNewOrderSearch] = useState("");
   const [clienteSearch, setClienteSearch] = useState("");
@@ -534,6 +536,7 @@ const Pedidos = () => {
       .from("pedido")
       .insert({
         cliente_id: selectedPedido.cliente_id,
+        data: new Date().toISOString(),
         local_estoque_id: selectedPedido.local_estoque_id,
         total: newOrderTotal,
         frete: 0,
@@ -742,6 +745,8 @@ const Pedidos = () => {
     setNewClientNome("");
     setNewClientCpf("");
     setNewClientEmail("");
+    setSelectedClienteCpf("");
+    setCpfCnpjError(null);
     setNewOrderTipoEntrega("retirada");
     setNewOrderLocalEstoqueId("");
     setClienteEnderecos([]);
@@ -750,7 +755,7 @@ const Pedidos = () => {
     setNewEndereco({ cep: "", logradouro: "", numero: "", bairro: "", cidade: "", estado: "", complemento: "" });
 
     const [cRes, pRes, leRes] = await Promise.all([
-      supabase.from("cliente").select("cliente_id, nome").eq("ativo", true).order("nome"),
+      supabase.from("cliente").select("cliente_id, nome, cpf_cnpj").eq("ativo", true).order("nome"),
       supabase.from("produto").select("produto_id, nome, preco, peso_bruto, unidade_medida, fabricante:fabricante_id(nome)").eq("ativo", true).order("nome"),
       supabase.from("local_estoque").select("local_estoque_id, nome").eq("ativo", true).order("nome"),
     ]);
@@ -835,17 +840,40 @@ const Pedidos = () => {
       return;
     }
 
+    // Validate CPF/CNPJ
+    if (showNewClient) {
+      if (!newClientCpf) {
+        setCpfCnpjError("CPF/CNPJ é obrigatório");
+        toast({ title: "Informe o CPF/CNPJ do cliente", variant: "destructive" });
+        return;
+      }
+      if (!validateCpfCnpj(newClientCpf)) {
+        setCpfCnpjError("CPF/CNPJ inválido");
+        toast({ title: "CPF/CNPJ inválido", description: "Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido", variant: "destructive" });
+        return;
+      }
+    } else if (newOrderClienteId && newOrderClienteId !== "__none") {
+      const cliente = clientes.find(c => c.cliente_id === newOrderClienteId);
+      if (!cliente?.cpf_cnpj) {
+        if (!selectedClienteCpf) {
+          setCpfCnpjError("CPF/CNPJ é obrigatório");
+          toast({ title: "Informe o CPF/CNPJ do cliente", variant: "destructive" });
+          return;
+        }
+        if (!validateCpfCnpj(selectedClienteCpf)) {
+          setCpfCnpjError("CPF/CNPJ inválido");
+          toast({ title: "CPF/CNPJ inválido", description: "Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido", variant: "destructive" });
+          return;
+        }
+      }
+    }
+
     setNewOrderSaving(true);
 
     let clienteId = newOrderClienteId === "__none" ? "" : newOrderClienteId;
 
     // Create new client inline if needed
     if (showNewClient && newClientNome) {
-      if (newClientCpf && !validateCpfCnpj(newClientCpf)) {
-        toast({ title: "CPF/CNPJ inválido", description: "Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido", variant: "destructive" });
-        setNewOrderSaving(false);
-        return;
-      }
       const { data: newCliente, error: clienteError } = await supabase
         .from("cliente")
         .insert({ nome: newClientNome, cpf_cnpj: newClientCpf || null, email: newClientEmail || null })
@@ -857,6 +885,14 @@ const Pedidos = () => {
         return;
       }
       clienteId = newCliente.cliente_id;
+    }
+
+    // Update CPF for existing client if it was missing
+    if (!showNewClient && clienteId) {
+      const cliente = clientes.find(c => c.cliente_id === clienteId);
+      if (!cliente?.cpf_cnpj && selectedClienteCpf) {
+        await supabase.from("cliente").update({ cpf_cnpj: selectedClienteCpf }).eq("cliente_id", clienteId);
+      }
     }
 
     // If no client selected, reuse existing "Consumidor Final" or create one
@@ -913,6 +949,7 @@ const Pedidos = () => {
       .from("pedido")
       .insert({
         cliente_id: clienteId,
+        data: new Date().toISOString(),
         total: newOrderTotal,
         frete: 0,
         status: "separacao" as any,
@@ -1549,7 +1586,7 @@ const Pedidos = () => {
                         <button
                           type="button"
                           className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors text-muted-foreground"
-                          onClick={() => { setNewOrderClienteId("__none"); setClienteSearch(""); setClienteDropdownOpen(false); setClienteEnderecos([]); }}
+                          onClick={() => { setNewOrderClienteId("__none"); setClienteSearch(""); setClienteDropdownOpen(false); setClienteEnderecos([]); setSelectedClienteCpf(""); setCpfCnpjError(null); }}
                         >
                           Sem cliente (Consumidor Final)
                         </button>
@@ -1558,7 +1595,7 @@ const Pedidos = () => {
                             key={c.cliente_id}
                             type="button"
                             className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors"
-                            onClick={() => { setNewOrderClienteId(c.cliente_id); setClienteSearch(""); setClienteDropdownOpen(false); loadClienteEnderecos(c.cliente_id); setNewOrderEnderecoId(""); setShowNewEndereco(false); }}
+                            onClick={() => { setNewOrderClienteId(c.cliente_id); setClienteSearch(""); setClienteDropdownOpen(false); loadClienteEnderecos(c.cliente_id); setNewOrderEnderecoId(""); setShowNewEndereco(false); setSelectedClienteCpf(c.cpf_cnpj || ""); setCpfCnpjError(null); }}
                           >
                             {c.nome}
                           </button>
@@ -1580,15 +1617,35 @@ const Pedidos = () => {
                   <div className="space-y-2">
                     <Input placeholder="Nome *" value={newClientNome} onChange={e => setNewClientNome(e.target.value)} />
                     <div className="grid grid-cols-2 gap-2">
-                      <Input placeholder="CPF/CNPJ" value={newClientCpf} onChange={e => setNewClientCpf(e.target.value)} />
+                      <Input placeholder="CPF/CNPJ *" value={newClientCpf} onChange={e => { setNewClientCpf(e.target.value.replace(/\D/g, "").slice(0, 14)); setCpfCnpjError(null); }} className={cpfCnpjError && showNewClient ? "border-destructive" : ""} />
                       <Input placeholder="Email" value={newClientEmail} onChange={e => setNewClientEmail(e.target.value)} />
                     </div>
+                    {cpfCnpjError && showNewClient && <p className="text-sm text-destructive">{cpfCnpjError}</p>}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Delivery type */}
+            {/* CPF/CNPJ - show when existing client has no CPF or for "Consumidor Final" */}
+            {!showNewClient && newOrderClienteId && newOrderClienteId !== "__none" && !clientes.find(c => c.cliente_id === newOrderClienteId)?.cpf_cnpj && (
+              <div className="space-y-2">
+                <Label>CPF/CNPJ do cliente *</Label>
+                <Input
+                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                  value={selectedClienteCpf}
+                  onChange={e => {
+                    const digits = e.target.value.replace(/\D/g, "").slice(0, 14);
+                    setSelectedClienteCpf(digits);
+                    setCpfCnpjError(null);
+                  }}
+                  className={cpfCnpjError ? "border-destructive" : ""}
+                />
+                {cpfCnpjError && <p className="text-sm text-destructive">{cpfCnpjError}</p>}
+                <p className="text-xs text-muted-foreground">Cliente selecionado não possui CPF/CNPJ cadastrado</p>
+              </div>
+            )}
+
+
             <div className="space-y-2">
               <Label>Tipo de Entrega</Label>
               <div className="flex gap-2">

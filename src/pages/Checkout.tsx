@@ -204,7 +204,7 @@ const Checkout = () => {
         observacao = `Entrega — frete sem compromisso, será calculado e informado posteriormente. Endereço: ${endStr}`;
       } else { observacao = `Retirada — local será definido na separação`; }
 
-      const { data: pedido, error: pErr } = await supabase.from("pedido").insert({ cliente_id: cId!, total, status: "separacao", origem: "web", local_estoque_id: null, observacao }).select("pedido_id").single();
+      const { data: pedido, error: pErr } = await supabase.from("pedido").insert({ cliente_id: cId!, data: new Date().toISOString(), total, status: "separacao", origem: "web", local_estoque_id: null, observacao }).select("pedido_id").single();
       if (pErr) throw pErr;
 
       const pedidoItems = items.map((item) => ({ pedido_id: pedido!.pedido_id, produto_id: item.produto_id, quantidade: item.quantidade, preco_unitario: item.preco }));
