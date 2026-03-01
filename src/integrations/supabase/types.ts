@@ -927,7 +927,7 @@ export type Database = {
         Insert: {
           cliente_id: string
           created_at?: string
-          data?: string
+          data: string
           frete?: number
           local_estoque_id?: string | null
           observacao?: string | null
