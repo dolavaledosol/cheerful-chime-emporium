@@ -16,14 +16,15 @@ import { format } from "date-fns";
 interface Fornecedor { fornecedor_id: string; nome: string; }
 interface Cliente { cliente_id: string; nome: string; }
 interface Banco { banco_id: string; nome: string; }
+interface FormaPagamento { forma_pagamento_id: string; nome: string; }
 
 
 interface ContaPagar {
   contas_pagar_id: string; descricao: string; valor: number;
   data_vencimento: string; data_pagamento: string | null;
   pago: boolean; observacao: string | null;
-  fornecedor_id: string | null; banco_id: string | null;
-  fornecedor: { nome: string } | null; banco: { nome: string } | null;
+  fornecedor_id: string | null; banco_id: string | null; forma_pagamento_id: string | null;
+  fornecedor: { nome: string } | null; banco: { nome: string } | null; forma_pagamento: { nome: string } | null;
 }
 
 interface ContaReceber {
@@ -39,7 +40,7 @@ interface ContaReceber {
 /* ── Empty forms ── */
 const emptyPagar = {
   descricao: "", valor: "", data_vencimento: "", data_pagamento: "",
-  pago: false, observacao: "", fornecedor_id: "", banco_id: "",
+  pago: false, observacao: "", fornecedor_id: "", banco_id: "", forma_pagamento_id: "",
 };
 const emptyReceber = {
   descricao: "", valor: "", data_vencimento: "", data_recebimento: "",
@@ -53,16 +54,19 @@ const Financeiro = () => {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [bancos, setBancos] = useState<Banco[]>([]);
+  const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
 
   useEffect(() => {
     Promise.all([
       supabase.from("fornecedor").select("fornecedor_id, nome").eq("ativo", true).order("nome"),
       supabase.from("cliente").select("cliente_id, nome").eq("ativo", true).order("nome"),
       supabase.from("banco").select("banco_id, nome").eq("ativo", true).order("nome"),
-    ]).then(([f, c, b]) => {
+      supabase.from("forma_pagamento").select("forma_pagamento_id, nome").eq("ativo", true).order("nome"),
+    ]).then(([f, c, b, fp]) => {
       if (f.data) setFornecedores(f.data);
       if (c.data) setClientes(c.data);
       if (b.data) setBancos(b.data);
+      if (fp.data) setFormasPagamento(fp.data);
     });
   }, []);
 
@@ -77,7 +81,7 @@ const Financeiro = () => {
   const loadPagar = async () => {
     const { data } = await supabase
       .from("contas_pagar")
-      .select("*, fornecedor(nome), banco(nome)")
+      .select("*, fornecedor(nome), banco(nome), forma_pagamento(nome)")
       .order("data_vencimento", { ascending: false });
     if (data) setPagar(data as any);
   };
@@ -95,7 +99,7 @@ const Financeiro = () => {
     setFormPagar({
       descricao: c.descricao, valor: String(c.valor), data_vencimento: c.data_vencimento,
       data_pagamento: c.data_pagamento || "", pago: c.pago, observacao: c.observacao || "",
-      fornecedor_id: c.fornecedor_id || "", banco_id: c.banco_id || "",
+      fornecedor_id: c.fornecedor_id || "", banco_id: c.banco_id || "", forma_pagamento_id: c.forma_pagamento_id || "",
     });
     setDialogPagar(true);
   };
@@ -109,10 +113,11 @@ const Financeiro = () => {
       pago: formPagar.pago, observacao: formPagar.observacao || null,
       fornecedor_id: formPagar.fornecedor_id || null,
       banco_id: formPagar.banco_id || null,
+      forma_pagamento_id: formPagar.forma_pagamento_id || null,
     };
     const { error } = editPagarId
-      ? await supabase.from("contas_pagar").update(payload).eq("contas_pagar_id", editPagarId)
-      : await supabase.from("contas_pagar").insert(payload);
+      ? await supabase.from("contas_pagar").update(payload).eq("contas_pagar_id", editPagarId).select()
+      : await supabase.from("contas_pagar").insert(payload).select();
     setLoadingPagar(false);
     if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
     toast({ title: editPagarId ? "Conta atualizada" : "Conta criada" });
@@ -171,7 +176,7 @@ const Financeiro = () => {
     setReceber(data.map((d: any) => ({
       ...d,
       _forma: pagMap[d.pedido_id]?.forma || "—",
-      _banco_pag: pagMap[d.pedido_id]?.banco || d.banco?.nome || "—",
+      _banco_pag: d.banco?.nome || pagMap[d.pedido_id]?.banco || "—",
     })) as any);
   };
 
@@ -254,24 +259,26 @@ const Financeiro = () => {
           <div className="border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead className="hidden sm:table-cell">Fornecedor</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-28">Ações</TableHead>
-                </TableRow>
+                 <TableRow>
+                   <TableHead>Descrição</TableHead>
+                   <TableHead className="hidden sm:table-cell">Fornecedor</TableHead>
+                   <TableHead>Vencimento</TableHead>
+                   <TableHead className="hidden md:table-cell">Forma</TableHead>
+                   <TableHead>Valor</TableHead>
+                   <TableHead>Status</TableHead>
+                   <TableHead className="w-28">Ações</TableHead>
+                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPagar.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
-                ) : filteredPagar.map((c) => (
+                   <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
+                 ) : filteredPagar.map((c) => (
                   <TableRow key={c.contas_pagar_id}>
                     <TableCell className="font-medium">{c.descricao}</TableCell>
                     <TableCell className="hidden sm:table-cell text-muted-foreground">{c.fornecedor?.nome || "—"}</TableCell>
-                    <TableCell>{fmtDate(c.data_vencimento)}</TableCell>
-                    <TableCell>{fmtMoney(c.valor)}</TableCell>
+                     <TableCell>{fmtDate(c.data_vencimento)}</TableCell>
+                     <TableCell className="hidden md:table-cell text-muted-foreground">{c.forma_pagamento?.nome || "—"}</TableCell>
+                     <TableCell>{fmtMoney(c.valor)}</TableCell>
                     <TableCell>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${c.pago ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
                         {c.pago ? "Pago" : "Pendente"}
@@ -383,6 +390,16 @@ const Financeiro = () => {
                   <SelectContent>{bancos.map((b) => <SelectItem key={b.banco_id} value={b.banco_id}>{b.nome}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Forma Pagamento</Label>
+                <Select value={formPagar.forma_pagamento_id} onValueChange={(v) => setFormPagar({ ...formPagar, forma_pagamento_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>{formasPagamento.map((fp) => <SelectItem key={fp.forma_pagamento_id} value={fp.forma_pagamento_id}>{fp.nome}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Data Pagamento</Label><Input type="date" value={formPagar.data_pagamento} onChange={(e) => setFormPagar({ ...formPagar, data_pagamento: e.target.value })} /></div>

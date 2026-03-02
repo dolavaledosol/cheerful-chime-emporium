@@ -1,0 +1,1 @@
+ALTER TABLE public.contas_pagar ADD COLUMN forma_pagamento_id uuid REFERENCES public.forma_pagamento(forma_pagamento_id) DEFAULT NULL;

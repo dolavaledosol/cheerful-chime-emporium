@@ -324,6 +324,7 @@ export type Database = {
           data_pagamento: string | null
           data_vencimento: string
           descricao: string
+          forma_pagamento_id: string | null
           fornecedor_id: string | null
           observacao: string | null
           pago: boolean
@@ -336,6 +337,7 @@ export type Database = {
           data_pagamento?: string | null
           data_vencimento: string
           descricao: string
+          forma_pagamento_id?: string | null
           fornecedor_id?: string | null
           observacao?: string | null
           pago?: boolean
@@ -348,6 +350,7 @@ export type Database = {
           data_pagamento?: string | null
           data_vencimento?: string
           descricao?: string
+          forma_pagamento_id?: string | null
           fornecedor_id?: string | null
           observacao?: string | null
           pago?: boolean
@@ -360,6 +363,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "banco"
             referencedColumns: ["banco_id"]
+          },
+          {
+            foreignKeyName: "contas_pagar_forma_pagamento_id_fkey"
+            columns: ["forma_pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "forma_pagamento"
+            referencedColumns: ["forma_pagamento_id"]
           },
           {
             foreignKeyName: "contas_pagar_fornecedor_id_fkey"
