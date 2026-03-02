@@ -12,6 +12,7 @@ import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 
 interface Cliente {
   cliente_id: string;
+  clientewhats_id: number | null;
   nome: string;
   cpf_cnpj: string | null;
   email: string | null;
@@ -137,6 +138,7 @@ const Clientes = () => {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-20">Código</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead className="hidden md:table-cell">CPF/CNPJ</TableHead>
               <TableHead className="hidden md:table-cell">Email</TableHead>
@@ -147,9 +149,10 @@ const Clientes = () => {
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum cliente encontrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum cliente encontrado</TableCell></TableRow>
             ) : filtered.map((c) => (
               <TableRow key={c.cliente_id}>
+                <TableCell className="text-muted-foreground">{c.clientewhats_id || "—"}</TableCell>
                 <TableCell className="font-medium">{c.nome}</TableCell>
                 <TableCell className="hidden md:table-cell text-muted-foreground">{c.cpf_cnpj || "—"}</TableCell>
                 <TableCell className="hidden md:table-cell text-muted-foreground">{c.email || "—"}</TableCell>
