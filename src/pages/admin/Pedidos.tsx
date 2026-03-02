@@ -178,6 +178,9 @@ const Pedidos = () => {
   const [allowNegativeStock, setAllowNegativeStock] = useState(false);
   const [stockCheckPassed, setStockCheckPassed] = useState(false);
   const [splitSelectedItems, setSplitSelectedItems] = useState<Record<string, boolean>>({});
+  const [splitMode, setSplitMode] = useState(false);
+  const [splitSelectedDetail, setSplitSelectedDetail] = useState<Record<string, boolean>>({});
+  const [splitLoading, setSplitLoading] = useState(false);
 
   // New order dialog
   const [newOrderOpen, setNewOrderOpen] = useState(false);
@@ -412,6 +415,9 @@ const Pedidos = () => {
     setStockCheckPassed(false);
     setSplitSelectedItems({});
     setStockDialogOpen(false);
+    setSplitMode(false);
+    setSplitSelectedDetail({});
+    setSplitLoading(false);
     const [itemsRes, histRes] = await Promise.all([
       supabase
         .from("pedido_item")
@@ -1359,10 +1365,23 @@ const Pedidos = () => {
 
               <div className="border rounded-lg overflow-hidden">
                 <Table>
-                  <TableHeader><TableRow><TableHead>Produto</TableHead><TableHead>Qtd</TableHead><TableHead>Preço</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow>
+                    {splitMode && <TableHead className="w-8"></TableHead>}
+                    <TableHead>Produto</TableHead><TableHead>Qtd</TableHead><TableHead>Preço</TableHead>
+                  </TableRow></TableHeader>
                   <TableBody>
                     {items.map((i) => (
                       <TableRow key={i.pedido_item_id}>
+                        {splitMode && (
+                          <TableCell>
+                            <Checkbox
+                              checked={!!splitSelectedDetail[i.pedido_item_id]}
+                              onCheckedChange={(checked) =>
+                                setSplitSelectedDetail(prev => ({ ...prev, [i.pedido_item_id]: !!checked }))
+                              }
+                            />
+                          </TableCell>
+                        )}
                         <TableCell className="text-sm">{i.produto?.nome || "—"}</TableCell>
                         <TableCell>{i.quantidade}</TableCell>
                         <TableCell>R$ {Number(i.preco_unitario).toFixed(2)}</TableCell>
@@ -1371,6 +1390,56 @@ const Pedidos = () => {
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Split order controls for separação */}
+              {selectedPedido.status === "separacao" && items.length > 1 && (
+                <div className="space-y-2">
+                  {!splitMode ? (
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setSplitMode(true); setSplitSelectedDetail({}); }}>
+                      <Split className="h-4 w-4" /> Desmembrar Pedido
+                    </Button>
+                  ) : (
+                    <div className="border rounded-lg p-3 bg-muted/30 space-y-2">
+                      <p className="text-sm text-muted-foreground">Marque os itens que <strong>ficam neste pedido</strong>. Os desmarcados irão para um novo pedido.</p>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setSplitMode(false)}>Cancelar</Button>
+                        <Button
+                          size="sm"
+                          disabled={splitLoading}
+                          onClick={async () => {
+                            const selectedIds = Object.keys(splitSelectedDetail).filter(k => splitSelectedDetail[k]);
+                            const unselectedItems = items.filter(i => !splitSelectedDetail[i.pedido_item_id]);
+                            if (unselectedItems.length === 0) {
+                              toast({ title: "Desmarque ao menos um item para desmembrar", variant: "destructive" });
+                              return;
+                            }
+                            if (selectedIds.length === 0) {
+                              toast({ title: "Marque ao menos um item para ficar neste pedido", variant: "destructive" });
+                              return;
+                            }
+                            setSplitLoading(true);
+                            // Create new order with unselected items
+                            const unselectedProductIds = unselectedItems.map(i => i.produto_id);
+                            await splitOrder(unselectedProductIds);
+                            // Update original order total
+                            const remainingItems = items.filter(i => splitSelectedDetail[i.pedido_item_id]);
+                            const remainingTotal = remainingItems.reduce((sum, i) => sum + Number(i.preco_unitario) * Number(i.quantidade), 0);
+                            const newTotal = remainingTotal + freteNum;
+                            await supabase.from("pedido").update({ total: newTotal }).eq("pedido_id", selectedPedido!.pedido_id);
+                            setSplitMode(false);
+                            setSplitLoading(false);
+                            setDialogOpen(false);
+                            load();
+                          }}
+                        >
+                          <Split className="h-4 w-4 mr-1" />
+                          {splitLoading ? "Desmembrando..." : `Desmembrar (${items.filter(i => !splitSelectedDetail[i.pedido_item_id]).length} itens)`}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {historico.length > 0 && (
                 <div className="space-y-2">
