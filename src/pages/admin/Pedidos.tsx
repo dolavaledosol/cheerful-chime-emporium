@@ -532,10 +532,14 @@ const Pedidos = () => {
     }
   };
 
-  const splitOrder = async (selectedProductIds: string[]) => {
-    if (!selectedPedido || selectedProductIds.length === 0) return;
+  const splitOrder = async (itemIdsToSplit: string[], byField: "produto_id" | "pedido_item_id" = "produto_id") => {
+    if (!selectedPedido || itemIdsToSplit.length === 0) return;
 
-    const splitItems = items.filter(i => selectedProductIds.includes(i.produto_id));
+    const splitItems = items.filter(i => byField === "produto_id" 
+      ? itemIdsToSplit.includes(i.produto_id) 
+      : itemIdsToSplit.includes(i.pedido_item_id));
+    if (splitItems.length === 0) return;
+    
     const newOrderTotal = splitItems.reduce((sum, i) => sum + Number(i.preco_unitario) * Number(i.quantidade), 0);
 
     const { data: newOrder, error: orderError } = await supabase
@@ -549,6 +553,7 @@ const Pedidos = () => {
         status: "separacao" as any,
         origem: selectedPedido.origem as any,
         observacao: `Desmembrado do pedido ${selectedPedido.pedido_id.slice(0, 8)}`,
+        vendedor_id: selectedPedido.vendedor_id,
       })
       .select("pedido_id")
       .single();
@@ -575,7 +580,7 @@ const Pedidos = () => {
       await supabase.from("pedido_item").delete().eq("pedido_item_id", item.pedido_item_id);
     }
 
-    const remainingItems = items.filter(i => !selectedProductIds.includes(i.produto_id));
+    const remainingItems = items.filter(i => !splitItems.some(s => s.pedido_item_id === i.pedido_item_id));
     setItems(remainingItems);
 
     toast({ title: `Pedido desmembrado`, description: `Novo pedido criado com ${splitItems.length} item(ns) — R$ ${newOrderTotal.toFixed(2)}` });
@@ -1418,9 +1423,9 @@ const Pedidos = () => {
                               return;
                             }
                             setSplitLoading(true);
-                            // Create new order with unselected items
-                            const unselectedProductIds = unselectedItems.map(i => i.produto_id);
-                            await splitOrder(unselectedProductIds);
+                            // Create new order with unselected items (by pedido_item_id)
+                            const unselectedItemIds = unselectedItems.map(i => i.pedido_item_id);
+                            await splitOrder(unselectedItemIds, "pedido_item_id");
                             // Update original order total
                             const remainingItems = items.filter(i => splitSelectedDetail[i.pedido_item_id]);
                             const remainingTotal = remainingItems.reduce((sum, i) => sum + Number(i.preco_unitario) * Number(i.quantidade), 0);
