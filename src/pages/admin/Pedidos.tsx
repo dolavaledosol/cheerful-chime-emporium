@@ -1184,15 +1184,15 @@ const Pedidos = () => {
 
     // Website
     ctx.textAlign = "center";
-    ctx.font = "bold 14px sans-serif";
+    ctx.font = "bold 16px sans-serif";
     ctx.fillStyle = "#5D4037";
-    ctx.fillText("🌐  www.cozinhadodola.com.br", w / 2, y);
-    y += 24;
+    ctx.fillText("www.cozinhadodola.com.br", w / 2, y);
+    y += 28;
 
     // Instagram
-    ctx.font = "14px sans-serif";
+    ctx.font = "bold 15px sans-serif";
     ctx.fillStyle = "#8D6E63";
-    ctx.fillText("📷  @cozinhadodola", w / 2, y);
+    ctx.fillText("Instagram: @cozinhadodola", w / 2, y);
     y += 30;
 
     // Bottom accent bar
