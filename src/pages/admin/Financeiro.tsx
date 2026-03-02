@@ -206,9 +206,14 @@ const Financeiro = () => {
       banco_id: formReceber.banco_id || null,
       pedido_id: formReceber.pedido_id || null,
     };
-    const { error } = editReceberId
-      ? await supabase.from("contas_receber").update(payload).eq("contas_receber_id", editReceberId)
-      : await supabase.from("contas_receber").insert(payload);
+    const { error, data: savedData } = editReceberId
+      ? await supabase.from("contas_receber").update(payload).eq("contas_receber_id", editReceberId).select()
+      : await supabase.from("contas_receber").insert(payload).select();
+    if (!error && editReceberId && (!savedData || savedData.length === 0)) {
+      setLoadingReceber(false);
+      toast({ title: "Erro", description: "Nenhum registro foi atualizado. Verifique suas permissões.", variant: "destructive" });
+      return;
+    }
     setLoadingReceber(false);
     if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
     toast({ title: editReceberId ? "Conta atualizada" : "Conta criada" });
