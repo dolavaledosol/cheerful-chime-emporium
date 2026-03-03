@@ -122,21 +122,26 @@ const ProductCard = ({
             </p>
           )}
           <div className="flex items-center justify-between gap-2">
-            <span className="text-lg font-bold text-primary">
-              R$ {preco.toFixed(2)}
-            </span>
-            <div className="flex items-center gap-1">
-              {aceita_fracionado && (
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0.1"
-                  value={quantidade}
-                  onChange={(e) => { e.stopPropagation(); setQuantidade(e.target.value); }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-14 h-8 text-center text-sm border rounded-md bg-background"
-                />
+            <div className="flex flex-col">
+              <span className="text-lg font-bold text-primary">
+                R$ {(preco * parseFloat(quantidade || "1")).toFixed(2)}
+              </span>
+              {parseFloat(quantidade) !== 1 && (
+                <span className="text-[10px] text-muted-foreground">
+                  R$ {preco.toFixed(2)} / {unidadeLabels[unidade_medida] || unidade_medida}
+                </span>
               )}
+            </div>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                step={aceita_fracionado ? "0.1" : "1"}
+                min={aceita_fracionado ? "0.1" : "1"}
+                value={quantidade}
+                onChange={(e) => { e.stopPropagation(); setQuantidade(e.target.value); }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-14 h-8 text-center text-sm border rounded-md bg-background"
+              />
               <Button size="sm" onClick={handleAdd} className="gap-1.5 shrink-0">
                 <ShoppingCart className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Adicionar</span>
@@ -202,20 +207,25 @@ const ProductCard = ({
             )}
 
             <div className="flex items-center justify-between pt-2 border-t">
-              <span className="text-2xl font-bold text-primary">
-                R$ {preco.toFixed(2)}
-              </span>
-              <div className="flex items-center gap-2">
-                {aceita_fracionado && (
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    value={quantidade}
-                    onChange={(e) => setQuantidade(e.target.value)}
-                    className="w-16 h-9 text-center text-sm border rounded-md bg-background"
-                  />
+              <div className="flex flex-col">
+                <span className="text-2xl font-bold text-primary">
+                  R$ {(preco * parseFloat(quantidade || "1")).toFixed(2)}
+                </span>
+                {parseFloat(quantidade) !== 1 && (
+                  <span className="text-xs text-muted-foreground">
+                    R$ {preco.toFixed(2)} / {unidadeLabels[unidade_medida] || unidade_medida}
+                  </span>
                 )}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  step={aceita_fracionado ? "0.1" : "1"}
+                  min={aceita_fracionado ? "0.1" : "1"}
+                  value={quantidade}
+                  onChange={(e) => setQuantidade(e.target.value)}
+                  className="w-16 h-9 text-center text-sm border rounded-md bg-background"
+                />
                 <Button onClick={() => { handleAdd(); setDetailOpen(false); }} className="gap-2">
                   <ShoppingCart className="h-4 w-4" />
                   Adicionar

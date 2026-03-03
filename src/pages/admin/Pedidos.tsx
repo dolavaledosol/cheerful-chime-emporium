@@ -1950,7 +1950,7 @@ const Pedidos = () => {
                           )}
                         </span>
                       </div>
-                      <span className="text-muted-foreground whitespace-nowrap">R$ {p.preco.toFixed(2)}</span>
+                      <span className="text-muted-foreground whitespace-nowrap">R$ {p.preco.toFixed(2)} {p.quantidade_default !== 1 && `(qtd: ${p.quantidade_default})`}</span>
                     </button>
                   ))}
                   {filteredProdutos.length === 0 && <p className="text-sm text-muted-foreground p-3">Nenhum produto encontrado</p>}
