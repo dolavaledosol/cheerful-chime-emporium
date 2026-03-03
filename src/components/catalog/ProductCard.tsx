@@ -109,9 +109,14 @@ const ProductCard = ({
           <h3 className="font-medium text-sm leading-tight line-clamp-2 min-h-[2.5rem]">
             {nome}
           </h3>
-          {pesoStr && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Weight className="h-3 w-3" /> {pesoStr}
+          {(pesoStr || aceita_fracionado) && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
+              {pesoStr && <><Weight className="h-3 w-3" /> {pesoStr}</>}
+              {aceita_fracionado && (
+                <span className="text-[10px] uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded font-medium">
+                  Fracionado
+                </span>
+              )}
             </p>
           )}
           <div className="flex items-center justify-between gap-2">
@@ -183,9 +188,14 @@ const ProductCard = ({
               <p className="text-sm text-muted-foreground leading-relaxed">{descricao}</p>
             )}
 
-            {pesoStr && (
-              <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                <Weight className="h-4 w-4" /> Peso: {pesoStr}
+            {(pesoStr || aceita_fracionado) && (
+              <p className="text-sm text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                {pesoStr && <><Weight className="h-4 w-4" /> Peso: {pesoStr}</>}
+                {aceita_fracionado && (
+                  <span className="text-xs uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded font-medium">
+                    Fracionado
+                  </span>
+                )}
               </p>
             )}
 
