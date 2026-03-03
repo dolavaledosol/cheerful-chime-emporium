@@ -8,13 +8,14 @@ interface CartItem {
   preco: number;
   quantidade: number;
   url_imagem?: string;
+  aceita_fracionado?: boolean;
 }
 
 interface CartContextType {
   items: CartItem[];
   count: number;
   total: number;
-  addItem: (item: Omit<CartItem, "quantidade">) => void;
+  addItem: (item: Omit<CartItem, "quantidade">, quantidade?: number) => void;
   removeItem: (produto_id: string) => void;
   updateQuantity: (produto_id: string, quantidade: number) => void;
   clearCart: () => void;
@@ -46,17 +47,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   }, [items]);
 
-  const addItem = useCallback((item: Omit<CartItem, "quantidade">) => {
+  const addItem = useCallback((item: Omit<CartItem, "quantidade">, quantidade: number = 1) => {
     setItems((prev) => {
       const existing = prev.find((i) => i.produto_id === item.produto_id);
       if (existing) {
         return prev.map((i) =>
           i.produto_id === item.produto_id
-            ? { ...i, quantidade: i.quantidade + 1 }
+            ? { ...i, quantidade: i.quantidade + quantidade }
             : i
         );
       }
-      return [...prev, { ...item, quantidade: 1 }];
+      return [...prev, { ...item, quantidade }];
     });
   }, []);
 
@@ -65,12 +66,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const updateQuantity = useCallback((produto_id: string, quantidade: number) => {
-    if (quantidade <= 0) {
+    const rounded = Math.round(quantidade * 10) / 10;
+    if (rounded <= 0) {
       setItems((prev) => prev.filter((i) => i.produto_id !== produto_id));
       return;
     }
     setItems((prev) =>
-      prev.map((i) => (i.produto_id === produto_id ? { ...i, quantidade } : i))
+      prev.map((i) => (i.produto_id === produto_id ? { ...i, quantidade: rounded } : i))
     );
   }, []);
 

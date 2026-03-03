@@ -18,6 +18,7 @@ interface ProductCardProps {
   peso_bruto?: number;
   peso_liquido?: number;
   unidade_medida?: string;
+  aceita_fracionado?: boolean;
 }
 
 const unidadeLabels: Record<string, string> = {
@@ -41,15 +42,19 @@ const ProductCard = ({
   peso_bruto,
   peso_liquido,
   unidade_medida = "un",
+  aceita_fracionado = false,
 }: ProductCardProps) => {
   const { addItem } = useCart();
   const { toast } = useToast();
   const [detailOpen, setDetailOpen] = useState(false);
+  const [quantidade, setQuantidade] = useState(aceita_fracionado ? "0.5" : "1");
 
   const handleAdd = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    addItem({ produto_id, nome, preco, url_imagem });
-    toast({ title: "Adicionado ao carrinho", description: nome });
+    const qty = parseFloat(quantidade);
+    if (isNaN(qty) || qty <= 0) return;
+    addItem({ produto_id, nome, preco, url_imagem, aceita_fracionado }, qty);
+    toast({ title: "Adicionado ao carrinho", description: `${qty} × ${nome}` });
   };
 
   const handleShare = async (e?: React.MouseEvent) => {
@@ -113,10 +118,23 @@ const ProductCard = ({
             <span className="text-lg font-bold text-primary">
               R$ {preco.toFixed(2)}
             </span>
-            <Button size="sm" onClick={handleAdd} className="gap-1.5 shrink-0">
-              <ShoppingCart className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Adicionar</span>
-            </Button>
+            <div className="flex items-center gap-1">
+              {aceita_fracionado && (
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0.1"
+                  value={quantidade}
+                  onChange={(e) => { e.stopPropagation(); setQuantidade(e.target.value); }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-14 h-8 text-center text-sm border rounded-md bg-background"
+                />
+              )}
+              <Button size="sm" onClick={handleAdd} className="gap-1.5 shrink-0">
+                <ShoppingCart className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Adicionar</span>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -175,10 +193,22 @@ const ProductCard = ({
               <span className="text-2xl font-bold text-primary">
                 R$ {preco.toFixed(2)}
               </span>
-              <Button onClick={() => { handleAdd(); setDetailOpen(false); }} className="gap-2">
-                <ShoppingCart className="h-4 w-4" />
-                Adicionar ao carrinho
-              </Button>
+              <div className="flex items-center gap-2">
+                {aceita_fracionado && (
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    value={quantidade}
+                    onChange={(e) => setQuantidade(e.target.value)}
+                    className="w-16 h-9 text-center text-sm border rounded-md bg-background"
+                  />
+                )}
+                <Button onClick={() => { handleAdd(); setDetailOpen(false); }} className="gap-2">
+                  <ShoppingCart className="h-4 w-4" />
+                  Adicionar
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>

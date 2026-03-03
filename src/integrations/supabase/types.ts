@@ -1124,6 +1124,7 @@ export type Database = {
       }
       produto: {
         Row: {
+          aceita_fracionado: boolean
           altura: number | null
           ativo: boolean
           created_at: string
@@ -1142,6 +1143,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          aceita_fracionado?: boolean
           altura?: number | null
           ativo?: boolean
           created_at?: string
@@ -1160,6 +1162,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          aceita_fracionado?: boolean
           altura?: number | null
           ativo?: boolean
           created_at?: string

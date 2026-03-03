@@ -1,0 +1,1 @@
+ALTER TABLE public.produto ADD COLUMN aceita_fracionado boolean NOT NULL DEFAULT false;

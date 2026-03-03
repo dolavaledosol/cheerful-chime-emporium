@@ -1,5 +1,6 @@
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -48,16 +49,30 @@ const CartDrawer = ({ onClose }: CartDrawerProps) => {
                   variant="outline"
                   size="icon"
                   className="h-7 w-7"
-                  onClick={() => updateQuantity(item.produto_id, item.quantidade - 1)}
+                  onClick={() => updateQuantity(item.produto_id, item.quantidade - (item.aceita_fracionado ? 0.1 : 1))}
                 >
                   <Minus className="h-3 w-3" />
                 </Button>
-                <span className="text-sm w-6 text-center">{item.quantidade}</span>
+                {item.aceita_fracionado ? (
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    value={item.quantidade}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value);
+                      if (!isNaN(v) && v > 0) updateQuantity(item.produto_id, Math.round(v * 10) / 10);
+                    }}
+                    className="w-14 h-7 text-center text-sm border rounded-md bg-background"
+                  />
+                ) : (
+                  <span className="text-sm w-6 text-center">{item.quantidade}</span>
+                )}
                 <Button
                   variant="outline"
                   size="icon"
                   className="h-7 w-7"
-                  onClick={() => updateQuantity(item.produto_id, item.quantidade + 1)}
+                  onClick={() => updateQuantity(item.produto_id, item.quantidade + (item.aceita_fracionado ? 0.1 : 1))}
                 >
                   <Plus className="h-3 w-3" />
                 </Button>

@@ -23,6 +23,7 @@ interface Produto {
   peso_bruto: number | null;
   peso_liquido: number | null;
   preco: number;
+  aceita_fracionado: boolean;
   familia?: { nome: string } | null;
   fabricante?: { nome: string } | null;
 }
@@ -35,6 +36,7 @@ const unidadeLabels: Record<string, string> = {
 const emptyForm = {
   nome: "", descricao: "", ativo: true, familia_id: "", fabricante_id: "",
   unidade_medida: "un", peso_bruto: "", peso_liquido: "", preco: "",
+  aceita_fracionado: false,
 };
 
 const Produtos = () => {
@@ -86,6 +88,7 @@ const Produtos = () => {
       peso_bruto: p.peso_bruto?.toString() || "",
       peso_liquido: p.peso_liquido?.toString() || "",
       preco: p.preco?.toString() || "0",
+      aceita_fracionado: p.aceita_fracionado,
     });
     setDialogOpen(true);
   };
@@ -102,6 +105,7 @@ const Produtos = () => {
       peso_bruto: form.peso_bruto ? Number(form.peso_bruto) : null,
       peso_liquido: form.peso_liquido ? Number(form.peso_liquido) : null,
       preco: form.preco ? Number(form.preco) : 0,
+      aceita_fracionado: form.aceita_fracionado,
     };
 
     let savedId = editId;
@@ -272,9 +276,15 @@ const Produtos = () => {
                 <Input type="number" step="0.001" value={form.peso_liquido} onChange={(e) => setForm({ ...form, peso_liquido: e.target.value })} />
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={form.ativo} onCheckedChange={(v) => setForm({ ...form, ativo: v })} />
-              <Label>Ativo</Label>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Switch checked={form.ativo} onCheckedChange={(v) => setForm({ ...form, ativo: v })} />
+                <Label>Ativo</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={form.aceita_fracionado} onCheckedChange={(v) => setForm({ ...form, aceita_fracionado: v })} />
+                <Label>Aceita fracionado</Label>
+              </div>
             </div>
 
             {/* Image upload - only after product is saved */}
