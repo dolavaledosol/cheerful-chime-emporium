@@ -98,6 +98,7 @@ interface NovoPedidoItem {
   nome: string;
   preco: number;
   quantidade: number;
+  aceita_fracionado: boolean;
 }
 
 /* ── Compras types ── */
@@ -190,7 +191,7 @@ const Pedidos = () => {
   const [clientes, setClientes] = useState<{ cliente_id: string; nome: string; cpf_cnpj: string | null }[]>([]);
   const [selectedClienteCpf, setSelectedClienteCpf] = useState("");
   const [cpfCnpjError, setCpfCnpjError] = useState<string | null>(null);
-  const [produtos, setProdutos] = useState<{ produto_id: string; nome: string; preco: number; fabricante_nome: string | null; peso_bruto: number | null; unidade_medida: string }[]>([]);
+  const [produtos, setProdutos] = useState<{ produto_id: string; nome: string; preco: number; fabricante_nome: string | null; peso_bruto: number | null; unidade_medida: string; aceita_fracionado: boolean }[]>([]);
   const [newOrderSearch, setNewOrderSearch] = useState("");
   const [clienteSearch, setClienteSearch] = useState("");
   const [clienteDropdownOpen, setClienteDropdownOpen] = useState(false);
@@ -767,11 +768,11 @@ const Pedidos = () => {
 
     const [cRes, pRes, leRes] = await Promise.all([
       supabase.from("cliente").select("cliente_id, nome, cpf_cnpj").eq("ativo", true).order("nome"),
-      supabase.from("produto").select("produto_id, nome, preco, peso_bruto, unidade_medida, fabricante:fabricante_id(nome)").eq("ativo", true).order("nome"),
+      supabase.from("produto").select("produto_id, nome, preco, peso_bruto, unidade_medida, aceita_fracionado, fabricante:fabricante_id(nome)").eq("ativo", true).order("nome"),
       supabase.from("local_estoque").select("local_estoque_id, nome").eq("ativo", true).order("nome"),
     ]);
     if (cRes.data) setClientes(cRes.data);
-    if (pRes.data) setProdutos(pRes.data.map((p: any) => ({ ...p, fabricante_nome: p.fabricante?.nome ?? null })));
+    if (pRes.data) setProdutos(pRes.data.map((p: any) => ({ ...p, fabricante_nome: p.fabricante?.nome ?? null, aceita_fracionado: p.aceita_fracionado ?? false })));
     if (leRes.data) setLocaisEstoque(leRes.data);
     setNewOrderOpen(true);
   };
@@ -803,11 +804,11 @@ const Pedidos = () => {
     return produtos.filter(p => p.nome.toLowerCase().includes(term) || p.fabricante_nome?.toLowerCase().includes(term));
   }, [produtos, newOrderSearch]);
 
-  const addProduct = (p: { produto_id: string; nome: string; preco: number }) => {
+  const addProduct = (p: { produto_id: string; nome: string; preco: number; aceita_fracionado?: boolean }) => {
     setNewOrderItems(prev => {
       const existing = prev.find(i => i.produto_id === p.produto_id);
-      if (existing) return prev.map(i => i.produto_id === p.produto_id ? { ...i, quantidade: i.quantidade + 1 } : i);
-      return [...prev, { produto_id: p.produto_id, nome: p.nome, preco: p.preco, quantidade: 1 }];
+      if (existing) return prev.map(i => i.produto_id === p.produto_id ? { ...i, quantidade: i.quantidade + (p.aceita_fracionado ? 0.5 : 1) } : i);
+      return [...prev, { produto_id: p.produto_id, nome: p.nome, preco: p.preco, quantidade: p.aceita_fracionado ? 0.5 : 1, aceita_fracionado: p.aceita_fracionado ?? false }];
     });
   };
 
@@ -1938,9 +1939,14 @@ const Pedidos = () => {
                     >
                       <div className="flex flex-col items-start text-left min-w-0">
                         <span className="font-medium truncate w-full">{p.nome}</span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
                           {p.fabricante_nome || "—"}
                           {p.peso_bruto != null && ` · ${p.peso_bruto}${p.unidade_medida}`}
+                          {p.aceita_fracionado && (
+                            <span className="text-[10px] uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded font-medium">
+                              Fracionado
+                            </span>
+                          )}
                         </span>
                       </div>
                       <span className="text-muted-foreground whitespace-nowrap">R$ {p.preco.toFixed(2)}</span>
@@ -1967,11 +1973,22 @@ const Pedidos = () => {
                   <TableBody>
                     {newOrderItems.map(i => (
                       <TableRow key={i.produto_id}>
-                        <TableCell className="text-sm">{i.nome}</TableCell>
+                        <TableCell className="text-sm">
+                          <div className="flex items-center gap-1.5">
+                            {i.nome}
+                            {i.aceita_fracionado && (
+                              <span className="text-[10px] uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded font-medium shrink-0">
+                                Fracionado
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>
-                          <Input type="number" min="1" className="h-8 w-20 text-sm text-center" value={i.quantidade}
+                          <Input type="number" min={i.aceita_fracionado ? "0.1" : "1"} step={i.aceita_fracionado ? "0.1" : "1"} className="h-8 w-20 text-sm text-center" value={i.quantidade}
                             onChange={(e) => {
-                              const val = Math.max(1, parseInt(e.target.value) || 1);
+                              const val = i.aceita_fracionado
+                                ? Math.max(0.1, Math.round((parseFloat(e.target.value) || 0.1) * 10) / 10)
+                                : Math.max(1, parseInt(e.target.value) || 1);
                               setNewOrderItems(prev => prev.map(item => item.produto_id === i.produto_id ? { ...item, quantidade: val } : item));
                             }} />
                         </TableCell>
