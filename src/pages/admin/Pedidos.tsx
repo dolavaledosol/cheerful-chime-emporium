@@ -105,6 +105,7 @@ interface NovoPedidoItem {
 interface ContaPagarCompra {
   contas_pagar_id: string; descricao: string; valor: number;
   data_vencimento: string; data_pagamento: string | null;
+  created_at: string;
   pago: boolean; fornecedor_id: string | null;
   fornecedor: { nome: string } | null;
   observacao: string | null;
@@ -260,8 +261,8 @@ const Pedidos = () => {
   const loadCompras = async () => {
     const { data } = await supabase
       .from("contas_pagar")
-      .select("contas_pagar_id, descricao, valor, data_vencimento, data_pagamento, pago, fornecedor_id, observacao, fornecedor(nome)")
-      .order("data_vencimento", { ascending: false });
+      .select("contas_pagar_id, descricao, valor, data_vencimento, data_pagamento, pago, fornecedor_id, observacao, created_at, fornecedor(nome)")
+      .order("created_at", { ascending: false });
     if (data) setCompras(data as any);
   };
 
@@ -2044,35 +2045,37 @@ const Pedidos = () => {
             <Table>
               <TableHeader>
                  <TableRow>
-                  <TableHead>Descrição</TableHead>
+                  <TableHead>Código</TableHead>
+                  <TableHead>NF</TableHead>
                   <TableHead className="hidden sm:table-cell">Fornecedor</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Valor</TableHead>
+                  <TableHead>Data Entrada</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="w-16">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredCompras.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum pedido de compra encontrado</TableCell></TableRow>
-                ) : filteredCompras.map((c) => (
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum pedido de compra encontrado</TableCell></TableRow>
+                ) : filteredCompras.map((c) => {
+                  const nfMatch = c.descricao.match(/NF\s+([^\s-]+)/i);
+                  const nfNum = nfMatch ? nfMatch[1] : "—";
+                  return (
                   <TableRow key={c.contas_pagar_id}>
-                    <TableCell className="font-medium">{c.descricao}</TableCell>
+                    <TableCell>
+                      <button onClick={() => openCompraEdit(c)} className="text-xs font-mono text-primary hover:underline cursor-pointer">
+                        {c.contas_pagar_id.slice(0, 8)}
+                      </button>
+                    </TableCell>
+                    <TableCell>{nfNum}</TableCell>
                     <TableCell className="hidden sm:table-cell text-muted-foreground">{c.fornecedor?.nome || "—"}</TableCell>
-                    <TableCell>{fmtDate(c.data_vencimento)}</TableCell>
-                    <TableCell>{fmtMoney(c.valor)}</TableCell>
+                    <TableCell>{fmtDate(c.created_at)}</TableCell>
                     <TableCell>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${c.pago ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
                         {c.pago ? "Pago" : "Pendente"}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => openCompraEdit(c)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
