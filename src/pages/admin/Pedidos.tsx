@@ -370,13 +370,14 @@ const Pedidos = () => {
         });
       }
       const fornNome = entradaFornecedores.find((f) => f.fornecedor_id === entradaFornecedor)?.nome || "";
+      const fornId = entradaFornecedor || null;
       if (totalNF > 0) {
-        const { error: cpErr } = await supabase.from("contas_pagar").insert({ descricao: `NF ${entradaNF || "s/n"} - ${fornNome}`, valor: totalNF, data_vencimento: new Date().toISOString().slice(0, 10), fornecedor_id: entradaFornecedor });
+        const { error: cpErr } = await supabase.from("contas_pagar").insert({ descricao: `NF ${entradaNF || "s/n"} - ${fornNome}`, valor: totalNF, data_vencimento: new Date().toISOString().slice(0, 10), fornecedor_id: fornId });
         if (cpErr) console.error("Erro ao criar conta a pagar NF:", cpErr.message);
       }
       const freteVal = Number(entradaFrete);
       if (freteVal > 0) {
-        const { error: cfErr } = await supabase.from("contas_pagar").insert({ descricao: `Frete NF ${entradaNF || "s/n"} - ${fornNome}`, valor: freteVal, data_vencimento: new Date().toISOString().slice(0, 10), fornecedor_id: entradaFornecedor });
+        const { error: cfErr } = await supabase.from("contas_pagar").insert({ descricao: `Frete NF ${entradaNF || "s/n"} - ${fornNome}`, valor: freteVal, data_vencimento: new Date().toISOString().slice(0, 10), fornecedor_id: fornId });
         if (cfErr) console.error("Erro ao criar conta a pagar Frete:", cfErr.message);
       }
       toast({ title: "Entrada registrada com sucesso!" });
