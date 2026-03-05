@@ -156,14 +156,8 @@ const Checkout = () => {
   };
 
   const findOrCreateCliente = async (): Promise<string> => {
-    // If we already have a clienteId and the CPF matches, reuse it
-    if (clienteId) {
-      const cleanCpf = cpfCnpj.replace(/\D/g, "");
-      // Update CPF/CNPJ on existing cliente if needed
-      await supabase.from("cliente").update({ cpf_cnpj: cleanCpf, email: user.email ?? undefined, updated_at: new Date().toISOString() }).eq("cliente_id", clienteId);
-      return clienteId;
-    }
     const cleanCpf = cpfCnpj.replace(/\D/g, "");
+    // Always use RPC to ensure proper merging/linking
     const { data, error } = await supabase.rpc("find_or_link_cliente_by_cpf", {
       _cpf_cnpj: cleanCpf,
       _user_id: user.id,

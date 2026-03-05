@@ -131,8 +131,8 @@ const Perfil = () => {
       if (telRes.data) setTelefones(telRes.data as any);
       if (pedRes.data) setPedidos(pedRes.data as any);
     } else {
-      const { data: newCliente } = await supabase.from("cliente").insert({ user_id: user.id, nome: user.user_metadata?.full_name || user.email || "", email: user.email }).select().single();
-      if (newCliente) { setCliente(newCliente as any); setEditNome((newCliente as any).nome); }
+      // The handle_new_user trigger should have created the record; just wait and retry
+      // Don't manually insert to avoid duplicates
     }
     setLoading(false);
   };
@@ -157,7 +157,7 @@ const Perfil = () => {
   };
 
   const saveProfile = async () => {
-    if (!cliente) return;
+    if (!cliente || !user) return;
     const cpfDigits = editCpf.replace(/\D/g, "");
     if (cpfDigits.length > 0) {
       if (cpfDigits.length <= 11) {
@@ -167,10 +167,27 @@ const Perfil = () => {
       }
     }
     setSaving(true);
-    const { error } = await supabase.from("cliente").update({ nome: editNome, cpf_cnpj: cpfDigits || null }).eq("cliente_id", cliente.cliente_id);
+    try {
+      if (cpfDigits.length > 0) {
+        // Use RPC to find/merge with existing cliente by CPF
+        const { data: mergedId, error: rpcErr } = await supabase.rpc("find_or_link_cliente_by_cpf", {
+          _cpf_cnpj: cpfDigits,
+          _user_id: user.id,
+          _email: user.email ?? "",
+          _nome: editNome,
+        });
+        if (rpcErr) throw rpcErr;
+        // Update nome on the (possibly merged) cliente
+        await supabase.from("cliente").update({ nome: editNome }).eq("cliente_id", mergedId);
+      } else {
+        await supabase.from("cliente").update({ nome: editNome, cpf_cnpj: null }).eq("cliente_id", cliente.cliente_id);
+      }
+      toast({ title: "Perfil atualizado" });
+      loadAll();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
     setSaving(false);
-    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); }
-    else { toast({ title: "Perfil atualizado" }); loadAll(); }
   };
 
   const openNewEnd = () => { setEditEndId(null); setEndForm(emptyEndereco); setEndDialogOpen(true); };
