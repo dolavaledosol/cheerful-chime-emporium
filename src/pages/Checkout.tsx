@@ -155,20 +155,17 @@ const Checkout = () => {
   };
 
   const findOrCreateCliente = async (): Promise<string> => {
-    if (clienteId) return clienteId;
     const cleanCpf = cpfCnpj.replace(/\D/g, "");
-    if (cleanCpf.length >= 11) {
-      const { data: existing } = await supabase.from("cliente").select("cliente_id").eq("cpf_cnpj", cleanCpf).maybeSingle();
-      if (existing) {
-        await supabase.from("cliente").update({ user_id: user.id, email: user.email }).eq("cliente_id", existing.cliente_id);
-        setClienteId(existing.cliente_id);
-        return existing.cliente_id;
-      }
-    }
-    const { data: newCliente, error: cErr } = await supabase.from("cliente").insert({ nome: user.email ?? "Cliente", email: user.email, user_id: user.id, cpf_cnpj: cleanCpf || null }).select("cliente_id").single();
-    if (cErr) throw cErr;
-    setClienteId(newCliente.cliente_id);
-    return newCliente.cliente_id;
+    const { data, error } = await supabase.rpc("find_or_link_cliente_by_cpf", {
+      _cpf_cnpj: cleanCpf,
+      _user_id: user.id,
+      _email: user.email ?? null,
+      _nome: user.email ?? "Cliente",
+    });
+    if (error) throw error;
+    const cId = data as string;
+    setClienteId(cId);
+    return cId;
   };
 
   const saveNovoEndereco = async () => {
@@ -196,25 +193,8 @@ const Checkout = () => {
     setLoading(true);
     try {
       const cleanCpfCnpj = cpfCnpj.replace(/\D/g, "");
-      // Always check if a cliente with this CPF already exists
-      const { data: existingByCpf } = await supabase.from("cliente").select("cliente_id").eq("cpf_cnpj", cleanCpfCnpj).maybeSingle();
-      let cId: string;
-      if (existingByCpf) {
-        cId = existingByCpf.cliente_id;
-        await supabase.from("cliente").update({ user_id: user.id, email: user.email }).eq("cliente_id", cId);
-        if (clienteId && clienteId !== cId) {
-          // Had a different clienteId before, update enderecos
-          await loadEnderecos(cId);
-        }
-      } else if (clienteId) {
-        cId = clienteId;
-        await supabase.from("cliente").update({ cpf_cnpj: cleanCpfCnpj }).eq("cliente_id", cId);
-      } else {
-        const { data: newCliente, error: cErr } = await supabase.from("cliente").insert({ nome: user.email ?? "Cliente", email: user.email, user_id: user.id, cpf_cnpj: cleanCpfCnpj }).select("cliente_id").single();
-        if (cErr) throw cErr;
-        cId = newCliente.cliente_id;
-      }
-      setClienteId(cId);
+      const cId = await findOrCreateCliente();
+      await loadEnderecos(cId);
 
       // Save/update phone
       const { data: existingTel } = await supabase.from("cliente_telefone").select("cliente_telefone_id").eq("cliente_id", cId!).limit(1);

@@ -1313,6 +1313,15 @@ export type Database = {
       }
     }
     Functions: {
+      find_or_link_cliente_by_cpf: {
+        Args: {
+          _cpf_cnpj: string
+          _email: string
+          _nome: string
+          _user_id: string
+        }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
