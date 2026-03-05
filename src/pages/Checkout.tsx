@@ -144,6 +144,7 @@ const Checkout = () => {
   }
 
   const handleCpfCnpjChange = (value: string) => { const digits = value.replace(/\D/g, "").slice(0, 14); setCpfCnpj(formatCpfCnpj(digits)); if (cpfCnpjError) setCpfCnpjError(null); };
+  const handleCpfCnpjBlur = () => { if (cpfCnpj.replace(/\D/g, "").length > 0) { const err = validateCpfCnpj(cpfCnpj); if (err) setCpfCnpjError(err); } };
   const handleTelefoneChange = (value: string) => { const digits = value.replace(/\D/g, "").slice(0, 11); setTelefone(formatTelefone(digits)); if (telefoneError) setTelefoneError(null); };
 
   const handleCepBlur = async () => {
@@ -260,7 +261,7 @@ const Checkout = () => {
           <CardContent>
             <div className="space-y-2">
               <Label htmlFor="cpfcnpj">Informe seu CPF ou CNPJ</Label>
-              <Input id="cpfcnpj" placeholder="000.000.000-00 ou 00.000.000/0000-00" value={cpfCnpj} onChange={(e) => handleCpfCnpjChange(e.target.value)} className={cpfCnpjError ? "border-destructive" : ""} />
+              <Input id="cpfcnpj" placeholder="000.000.000-00 ou 00.000.000/0000-00" value={cpfCnpj} onChange={(e) => handleCpfCnpjChange(e.target.value)} onBlur={handleCpfCnpjBlur} className={cpfCnpjError ? "border-destructive" : ""} />
               {cpfCnpjError && (<p className="text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {cpfCnpjError}</p>)}
             </div>
           </CardContent>
