@@ -137,10 +137,37 @@ const Perfil = () => {
     setLoading(false);
   };
 
+  const validateCpfDigits = (cpf: string): boolean => {
+    const d = cpf.replace(/\D/g, "");
+    if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+    let s = 0; for (let i = 0; i < 9; i++) s += parseInt(d[i]) * (10 - i);
+    let r = (s * 10) % 11; if (r === 10) r = 0; if (r !== parseInt(d[9])) return false;
+    s = 0; for (let i = 0; i < 10; i++) s += parseInt(d[i]) * (11 - i);
+    r = (s * 10) % 11; if (r === 10) r = 0; return r === parseInt(d[10]);
+  };
+
+  const validateCnpjDigits = (cnpj: string): boolean => {
+    const d = cnpj.replace(/\D/g, "");
+    if (d.length !== 14 || /^(\d)\1{13}$/.test(d)) return false;
+    const w1 = [5,4,3,2,9,8,7,6,5,4,3,2], w2 = [6,5,4,3,2,9,8,7,6,5,4,3,2];
+    let s = 0; for (let i = 0; i < 12; i++) s += parseInt(d[i]) * w1[i];
+    let r = s % 11; const d1 = r < 2 ? 0 : 11 - r; if (parseInt(d[12]) !== d1) return false;
+    s = 0; for (let i = 0; i < 13; i++) s += parseInt(d[i]) * w2[i];
+    r = s % 11; const d2 = r < 2 ? 0 : 11 - r; return parseInt(d[13]) === d2;
+  };
+
   const saveProfile = async () => {
     if (!cliente) return;
+    const cpfDigits = editCpf.replace(/\D/g, "");
+    if (cpfDigits.length > 0) {
+      if (cpfDigits.length <= 11) {
+        if (cpfDigits.length !== 11 || !validateCpfDigits(cpfDigits)) { toast({ title: "CPF inválido", variant: "destructive" }); return; }
+      } else {
+        if (cpfDigits.length !== 14 || !validateCnpjDigits(cpfDigits)) { toast({ title: "CNPJ inválido", variant: "destructive" }); return; }
+      }
+    }
     setSaving(true);
-    const { error } = await supabase.from("cliente").update({ nome: editNome, cpf_cnpj: editCpf || null }).eq("cliente_id", cliente.cliente_id);
+    const { error } = await supabase.from("cliente").update({ nome: editNome, cpf_cnpj: cpfDigits || null }).eq("cliente_id", cliente.cliente_id);
     setSaving(false);
     if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); }
     else { toast({ title: "Perfil atualizado" }); loadAll(); }
