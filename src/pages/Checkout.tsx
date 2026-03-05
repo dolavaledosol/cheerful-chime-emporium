@@ -261,7 +261,7 @@ const Checkout = () => {
           <CardContent>
             <div className="space-y-2">
               <Label htmlFor="cpfcnpj">Informe seu CPF ou CNPJ</Label>
-              <Input id="cpfcnpj" placeholder="000.000.000-00 ou 00.000.000/0000-00" value={cpfCnpj} onChange={(e) => handleCpfCnpjChange(e.target.value)} className={cpfCnpjError ? "border-destructive" : ""} />
+              <Input id="cpfcnpj" placeholder="000.000.000-00 ou 00.000.000/0000-00" value={cpfCnpj} onChange={(e) => handleCpfCnpjChange(e.target.value)} onBlur={handleCpfCnpjBlur} className={cpfCnpjError ? "border-destructive" : ""} />
               {cpfCnpjError && (<p className="text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {cpfCnpjError}</p>)}
             </div>
           </CardContent>
