@@ -227,7 +227,9 @@ const Checkout = () => {
     finally { setLoading(false); }
   };
 
-  const canSubmit = !loading && cpfCnpj.length > 0 && telefone.replace(/\D/g, "").length >= 10 && tipoEntrega !== "" && (tipoEntrega === "retirada" || enderecoSelecionado !== "");
+  const cpfCnpjDigits = cpfCnpj.replace(/\D/g, "");
+  const isCpfCnpjValid = (cpfCnpjDigits.length === 11 && validateCpf(cpfCnpjDigits)) || (cpfCnpjDigits.length === 14 && validateCnpj(cpfCnpjDigits));
+  const canSubmit = !loading && isCpfCnpjValid && !cpfCnpjError && telefone.replace(/\D/g, "").length >= 10 && !telefoneError && tipoEntrega !== "" && (tipoEntrega === "retirada" || enderecoSelecionado !== "");
 
   return (
     <div className="min-h-screen bg-background">
