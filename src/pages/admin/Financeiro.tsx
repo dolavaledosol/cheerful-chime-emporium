@@ -149,7 +149,7 @@ const Financeiro = () => {
   const loadReceber = async () => {
     const { data } = await supabase
       .from("contas_receber")
-      .select("*, cliente(nome), banco(nome)")
+      .select("*, cliente(nome), banco(nome), pedido(pedido_id, data)")
       .order("created_at", { ascending: false });
     if (!data) { setReceber([]); return; }
 
@@ -258,14 +258,17 @@ const Financeiro = () => {
       }
     }
 
-    const headers = ["Código", "Cliente", "Cliente ID", "WhatsApp (from)", "Criação", "Vencimento", "Forma", "Banco", "Valor", "Status"];
+    const headers = ["Código", "Cliente", "Cliente ID", "WhatsApp (from)", "Cód. Pedido", "Data Pedido", "Criação", "Vencimento", "Forma", "Banco", "Valor", "Status"];
     const rows = filteredReceber.map((c) => {
       const phone = c.cliente_id ? phoneMap[c.cliente_id] : null;
+      const pedido = (c as any).pedido;
       return [
         c.contas_receber_id.slice(0, 8).toUpperCase(),
         c.cliente?.nome || "—",
         c.cliente_id || "—",
         phone?.from || "—",
+        c.pedido_id ? c.pedido_id.slice(0, 8).toUpperCase() : "—",
+        pedido?.data ? format(new Date(pedido.data), "dd/MM/yy HH:mm") : "—",
         format(new Date(c.created_at), "dd/MM/yy HH:mm"),
         fmtDate(c.data_vencimento),
         c._forma,
