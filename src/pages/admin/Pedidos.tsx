@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Eye, Truck, Store, Clock, CalendarIcon, AlertTriangle, Split, Plus, Minus, Trash2, UserPlus, MapPin, PackagePlus, Share2 } from "lucide-react";
+import { Search, Eye, Truck, Store, Clock, CalendarIcon, AlertTriangle, Split, Plus, Minus, Trash2, UserPlus, MapPin, PackagePlus, Share2, Download } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { useCep } from "@/hooks/useCep";
@@ -1384,7 +1384,10 @@ const Pedidos = () => {
         <TabsContent value="vendas" className="space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div />
-        <Button onClick={openNewOrder} className="gap-2"><Plus className="h-4 w-4" /> Novo Pedido</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={exportPedidos} className="gap-2"><Download className="h-4 w-4" /> Exportar</Button>
+          <Button onClick={openNewOrder} className="gap-2"><Plus className="h-4 w-4" /> Novo Pedido</Button>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
