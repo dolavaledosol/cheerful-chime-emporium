@@ -321,40 +321,37 @@ const Financeiro = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead className="hidden sm:table-cell">Cliente</TableHead>
-                  <TableHead>Criação</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead className="hidden md:table-cell">Forma</TableHead>
-                  <TableHead className="hidden md:table-cell">Banco</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-28">Ações</TableHead>
-                </TableRow>
+                   <TableHead>Código</TableHead>
+                   <TableHead className="hidden sm:table-cell">Cliente</TableHead>
+                   <TableHead>Criação</TableHead>
+                   <TableHead>Vencimento</TableHead>
+                   <TableHead className="hidden md:table-cell">Forma</TableHead>
+                   <TableHead className="hidden md:table-cell">Banco</TableHead>
+                   <TableHead>Valor</TableHead>
+                   <TableHead>Status</TableHead>
+                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredReceber.length === 0 ? (
-                  <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
                 ) : filteredReceber.map((c) => {
                   return (
                   <TableRow key={c.contas_receber_id}>
-                    <TableCell className="font-medium">{c.descricao}</TableCell>
-                    <TableCell className="hidden sm:table-cell text-muted-foreground">{c.cliente?.nome || "—"}</TableCell>
-                    <TableCell className="text-xs">{format(new Date(c.created_at), "dd/MM/yy HH:mm")}</TableCell>
-                    <TableCell>{fmtDate(c.data_vencimento)}</TableCell>
-                    <TableCell className="hidden md:table-cell text-muted-foreground">{c._forma}</TableCell>
-                    <TableCell className="hidden md:table-cell text-muted-foreground">{c._banco_pag}</TableCell>
-                    <TableCell>{fmtMoney(c.valor)}</TableCell>
-                    <TableCell>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${c.recebido ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
-                        {c.recebido ? "Recebido" : "Pendente"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {!c.recebido && <Button variant="ghost" size="icon" onClick={() => marcarRecebido(c.contas_receber_id)} title="Marcar recebido"><Check className="h-4 w-4 text-green-600" /></Button>}
-                        <Button variant="ghost" size="icon" onClick={() => openEditReceber(c)}><Pencil className="h-4 w-4" /></Button>
-                      </div>
+                     <TableCell>
+                       <button onClick={() => openEditReceber(c)} className="text-primary underline hover:text-primary/80 font-medium text-xs">
+                         {c.contas_receber_id.slice(0, 8).toUpperCase()}
+                       </button>
+                     </TableCell>
+                     <TableCell className="hidden sm:table-cell text-muted-foreground">{c.cliente?.nome || "—"}</TableCell>
+                     <TableCell className="text-xs">{format(new Date(c.created_at), "dd/MM/yy HH:mm")}</TableCell>
+                     <TableCell>{fmtDate(c.data_vencimento)}</TableCell>
+                     <TableCell className="hidden md:table-cell text-muted-foreground">{c._forma}</TableCell>
+                     <TableCell className="hidden md:table-cell text-muted-foreground">{c._banco_pag}</TableCell>
+                     <TableCell>{fmtMoney(c.valor)}</TableCell>
+                     <TableCell>
+                       <span className={`text-xs px-2 py-0.5 rounded-full ${c.recebido ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
+                         {c.recebido ? "Recebido" : "Pendente"}
+                       </span>
                     </TableCell>
                   </TableRow>
                   );
