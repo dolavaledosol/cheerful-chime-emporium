@@ -149,7 +149,7 @@ const Financeiro = () => {
   const loadReceber = async () => {
     const { data } = await supabase
       .from("contas_receber")
-      .select("*, cliente(nome), banco(nome)")
+      .select("*, cliente(nome), banco(nome), pedido(pedido_id, data)")
       .order("created_at", { ascending: false });
     if (!data) { setReceber([]); return; }
 
