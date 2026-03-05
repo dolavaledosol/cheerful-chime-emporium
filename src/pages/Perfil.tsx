@@ -277,7 +277,7 @@ const Perfil = () => {
               <CardHeader><CardTitle className="text-lg">Dados pessoais</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2"><Label>Nome</Label><Input value={editNome} onChange={(e) => setEditNome(e.target.value)} /></div>
-                <div className="space-y-2"><Label>CPF/CNPJ</Label><Input value={editCpf} onChange={(e) => setEditCpf(e.target.value)} /></div>
+                <div className="space-y-2"><Label>CPF/CNPJ</Label><Input value={editCpf} onChange={(e) => { if (!cliente?.cpf_cnpj) setEditCpf(e.target.value); }} disabled={!!cliente?.cpf_cnpj} className={cliente?.cpf_cnpj ? "bg-muted" : ""} />{cliente?.cpf_cnpj && <p className="text-xs text-muted-foreground">CPF/CNPJ não pode ser alterado após cadastrado.</p>}</div>
                 <div className="space-y-2"><Label>Email</Label><Input value={user?.email || ""} disabled className="bg-muted" /></div>
                 <Button onClick={saveProfile} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
               </CardContent>
