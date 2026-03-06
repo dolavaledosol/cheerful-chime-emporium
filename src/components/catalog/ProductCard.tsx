@@ -62,12 +62,17 @@ const ProductCard = memo(function ProductCard({
   const handleShare = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
     const url = `${window.location.origin}/?produto=${produto_id}`;
-    const shareData = { title: nome, text: `Confira: ${nome} - R$ ${preco.toFixed(2)}`, url };
+    const text = `🍳 *${nome}*\n💰 R$ ${preco.toFixed(2)}\n\nVeja no catálogo: ${url}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+
     if (navigator.share) {
-      try { await navigator.share(shareData); } catch {}
+      try {
+        await navigator.share({ title: nome, text: `${nome} - R$ ${preco.toFixed(2)}`, url });
+      } catch {
+        window.open(whatsappUrl, "_blank");
+      }
     } else {
-      await navigator.clipboard.writeText(url);
-      toast({ title: "Link copiado!", description: nome });
+      window.open(whatsappUrl, "_blank");
     }
   };
 

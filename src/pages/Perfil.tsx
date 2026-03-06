@@ -213,14 +213,14 @@ const Perfil = () => {
     toast({ title: "Endereço removido" }); loadAll();
   };
 
-  const openNewTel = () => { setEditTelId(null); setTelForm(""); setTelWhatsapp(true); setTelDialogOpen(true); };
+  const openNewTel = () => { setEditTelId(null); setTelForm(""); setTelWhatsapp(false); setTelDialogOpen(true); };
   const openEditTel = (t: Telefone) => { setEditTelId(t.cliente_telefone_id); setTelForm(t.telefone); setTelWhatsapp(t.is_whatsapp); setTelDialogOpen(true); };
 
   const saveTelefone = async () => {
     if (!cliente) return;
     setSaving(true);
-    if (editTelId) { await supabase.from("cliente_telefone").update({ telefone: telForm, is_whatsapp: telWhatsapp }).eq("cliente_telefone_id", editTelId); }
-    else { await supabase.from("cliente_telefone").insert({ cliente_id: cliente.cliente_id, telefone: telForm, is_whatsapp: telWhatsapp }); }
+    if (editTelId) { await supabase.from("cliente_telefone").update({ telefone: telForm, is_whatsapp: false }).eq("cliente_telefone_id", editTelId); }
+    else { await supabase.from("cliente_telefone").insert({ cliente_id: cliente.cliente_id, telefone: telForm, is_whatsapp: false }); }
     setSaving(false); setTelDialogOpen(false);
     toast({ title: editTelId ? "Telefone atualizado" : "Telefone adicionado" }); loadAll();
   };

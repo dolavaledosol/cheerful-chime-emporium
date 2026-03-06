@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, ROUTE_TO_RESOURCE } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,6 +50,9 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-12 flex items-center gap-2 border-b px-3 bg-background sticky top-0 z-30">
             <SidebarTrigger />
+            <Link to="/admin" className="flex items-center shrink-0">
+              <img src="/images/logo-cozinha-dodola.png" alt="CozinhaDoDola" className="h-8 w-auto" />
+            </Link>
             <span className="text-sm font-semibold text-muted-foreground">Painel Admin</span>
           </header>
           <main className="flex-1 p-4 md:p-6 overflow-auto">

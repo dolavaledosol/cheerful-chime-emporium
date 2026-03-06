@@ -203,7 +203,7 @@ const Checkout = () => {
       if (existingTel && existingTel.length > 0) {
         await supabase.from("cliente_telefone").update({ telefone: telDigits }).eq("cliente_telefone_id", existingTel[0].cliente_telefone_id);
       } else {
-        await supabase.from("cliente_telefone").insert({ cliente_id: cId!, telefone: telDigits, is_whatsapp: true });
+        await supabase.from("cliente_telefone").insert({ cliente_id: cId!, telefone: telDigits, is_whatsapp: false });
       }
 
       let observacao = "";
