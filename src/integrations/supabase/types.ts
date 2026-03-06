@@ -872,6 +872,7 @@ export type Database = {
           produto_id: string
           quantidade: number
           tipo: string
+          usuario_id: string | null
         }
         Insert: {
           created_at?: string
@@ -884,6 +885,7 @@ export type Database = {
           produto_id: string
           quantidade?: number
           tipo: string
+          usuario_id?: string | null
         }
         Update: {
           created_at?: string
@@ -896,6 +898,7 @@ export type Database = {
           produto_id?: string
           quantidade?: number
           tipo?: string
+          usuario_id?: string | null
         }
         Relationships: [
           {
