@@ -249,12 +249,14 @@ const Estoque = () => {
 
         // Log movimentação
         const tipo = linha.diferenca > 0 ? "entrada" : "saida";
+        const { data: { session } } = await supabase.auth.getSession();
         await supabase.from("movimentacao_estoque").insert({
           tipo,
           produto_id: linha.produto_id,
           local_estoque_id: linha.local_estoque_id,
           quantidade: Math.abs(linha.diferenca),
           documento: "Conciliação de estoque",
+          usuario_id: session?.user?.id || null,
         });
       }
       toast({ title: `Conciliação aplicada: ${linhasComDif.length} produto(s) ajustado(s)` });
@@ -457,6 +459,7 @@ const Estoque = () => {
         }
 
         // Log movimentação
+        const { data: { session } } = await supabase.auth.getSession();
         await supabase.from("movimentacao_estoque").insert({
           tipo: "transferencia",
           produto_id: linha.produto_id,
@@ -464,6 +467,7 @@ const Estoque = () => {
           local_estoque_destino_id: transferDestino,
           quantidade: qty,
           documento: `Transferência`,
+          usuario_id: session?.user?.id || null,
         });
       }
 
@@ -503,9 +507,12 @@ const Estoque = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Estoque</h1>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={exportExcel} className="gap-2"><Download className="h-4 w-4" /> Exportar Excel</Button>
-          <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Importar Conciliação</Button>
+          <Button variant="outline" onClick={exportExcel} className="gap-2"><Download className="h-4 w-4" /> Exportar Estoque</Button>
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Importar Estoque</Button>
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
+          <Button variant="outline" onClick={exportPedidosExcel} className="gap-2"><Download className="h-4 w-4" /> Exportar Pedidos</Button>
+          <Button variant="outline" onClick={() => fileInputPedRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Importar Pedidos</Button>
+          <input ref={fileInputPedRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportPedidosFile} />
           <Button onClick={openTransfer} className="gap-2"><ArrowRightLeft className="h-4 w-4" /> Transferir</Button>
         </div>
       </div>
@@ -601,11 +608,12 @@ const Estoque = () => {
                   <TableHead className="whitespace-nowrap">Família</TableHead>
                   <TableHead className="whitespace-nowrap text-center">Qtd</TableHead>
                   <TableHead className="whitespace-nowrap">Local Estoque</TableHead>
+                  <TableHead className="whitespace-nowrap">Usuário</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredMov.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma movimentação encontrada</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhuma movimentação encontrada</TableCell></TableRow>
                 ) : filteredMov.map((m) => (
                   <TableRow key={m.movimentacao_estoque_id}>
                     <TableCell className="whitespace-nowrap">{format(new Date(m.created_at), "dd/MM/yyyy HH:mm")}</TableCell>
@@ -621,6 +629,7 @@ const Estoque = () => {
                         <span className="text-muted-foreground"> → {m.local_estoque_destino.nome}</span>
                       )}
                     </TableCell>
+                    <TableCell className="text-muted-foreground whitespace-nowrap">{m.usuario_nome || "—"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
