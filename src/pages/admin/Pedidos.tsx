@@ -443,6 +443,7 @@ const Pedidos = () => {
               tipo: "entrada", produto_id: item.produto_id, local_estoque_id: localId,
               quantidade: item.quantidade, documento: nfMatch ? `NF ${nfMatch[1]}` : null,
               fornecedor_id: compra.fornecedor_id || null,
+              usuario_id: (await supabase.auth.getSession()).data.session?.user?.id || null,
             });
           }
         }
@@ -706,6 +707,7 @@ const Pedidos = () => {
             local_estoque_id: stock.local_estoque_id,
             quantidade: actualDeduct,
             documento: `Pedido ${selectedPedido.pedido_id.substring(0, 8)}`,
+            usuario_id: (await supabase.auth.getSession()).data.session?.user?.id || null,
           });
         }
 
@@ -893,6 +895,7 @@ const Pedidos = () => {
               local_estoque_id: localId,
               quantidade: Number(item.quantidade),
               documento: `Cancelamento Pedido ${selectedPedido.pedido_id.substring(0, 8)}`,
+              usuario_id: (await supabase.auth.getSession()).data.session?.user?.id || null,
             });
           }
           // Remove financial records
