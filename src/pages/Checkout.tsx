@@ -1,12 +1,11 @@
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ShoppingBag, ArrowLeft, LogIn, Truck, Store, AlertCircle, Plus, MapPin, Loader2, Phone } from "lucide-react";
+import { ShoppingBag, ArrowLeft, LogIn, Truck, Store, AlertCircle, Plus, MapPin, Loader2, Phone, Check } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -92,14 +91,12 @@ const Checkout = () => {
   const { fetchCep, loading: cepLoading } = useCep();
 
   useEffect(() => {
-    // load client data only
     if (user) {
       supabase.from("cliente").select("cliente_id, cpf_cnpj").eq("user_id", user.id).maybeSingle().then(({ data }) => {
         if (data) {
           setClienteId(data.cliente_id);
           if (data.cpf_cnpj) setCpfCnpj(formatCpfCnpj(data.cpf_cnpj));
           loadEnderecos(data.cliente_id);
-          // Load existing phone
           supabase.from("cliente_telefone").select("telefone").eq("cliente_id", data.cliente_id).limit(1).then(({ data: tels }) => {
             if (tels && tels.length > 0) setTelefone(formatTelefone(tels[0].telefone));
           });
@@ -113,28 +110,35 @@ const Checkout = () => {
     if (data) { setEnderecos(data.map((e: any) => e.endereco).filter(Boolean)); }
   };
 
+  // Empty cart
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <AppHeader backTo="/" backLabel="Catálogo" />
-        <div className="flex-1 flex flex-col items-center justify-center gap-4">
-          <ShoppingBag className="h-16 w-16 text-muted-foreground stroke-1" />
-          <p className="text-lg text-muted-foreground">Seu carrinho está vazio</p>
-          <Link to="/"><Button variant="outline" className="gap-2"><ArrowLeft className="h-4 w-4" /> Voltar ao catálogo</Button></Link>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
+          <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
+            <ShoppingBag className="h-10 w-10 text-muted-foreground/50" />
+          </div>
+          <p className="text-lg font-medium text-muted-foreground">Carrinho vazio</p>
+          <Link to="/"><Button variant="outline" className="gap-2 rounded-full"><ArrowLeft className="h-4 w-4" /> Voltar ao catálogo</Button></Link>
         </div>
       </div>
     );
   }
 
+  // Not logged in
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <AppHeader backTo="/" backLabel="Catálogo" />
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
-          <LogIn className="h-16 w-16 text-muted-foreground stroke-1" />
-          <p className="text-lg text-muted-foreground">Faça login para finalizar o pedido</p>
-          <Link to="/auth?redirect=/checkout"><Button className="gap-2"><LogIn className="h-4 w-4" /> Entrar / Cadastrar</Button></Link>
-          <Link to="/"><Button variant="ghost" className="gap-2"><ArrowLeft className="h-4 w-4" /> Voltar ao catálogo</Button></Link>
+          <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
+            <LogIn className="h-10 w-10 text-muted-foreground/50" />
+          </div>
+          <p className="text-lg font-medium">Faça login para continuar</p>
+          <p className="text-sm text-muted-foreground text-center">Você precisa de uma conta para finalizar o pedido</p>
+          <Link to="/auth?redirect=/checkout"><Button className="gap-2 rounded-full"><LogIn className="h-4 w-4" /> Entrar / Cadastrar</Button></Link>
+          <Link to="/"><Button variant="ghost" className="gap-2 text-sm"><ArrowLeft className="h-4 w-4" /> Voltar ao catálogo</Button></Link>
         </div>
       </div>
     );
@@ -154,7 +158,6 @@ const Checkout = () => {
 
   const findOrCreateCliente = async (): Promise<string> => {
     const cleanCpf = cpfCnpj.replace(/\D/g, "");
-    // Always use RPC to ensure proper merging/linking
     const { data, error } = await supabase.rpc("find_or_link_cliente_by_cpf", {
       _cpf_cnpj: cleanCpf,
       _user_id: user.id,
@@ -191,11 +194,9 @@ const Checkout = () => {
 
     setLoading(true);
     try {
-      
       const cId = await findOrCreateCliente();
       await loadEnderecos(cId);
 
-      // Save/update phone
       const { data: existingTel } = await supabase.from("cliente_telefone").select("cliente_telefone_id").eq("cliente_id", cId!).limit(1);
       if (existingTel && existingTel.length > 0) {
         await supabase.from("cliente_telefone").update({ telefone: telDigits }).eq("cliente_telefone_id", existingTel[0].cliente_telefone_id);
@@ -230,145 +231,219 @@ const Checkout = () => {
   const canSubmit = !loading && isCpfCnpjValid && !cpfCnpjError && telefone.replace(/\D/g, "").length >= 10 && !telefoneError && tipoEntrega !== "" && (tipoEntrega === "retirada" || enderecoSelecionado !== "");
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <AppHeader backTo="/" backLabel="Catálogo" />
 
-      <div className="container mx-auto px-4 py-6 max-w-2xl">
-        <h1 className="text-xl font-bold mb-6">Finalizar Pedido</h1>
+      <main className="flex-1 px-4 py-5 md:py-8 max-w-lg mx-auto w-full">
+        <h1 className="text-xl font-bold mb-5">Finalizar Pedido</h1>
 
-        {/* Items */}
-        <Card className="mb-6">
-          <CardHeader><CardTitle className="text-lg">Itens do pedido</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {items.map((item) => (
-              <div key={item.produto_id} className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium text-sm">{item.nome}</p>
-                  <p className="text-xs text-muted-foreground">{item.quantidade}x R$ {item.preco.toFixed(2)}</p>
+        {/* Order summary */}
+        <section className="mb-5">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Resumo</h2>
+          <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
+            <div className="divide-y divide-border/50">
+              {items.map((item) => (
+                <div key={item.produto_id} className="flex justify-between items-center px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm truncate">{item.nome}</p>
+                    <p className="text-xs text-muted-foreground">{item.quantidade}× R$ {item.preco.toFixed(2)}</p>
+                  </div>
+                  <span className="font-semibold text-sm ml-3">R$ {(item.preco * item.quantidade).toFixed(2)}</span>
                 </div>
-                <span className="font-semibold text-sm">R$ {(item.preco * item.quantidade).toFixed(2)}</span>
-              </div>
-            ))}
-            <div className="border-t pt-3 flex justify-between text-lg font-bold">
-              <span>Total</span><span>R$ {total.toFixed(2)}</span>
+              ))}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* CPF/CNPJ */}
-        <Card className="mb-6">
-          <CardHeader><CardTitle className="text-lg">CPF ou CNPJ</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="cpfcnpj">Informe seu CPF ou CNPJ</Label>
-              <Input id="cpfcnpj" placeholder="000.000.000-00 ou 00.000.000/0000-00" value={cpfCnpj} onChange={(e) => handleCpfCnpjChange(e.target.value)} onBlur={handleCpfCnpjBlur} className={cpfCnpjError ? "border-destructive" : ""} />
-              {cpfCnpjError && (<p className="text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {cpfCnpjError}</p>)}
+            <div className="border-t border-border bg-muted/30 px-4 py-3 flex justify-between items-center">
+              <span className="font-semibold">Total</span>
+              <span className="text-xl font-bold text-primary">R$ {total.toFixed(2)}</span>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        {/* Telefone */}
-        <Card className="mb-6">
-          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Phone className="h-5 w-5" /> Telefone</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="telefone">Telefone para contato *</Label>
-              <Input id="telefone" placeholder="(00) 00000-0000" value={telefone} onChange={(e) => handleTelefoneChange(e.target.value)} className={telefoneError ? "border-destructive" : ""} />
-              {telefoneError && (<p className="text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {telefoneError}</p>)}
+        {/* Identification */}
+        <section className="mb-5">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Identificação</h2>
+          <div className="bg-card rounded-xl border border-border/50 p-4 space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="cpfcnpj" className="text-sm">CPF ou CNPJ *</Label>
+              <Input
+                id="cpfcnpj"
+                placeholder="000.000.000-00"
+                value={cpfCnpj}
+                onChange={(e) => handleCpfCnpjChange(e.target.value)}
+                onBlur={handleCpfCnpjBlur}
+                className={`rounded-xl h-12 ${cpfCnpjError ? "border-destructive" : ""}`}
+              />
+              {cpfCnpjError && (
+                <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                  <AlertCircle className="h-3 w-3" /> {cpfCnpjError}
+                </p>
+              )}
             </div>
-          </CardContent>
-        </Card>
+            <div className="space-y-1.5">
+              <Label htmlFor="telefone" className="text-sm flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5" /> Telefone *
+              </Label>
+              <Input
+                id="telefone"
+                placeholder="(00) 00000-0000"
+                value={telefone}
+                onChange={(e) => handleTelefoneChange(e.target.value)}
+                className={`rounded-xl h-12 ${telefoneError ? "border-destructive" : ""}`}
+              />
+              {telefoneError && (
+                <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                  <AlertCircle className="h-3 w-3" /> {telefoneError}
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
 
-        {/* Tipo de entrega */}
-        <Card className="mb-6">
-          <CardHeader><CardTitle className="text-lg">Entrega ou Retirada</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
+        {/* Delivery type */}
+        <section className="mb-6">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Entrega</h2>
+          <div className="space-y-3">
             <RadioGroup value={tipoEntrega} onValueChange={(v) => setTipoEntrega(v as "entrega" | "retirada")}>
-              <div className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50" onClick={() => setTipoEntrega("entrega")}>
-                <RadioGroupItem value="entrega" id="entrega" className="mt-0.5" />
-                <div className="flex-1">
-                  <Label htmlFor="entrega" className="flex items-center gap-2 cursor-pointer font-medium"><Truck className="h-4 w-4" /> Entrega</Label>
-                  <p className="text-sm text-muted-foreground mt-1">Receba no seu endereço</p>
+              {/* Entrega */}
+              <div
+                className={`bg-card rounded-xl border-2 p-4 cursor-pointer transition-all ${
+                  tipoEntrega === "entrega" ? "border-primary shadow-sm" : "border-border/50 hover:border-border"
+                }`}
+                onClick={() => setTipoEntrega("entrega")}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
+                    tipoEntrega === "entrega" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  }`}>
+                    <Truck className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm">Entrega</p>
+                    <p className="text-xs text-muted-foreground">Receba no seu endereço</p>
+                  </div>
+                  <RadioGroupItem value="entrega" id="entrega" />
                 </div>
               </div>
-              <div className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50" onClick={() => setTipoEntrega("retirada")}>
-                <RadioGroupItem value="retirada" id="retirada" className="mt-0.5" />
-                <div className="flex-1">
-                  <Label htmlFor="retirada" className="flex items-center gap-2 cursor-pointer font-medium"><Store className="h-4 w-4" /> Retirada no local</Label>
-                  <p className="text-sm text-muted-foreground mt-1">Retire em uma de nossas unidades</p>
+
+              {/* Retirada */}
+              <div
+                className={`bg-card rounded-xl border-2 p-4 cursor-pointer transition-all ${
+                  tipoEntrega === "retirada" ? "border-primary shadow-sm" : "border-border/50 hover:border-border"
+                }`}
+                onClick={() => setTipoEntrega("retirada")}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
+                    tipoEntrega === "retirada" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  }`}>
+                    <Store className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm">Retirada no local</p>
+                    <p className="text-xs text-muted-foreground">Retire em uma de nossas unidades</p>
+                  </div>
+                  <RadioGroupItem value="retirada" id="retirada" />
                 </div>
               </div>
             </RadioGroup>
 
+            {/* Delivery address */}
             {tipoEntrega === "entrega" && (
-              <div className="space-y-4">
-                <div className="rounded-lg bg-muted/50 border border-border p-3 flex items-start gap-2">
+              <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
+                <div className="rounded-xl bg-accent/50 border border-accent p-3 flex items-start gap-2">
                   <AlertCircle className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <p className="text-sm text-muted-foreground">O frete será calculado e informado posteriormente pela nossa equipe, <strong>sem compromisso</strong>.</p>
+                  <p className="text-xs text-muted-foreground">O frete será calculado e informado posteriormente pela equipe, <strong>sem compromisso</strong>.</p>
                 </div>
+
                 <div className="space-y-2">
-                  <Label>Endereço de entrega</Label>
-                  {enderecos.length > 0 ? (
-                    <div className="space-y-2">
-                      {enderecos.map((e) => (
-                        <div key={e.endereco_id} className={`border rounded-lg p-3 cursor-pointer transition-colors ${enderecoSelecionado === e.endereco_id ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`} onClick={() => setEnderecoSelecionado(e.endereco_id)}>
-                          <div className="flex items-start gap-2">
-                            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-sm font-medium">{e.logradouro}{e.numero ? `, ${e.numero}` : ""}</p>
-                              {e.complemento && <p className="text-xs text-muted-foreground">{e.complemento}</p>}
-                              <p className="text-xs text-muted-foreground">{[e.bairro, e.cidade, e.estado].filter(Boolean).join(" — ")}</p>
-                            </div>
-                          </div>
+                  {enderecos.length > 0 && enderecos.map((e) => (
+                    <div
+                      key={e.endereco_id}
+                      className={`bg-card rounded-xl border-2 p-3 cursor-pointer transition-all ${
+                        enderecoSelecionado === e.endereco_id ? "border-primary shadow-sm" : "border-border/50 hover:border-border"
+                      }`}
+                      onClick={() => setEnderecoSelecionado(e.endereco_id)}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+                          enderecoSelecionado === e.endereco_id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                        }`}>
+                          {enderecoSelecionado === e.endereco_id ? <Check className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
                         </div>
-                      ))}
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{e.logradouro}{e.numero ? `, ${e.numero}` : ""}</p>
+                          {e.complemento && <p className="text-xs text-muted-foreground">{e.complemento}</p>}
+                          <p className="text-xs text-muted-foreground">{[e.bairro, e.cidade, e.estado].filter(Boolean).join(" — ")}</p>
+                        </div>
+                      </div>
                     </div>
-                  ) : (<p className="text-sm text-muted-foreground">Nenhum endereço cadastrado</p>)}
-                  <Button variant="outline" size="sm" className="gap-1 mt-2" onClick={() => { setEndForm(emptyEndForm); setEndDialogOpen(true); }}><Plus className="h-3 w-3" /> Cadastrar novo endereço</Button>
+                  ))}
+                  {enderecos.length === 0 && (
+                    <p className="text-sm text-muted-foreground">Nenhum endereço cadastrado</p>
+                  )}
+                  <button
+                    onClick={() => { setEndForm(emptyEndForm); setEndDialogOpen(true); }}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/70 py-3 text-sm text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+                  >
+                    <Plus className="h-4 w-4" /> Cadastrar novo endereço
+                  </button>
                 </div>
               </div>
             )}
 
             {tipoEntrega === "retirada" && (
-              <div className="rounded-lg bg-muted/50 border border-border p-3 flex items-start gap-2">
+              <div className="rounded-xl bg-accent/50 border border-accent p-3 flex items-start gap-2 animate-in slide-in-from-top-2 duration-200">
                 <Store className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                <p className="text-sm text-muted-foreground">O local de retirada será definido pela nossa equipe durante a separação do pedido.</p>
+                <p className="text-xs text-muted-foreground">O local de retirada será definido pela equipe durante a separação.</p>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        <Button className="w-full" size="lg" onClick={handleFinalize} disabled={!canSubmit}>{loading ? "Processando..." : "Confirmar Pedido"}</Button>
-      </div>
+        {/* Submit */}
+        <div className="safe-bottom pb-4">
+          <Button
+            className="w-full h-14 rounded-full text-base font-semibold"
+            onClick={handleFinalize}
+            disabled={!canSubmit}
+          >
+            {loading ? (
+              <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Processando...</>
+            ) : (
+              "Confirmar Pedido"
+            )}
+          </Button>
+        </div>
+      </main>
 
-      {/* New Address Dialog */}
+      {/* Address dialog */}
       <Dialog open={endDialogOpen} onOpenChange={setEndDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto mx-4 rounded-2xl">
           <DialogHeader><DialogTitle>Novo Endereço</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1 col-span-1">
                 <Label className="text-xs">CEP</Label>
                 <div className="relative">
-                  <Input value={endForm.cep} onChange={(e) => setEndForm({ ...endForm, cep: e.target.value })} onBlur={handleCepBlur} placeholder="00000-000" />
+                  <Input value={endForm.cep} onChange={(e) => setEndForm({ ...endForm, cep: e.target.value })} onBlur={handleCepBlur} placeholder="00000-000" className="rounded-xl" />
                   {cepLoading && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
                 </div>
               </div>
-              <div className="space-y-1 col-span-2"><Label className="text-xs">Logradouro *</Label><Input value={endForm.logradouro} onChange={(e) => setEndForm({ ...endForm, logradouro: e.target.value })} /></div>
+              <div className="space-y-1 col-span-2"><Label className="text-xs">Logradouro *</Label><Input value={endForm.logradouro} onChange={(e) => setEndForm({ ...endForm, logradouro: e.target.value })} className="rounded-xl" /></div>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1"><Label className="text-xs">Número</Label><Input value={endForm.numero} onChange={(e) => setEndForm({ ...endForm, numero: e.target.value })} /></div>
-              <div className="space-y-1 col-span-2"><Label className="text-xs">Complemento</Label><Input value={endForm.complemento} onChange={(e) => setEndForm({ ...endForm, complemento: e.target.value })} /></div>
+              <div className="space-y-1"><Label className="text-xs">Número</Label><Input value={endForm.numero} onChange={(e) => setEndForm({ ...endForm, numero: e.target.value })} className="rounded-xl" /></div>
+              <div className="space-y-1 col-span-2"><Label className="text-xs">Complemento</Label><Input value={endForm.complemento} onChange={(e) => setEndForm({ ...endForm, complemento: e.target.value })} className="rounded-xl" /></div>
             </div>
-            <div className="space-y-1"><Label className="text-xs">Bairro</Label><Input value={endForm.bairro} onChange={(e) => setEndForm({ ...endForm, bairro: e.target.value })} /></div>
+            <div className="space-y-1"><Label className="text-xs">Bairro</Label><Input value={endForm.bairro} onChange={(e) => setEndForm({ ...endForm, bairro: e.target.value })} className="rounded-xl" /></div>
             <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1 col-span-2"><Label className="text-xs">Cidade *</Label><Input value={endForm.cidade} onChange={(e) => setEndForm({ ...endForm, cidade: e.target.value })} /></div>
-              <div className="space-y-1"><Label className="text-xs">Estado *</Label><Input value={endForm.estado} onChange={(e) => setEndForm({ ...endForm, estado: e.target.value })} maxLength={2} /></div>
+              <div className="space-y-1 col-span-2"><Label className="text-xs">Cidade *</Label><Input value={endForm.cidade} onChange={(e) => setEndForm({ ...endForm, cidade: e.target.value })} className="rounded-xl" /></div>
+              <div className="space-y-1"><Label className="text-xs">Estado *</Label><Input value={endForm.estado} onChange={(e) => setEndForm({ ...endForm, estado: e.target.value })} maxLength={2} className="rounded-xl" /></div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEndDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={saveNovoEndereco} disabled={savingEnd}>{savingEnd ? "Salvando..." : "Salvar"}</Button>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setEndDialogOpen(false)} className="rounded-full">Cancelar</Button>
+            <Button onClick={saveNovoEndereco} disabled={savingEnd} className="rounded-full">{savingEnd ? "Salvando..." : "Salvar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

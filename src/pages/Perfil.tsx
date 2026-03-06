@@ -5,13 +5,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, MapPin, Phone, User, Package, Loader2, MessageCircle, Eye, Shield } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Phone, User, Package, Loader2, MessageCircle, Eye, Shield, ChevronRight } from "lucide-react";
 import { formatTelefone, unformatTelefone } from "@/lib/telefone";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCep } from "@/hooks/useCep";
@@ -63,14 +61,14 @@ interface PedidoItem {
 
 const emptyEndereco = { cep: "", logradouro: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "", observacao: "" };
 
-const statusLabel: Record<string, { label: string; color: string }> = {
+const statusConfig: Record<string, { label: string; color: string }> = {
   carrinho: { label: "Carrinho", color: "bg-muted text-muted-foreground" },
-  separacao: { label: "Separação", color: "bg-yellow-100 text-yellow-800" },
-  aguardando_pagamento: { label: "Aguardando pgto", color: "bg-orange-100 text-orange-800" },
-  pago: { label: "Pago", color: "bg-blue-100 text-blue-800" },
-  enviado: { label: "Enviado", color: "bg-indigo-100 text-indigo-800" },
-  entregue: { label: "Entregue", color: "bg-green-100 text-green-700" },
-  cancelado: { label: "Cancelado", color: "bg-red-100 text-red-700" },
+  separacao: { label: "Separação", color: "bg-accent text-accent-foreground" },
+  aguardando_pagamento: { label: "Aguardando pgto", color: "bg-accent text-accent-foreground" },
+  pago: { label: "Pago", color: "bg-primary/10 text-primary" },
+  enviado: { label: "Enviado", color: "bg-primary/10 text-primary" },
+  entregue: { label: "Entregue", color: "bg-primary/15 text-primary" },
+  cancelado: { label: "Cancelado", color: "bg-destructive/10 text-destructive" },
 };
 
 const Perfil = () => {
@@ -92,7 +90,6 @@ const Perfil = () => {
   const [endDialogOpen, setEndDialogOpen] = useState(false);
   const [editEndId, setEditEndId] = useState<string | null>(null);
   const [endForm, setEndForm] = useState(emptyEndereco);
-
   const { fetchCep, loading: cepLoading } = useCep();
 
   const [telDialogOpen, setTelDialogOpen] = useState(false);
@@ -105,6 +102,8 @@ const Perfil = () => {
   const [pedidoItens, setPedidoItens] = useState<PedidoItem[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
+  const [activeTab, setActiveTab] = useState<"dados" | "enderecos" | "pedidos">("dados");
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) { navigate("/auth", { replace: true }); return; }
@@ -116,24 +115,18 @@ const Perfil = () => {
     if (!user) return;
     setLoading(true);
     const { data: clienteData } = await supabase.from("cliente").select("*").eq("user_id", user.id).maybeSingle();
-
     if (clienteData) {
       setCliente(clienteData as any);
       setEditNome((clienteData as any).nome);
       setEditCpf((clienteData as any).cpf_cnpj || "");
-
       const [endRes, telRes, pedRes] = await Promise.all([
         supabase.from("cliente_endereco").select("endereco_id, endereco:endereco_id(*)").eq("cliente_id", (clienteData as any).cliente_id),
         supabase.from("cliente_telefone").select("*").eq("cliente_id", (clienteData as any).cliente_id),
         supabase.from("pedido").select("pedido_id, data, total, frete, status, origem, observacao").eq("cliente_id", (clienteData as any).cliente_id).neq("status", "carrinho").order("data", { ascending: false }),
       ]);
-
       if (endRes.data) setEnderecos(endRes.data.map((e: any) => e.endereco).filter(Boolean));
       if (telRes.data) setTelefones(telRes.data as any);
       if (pedRes.data) setPedidos(pedRes.data as any);
-    } else {
-      // The handle_new_user trigger should have created the record; just wait and retry
-      // Don't manually insert to avoid duplicates
     }
     setLoading(false);
   };
@@ -170,24 +163,16 @@ const Perfil = () => {
     setSaving(true);
     try {
       if (cpfDigits.length > 0) {
-        // Use RPC to find/merge with existing cliente by CPF
         const { data: mergedId, error: rpcErr } = await supabase.rpc("find_or_link_cliente_by_cpf", {
-          _cpf_cnpj: cpfDigits,
-          _user_id: user.id,
-          _email: user.email ?? "",
-          _nome: editNome,
+          _cpf_cnpj: cpfDigits, _user_id: user.id, _email: user.email ?? "", _nome: editNome,
         });
         if (rpcErr) throw rpcErr;
-        // Update nome on the (possibly merged) cliente
         await supabase.from("cliente").update({ nome: editNome }).eq("cliente_id", mergedId);
       } else {
         await supabase.from("cliente").update({ nome: editNome, cpf_cnpj: null }).eq("cliente_id", cliente.cliente_id);
       }
-      toast({ title: "Perfil atualizado" });
-      loadAll();
-    } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
-    }
+      toast({ title: "Perfil atualizado" }); loadAll();
+    } catch (err: any) { toast({ title: "Erro", description: err.message, variant: "destructive" }); }
     setSaving(false);
   };
 
@@ -243,269 +228,316 @@ const Perfil = () => {
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8 max-w-3xl space-y-4">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-40 w-full" />
+        <AppHeader backTo="/" backLabel="Catálogo" />
+        <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
+          <Skeleton className="h-8 w-48 rounded-xl" />
+          <Skeleton className="h-40 w-full rounded-xl" />
+          <Skeleton className="h-40 w-full rounded-xl" />
         </div>
       </div>
     );
   }
 
+  const tabs = [
+    { id: "dados" as const, label: "Dados", icon: User },
+    { id: "enderecos" as const, label: "Endereços", icon: MapPin },
+    { id: "pedidos" as const, label: "Pedidos", icon: Package },
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <AppHeader backTo="/" backLabel="Catálogo">
         {isAdmin && (
-          <Button size="sm" variant="secondary" className="gap-1.5 bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80" onClick={() => navigate("/admin")}>
+          <Button size="sm" variant="ghost" className="text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-full gap-1.5 text-xs" onClick={() => navigate("/admin")}>
             <Shield className="h-4 w-4" /> Admin
           </Button>
         )}
-        <Button variant="ghost" size="sm" className="text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent" onClick={async () => { await signOut(); navigate("/"); }}>
+        <Button variant="ghost" size="sm" className="text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-full text-xs" onClick={async () => { await signOut(); navigate("/"); }}>
           Sair
         </Button>
       </AppHeader>
 
-      <div className="container mx-auto px-4 py-6 max-w-3xl">
-        <h1 className="text-xl font-bold mb-4">Meu Perfil</h1>
-        <Tabs defaultValue="dados" className="space-y-4">
-          <TabsList className="w-full grid grid-cols-3">
-            <TabsTrigger value="dados" className="gap-1.5"><User className="h-3.5 w-3.5 hidden sm:block" /> Dados</TabsTrigger>
-            <TabsTrigger value="enderecos" className="gap-1.5"><MapPin className="h-3.5 w-3.5 hidden sm:block" /> Endereços</TabsTrigger>
-            <TabsTrigger value="pedidos" className="gap-1.5"><Package className="h-3.5 w-3.5 hidden sm:block" /> Pedidos</TabsTrigger>
-          </TabsList>
+      {/* Tab bar - sticky */}
+      <div className="sticky top-14 md:top-16 z-30 bg-background/95 backdrop-blur-md border-b border-border/50">
+        <div className="flex max-w-lg mx-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === tab.id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <tab.icon className="h-4 w-4" />
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
-          {/* DADOS */}
-          <TabsContent value="dados">
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Dados pessoais</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2"><Label>Nome</Label><Input value={editNome} onChange={(e) => setEditNome(e.target.value)} /></div>
-                <div className="space-y-2"><Label>CPF/CNPJ</Label><Input value={editCpf} onChange={(e) => { if (!cliente?.cpf_cnpj) setEditCpf(e.target.value); }} disabled={!!cliente?.cpf_cnpj} className={cliente?.cpf_cnpj ? "bg-muted" : ""} />{cliente?.cpf_cnpj && <p className="text-xs text-muted-foreground">CPF/CNPJ não pode ser alterado após cadastrado.</p>}</div>
-                <div className="space-y-2"><Label>Email</Label><Input value={user?.email || ""} disabled className="bg-muted" /></div>
-                <Button onClick={saveProfile} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
-              </CardContent>
-            </Card>
+      <main className="flex-1 px-4 py-5 max-w-lg mx-auto w-full">
+        {/* DADOS */}
+        {activeTab === "dados" && (
+          <div className="space-y-5 animate-in fade-in duration-200">
+            {/* Personal info */}
+            <section>
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Dados pessoais</h2>
+              <div className="bg-card rounded-xl border border-border/50 p-4 space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Nome</Label>
+                  <Input value={editNome} onChange={(e) => setEditNome(e.target.value)} className="rounded-xl h-12" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">CPF/CNPJ</Label>
+                  <Input value={editCpf} onChange={(e) => { if (!cliente?.cpf_cnpj) setEditCpf(e.target.value); }} disabled={!!cliente?.cpf_cnpj} className={`rounded-xl h-12 ${cliente?.cpf_cnpj ? "bg-muted" : ""}`} />
+                  {cliente?.cpf_cnpj && <p className="text-[11px] text-muted-foreground">Não pode ser alterado após cadastrado</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Email</Label>
+                  <Input value={user?.email || ""} disabled className="rounded-xl h-12 bg-muted" />
+                </div>
+                <Button onClick={saveProfile} disabled={saving} className="w-full rounded-full h-11">
+                  {saving ? "Salvando..." : "Salvar"}
+                </Button>
+              </div>
+            </section>
 
-            <Card className="mt-4">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg">Telefones</CardTitle>
-                <Button size="sm" variant="outline" onClick={openNewTel} className="gap-1"><Plus className="h-3 w-3" /> Adicionar</Button>
-              </CardHeader>
-              <CardContent>
-                {telefones.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nenhum telefone cadastrado</p>
-                ) : (
-                  <div className="space-y-2">
-                    {telefones.map((t) => (
-                      <div key={t.cliente_telefone_id} className="flex items-center justify-between border rounded-md px-3 py-2">
-                        <div className="flex items-center gap-2">
+            {/* Phones */}
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Telefones</h2>
+                <button onClick={openNewTel} className="text-xs text-primary font-medium flex items-center gap-1">
+                  <Plus className="h-3.5 w-3.5" /> Adicionar
+                </button>
+              </div>
+              {telefones.length === 0 ? (
+                <div className="bg-card rounded-xl border border-border/50 p-6 flex flex-col items-center gap-2 text-muted-foreground">
+                  <Phone className="h-8 w-8 text-muted-foreground/30" />
+                  <p className="text-sm">Nenhum telefone cadastrado</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {telefones.map((t) => (
+                    <div key={t.cliente_telefone_id} className="bg-card rounded-xl border border-border/50 px-4 py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0">
                           <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">{formatTelefone(t.telefone)}</span>
+                        </div>
+                        <div>
+                          <span className="text-sm font-medium">{formatTelefone(t.telefone)}</span>
                           {t.is_whatsapp && (
-                            <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">
-                              <MessageCircle className="h-3 w-3" /> WhatsApp
+                            <span className="ml-2 inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                              <MessageCircle className="h-2.5 w-2.5" /> WhatsApp
                             </span>
                           )}
                         </div>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditTel(t)}><Pencil className="h-3 w-3" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteTelefone(t.cliente_telefone_id)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
-                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ENDEREÇOS */}
-          <TabsContent value="enderecos">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg">Meus endereços</CardTitle>
-                <Button size="sm" onClick={openNewEnd} className="gap-1"><Plus className="h-3 w-3" /> Novo</Button>
-              </CardHeader>
-              <CardContent>
-                {enderecos.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nenhum endereço cadastrado</p>
-                ) : (
-                  <div className="space-y-3">
-                    {enderecos.map((e) => (
-                      <div key={e.endereco_id} className="border rounded-lg p-4 space-y-1">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="font-medium text-sm">{e.logradouro}{e.numero ? `, ${e.numero}` : ""}</p>
-                            {e.complemento && <p className="text-xs text-muted-foreground">{e.complemento}</p>}
-                            <p className="text-xs text-muted-foreground">{[e.bairro, e.cidade, e.estado].filter(Boolean).join(" — ")}</p>
-                            {e.cep && <p className="text-xs text-muted-foreground">CEP: {e.cep}</p>}
-                          </div>
-                          <div className="flex gap-1 shrink-0">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditEnd(e)}><Pencil className="h-3 w-3" /></Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteEndereco(e.endereco_id)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
-                          </div>
-                        </div>
+                      <div className="flex gap-0.5">
+                        <button onClick={() => openEditTel(t)} className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"><Pencil className="h-3.5 w-3.5 text-muted-foreground" /></button>
+                        <button onClick={() => deleteTelefone(t.cliente_telefone_id)} className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-destructive/10 transition-colors"><Trash2 className="h-3.5 w-3.5 text-destructive" /></button>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* PEDIDOS */}
-          <TabsContent value="pedidos">
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Meus pedidos</CardTitle></CardHeader>
-              <CardContent>
-                {pedidos.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nenhum pedido realizado ainda</p>
-                ) : (
-                  <div className="space-y-3 md:space-y-0">
-                    {/* Mobile: cards */}
-                    <div className="md:hidden space-y-3">
-                      {pedidos.map((p) => {
-                        const s = statusLabel[p.status] || { label: p.status, color: "bg-muted" };
-                        return (
-                          <div key={p.pedido_id} className="border rounded-lg p-3 space-y-2 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => openPedidoDetail(p)}>
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-mono text-muted-foreground">{p.pedido_id.slice(0, 8)}</span>
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${s.color}`}>{s.label}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span>{new Date(p.data).toLocaleDateString("pt-BR")}</span>
-                              <span className="font-semibold">R$ {Number(p.total).toFixed(2)}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
                     </div>
-                    {/* Desktop: table */}
-                    <div className="hidden md:block border rounded-lg overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Pedido</TableHead>
-                            <TableHead>Data</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
-                            <TableHead className="w-10"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {pedidos.map((p) => {
-                            const s = statusLabel[p.status] || { label: p.status, color: "bg-muted" };
-                            return (
-                              <TableRow key={p.pedido_id} className="cursor-pointer" onClick={() => openPedidoDetail(p)}>
-                                <TableCell className="text-xs font-mono text-muted-foreground">{p.pedido_id.slice(0, 8)}</TableCell>
-                                <TableCell className="text-sm">{new Date(p.data).toLocaleDateString("pt-BR")}</TableCell>
-                                <TableCell><span className={`text-xs px-2 py-0.5 rounded-full ${s.color}`}>{s.label}</span></TableCell>
-                                <TableCell className="text-right font-medium">R$ {Number(p.total).toFixed(2)}</TableCell>
-                                <TableCell><Button variant="ghost" size="icon" className="h-7 w-7"><Eye className="h-4 w-4" /></Button></TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+
+        {/* ENDEREÇOS */}
+        {activeTab === "enderecos" && (
+          <div className="space-y-3 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Meus endereços</h2>
+              <button onClick={openNewEnd} className="text-xs text-primary font-medium flex items-center gap-1">
+                <Plus className="h-3.5 w-3.5" /> Novo
+              </button>
+            </div>
+            {enderecos.length === 0 ? (
+              <div className="bg-card rounded-xl border border-border/50 p-6 flex flex-col items-center gap-2 text-muted-foreground">
+                <MapPin className="h-8 w-8 text-muted-foreground/30" />
+                <p className="text-sm">Nenhum endereço cadastrado</p>
+              </div>
+            ) : (
+              enderecos.map((e) => (
+                <div key={e.endereco_id} className="bg-card rounded-xl border border-border/50 p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm">{e.logradouro}{e.numero ? `, ${e.numero}` : ""}</p>
+                        {e.complemento && <p className="text-xs text-muted-foreground">{e.complemento}</p>}
+                        <p className="text-xs text-muted-foreground">{[e.bairro, e.cidade, e.estado].filter(Boolean).join(" — ")}</p>
+                        {e.cep && <p className="text-xs text-muted-foreground">CEP: {e.cep}</p>}
+                      </div>
+                    </div>
+                    <div className="flex gap-0.5 shrink-0">
+                      <button onClick={() => openEditEnd(e)} className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"><Pencil className="h-3.5 w-3.5 text-muted-foreground" /></button>
+                      <button onClick={() => deleteEndereco(e.endereco_id)} className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-destructive/10 transition-colors"><Trash2 className="h-3.5 w-3.5 text-destructive" /></button>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* PEDIDOS */}
+        {activeTab === "pedidos" && (
+          <div className="space-y-3 animate-in fade-in duration-200">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">Meus pedidos</h2>
+            {pedidos.length === 0 ? (
+              <div className="bg-card rounded-xl border border-border/50 p-6 flex flex-col items-center gap-2 text-muted-foreground">
+                <Package className="h-8 w-8 text-muted-foreground/30" />
+                <p className="text-sm">Nenhum pedido realizado ainda</p>
+              </div>
+            ) : (
+              pedidos.map((p) => {
+                const s = statusConfig[p.status] || { label: p.status, color: "bg-muted text-muted-foreground" };
+                return (
+                  <div
+                    key={p.pedido_id}
+                    className="bg-card rounded-xl border border-border/50 p-4 cursor-pointer hover:shadow-sm transition-shadow active:scale-[0.99]"
+                    onClick={() => openPedidoDetail(p)}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-mono text-muted-foreground"># {p.pedido_id.slice(0, 8).toUpperCase()}</span>
+                      <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium ${s.color}`}>{s.label}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">{new Date(p.data).toLocaleDateString("pt-BR")}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="font-bold text-sm">R$ {Number(p.total).toFixed(2)}</span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </main>
 
       {/* Endereco Dialog */}
       <Dialog open={endDialogOpen} onOpenChange={setEndDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto mx-4 rounded-2xl">
           <DialogHeader><DialogTitle>{editEndId ? "Editar Endereço" : "Novo Endereço"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1 col-span-1">
                 <Label className="text-xs">CEP</Label>
                 <div className="relative">
-                  <Input value={endForm.cep} onChange={(e) => setEndForm({ ...endForm, cep: e.target.value })} onBlur={async () => { const data = await fetchCep(endForm.cep); if (data) { setEndForm((prev) => ({ ...prev, logradouro: data.street || prev.logradouro, bairro: data.neighborhood || prev.bairro, cidade: data.city || prev.cidade, estado: data.state || prev.estado })); } }} placeholder="00000-000" maxLength={9} />
+                  <Input value={endForm.cep} onChange={(e) => setEndForm({ ...endForm, cep: e.target.value })} onBlur={async () => { const data = await fetchCep(endForm.cep); if (data) { setEndForm((prev) => ({ ...prev, logradouro: data.street || prev.logradouro, bairro: data.neighborhood || prev.bairro, cidade: data.city || prev.cidade, estado: data.state || prev.estado })); } }} placeholder="00000-000" maxLength={9} className="rounded-xl" />
                   {cepLoading && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
                 </div>
               </div>
-              <div className="space-y-1 col-span-2">
-                <Label className="text-xs">Logradouro *</Label>
-                <Input value={endForm.logradouro} onChange={(e) => setEndForm({ ...endForm, logradouro: e.target.value })} />
-              </div>
+              <div className="space-y-1 col-span-2"><Label className="text-xs">Logradouro *</Label><Input value={endForm.logradouro} onChange={(e) => setEndForm({ ...endForm, logradouro: e.target.value })} className="rounded-xl" /></div>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1"><Label className="text-xs">Número</Label><Input value={endForm.numero} onChange={(e) => setEndForm({ ...endForm, numero: e.target.value })} /></div>
-              <div className="space-y-1 col-span-2"><Label className="text-xs">Complemento</Label><Input value={endForm.complemento} onChange={(e) => setEndForm({ ...endForm, complemento: e.target.value })} /></div>
+              <div className="space-y-1"><Label className="text-xs">Número</Label><Input value={endForm.numero} onChange={(e) => setEndForm({ ...endForm, numero: e.target.value })} className="rounded-xl" /></div>
+              <div className="space-y-1 col-span-2"><Label className="text-xs">Complemento</Label><Input value={endForm.complemento} onChange={(e) => setEndForm({ ...endForm, complemento: e.target.value })} className="rounded-xl" /></div>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1"><Label className="text-xs">Bairro</Label><Input value={endForm.bairro} onChange={(e) => setEndForm({ ...endForm, bairro: e.target.value })} /></div>
-              <div className="space-y-1"><Label className="text-xs">Cidade *</Label><Input value={endForm.cidade} onChange={(e) => setEndForm({ ...endForm, cidade: e.target.value })} /></div>
-              <div className="space-y-1"><Label className="text-xs">Estado *</Label><Input value={endForm.estado} onChange={(e) => setEndForm({ ...endForm, estado: e.target.value })} maxLength={2} /></div>
+              <div className="space-y-1"><Label className="text-xs">Bairro</Label><Input value={endForm.bairro} onChange={(e) => setEndForm({ ...endForm, bairro: e.target.value })} className="rounded-xl" /></div>
+              <div className="space-y-1"><Label className="text-xs">Cidade *</Label><Input value={endForm.cidade} onChange={(e) => setEndForm({ ...endForm, cidade: e.target.value })} className="rounded-xl" /></div>
+              <div className="space-y-1"><Label className="text-xs">Estado *</Label><Input value={endForm.estado} onChange={(e) => setEndForm({ ...endForm, estado: e.target.value })} maxLength={2} className="rounded-xl" /></div>
             </div>
-            <div className="space-y-1"><Label className="text-xs">Observação</Label><Input value={endForm.observacao} onChange={(e) => setEndForm({ ...endForm, observacao: e.target.value })} /></div>
+            <div className="space-y-1"><Label className="text-xs">Observação</Label><Input value={endForm.observacao} onChange={(e) => setEndForm({ ...endForm, observacao: e.target.value })} className="rounded-xl" /></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEndDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={saveEndereco} disabled={saving || !endForm.logradouro || !endForm.cidade || !endForm.estado}>{saving ? "Salvando..." : "Salvar"}</Button>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setEndDialogOpen(false)} className="rounded-full">Cancelar</Button>
+            <Button onClick={saveEndereco} disabled={saving || !endForm.logradouro || !endForm.cidade || !endForm.estado} className="rounded-full">{saving ? "Salvando..." : "Salvar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Telefone Dialog */}
       <Dialog open={telDialogOpen} onOpenChange={setTelDialogOpen}>
-        <DialogContent>
+        <DialogContent className="mx-4 rounded-2xl">
           <DialogHeader><DialogTitle>{editTelId ? "Editar Telefone" : "Novo Telefone"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2"><Label>Telefone</Label><Input placeholder="(00) 00000-0000" value={telForm} onChange={(e) => setTelForm(formatTelefone(e.target.value))} /></div>
+            <div className="space-y-1.5">
+              <Label className="text-sm">Telefone</Label>
+              <Input placeholder="(00) 00000-0000" value={telForm} onChange={(e) => setTelForm(formatTelefone(e.target.value))} className="rounded-xl h-12" />
+            </div>
             <div className="flex items-center gap-2">
               <Switch checked={telWhatsapp} onCheckedChange={setTelWhatsapp} />
-              <Label className="flex items-center gap-1.5"><MessageCircle className="h-4 w-4 text-green-600" /> É WhatsApp?</Label>
+              <Label className="flex items-center gap-1.5 text-sm"><MessageCircle className="h-4 w-4 text-primary" /> É WhatsApp?</Label>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTelDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={saveTelefone} disabled={saving || !telForm}>{saving ? "Salvando..." : "Salvar"}</Button>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setTelDialogOpen(false)} className="rounded-full">Cancelar</Button>
+            <Button onClick={saveTelefone} disabled={saving || !telForm} className="rounded-full">{saving ? "Salvando..." : "Salvar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Pedido Detail Dialog */}
       <Dialog open={pedidoDetailOpen} onOpenChange={setPedidoDetailOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-y-auto mx-4 rounded-2xl sm:max-w-lg">
           <DialogHeader><DialogTitle>Detalhes do Pedido</DialogTitle></DialogHeader>
           {pedidoDetail && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-muted-foreground">Pedido:</span><p className="font-mono text-xs">{pedidoDetail.pedido_id.slice(0, 8)}</p></div>
-                <div><span className="text-muted-foreground">Data:</span><p>{new Date(pedidoDetail.data).toLocaleDateString("pt-BR")}</p></div>
-                <div><span className="text-muted-foreground">Status:</span><p><span className={`text-xs px-2 py-0.5 rounded-full ${(statusLabel[pedidoDetail.status] || { color: "bg-muted" }).color}`}>{(statusLabel[pedidoDetail.status] || { label: pedidoDetail.status }).label}</span></p></div>
-                <div><span className="text-muted-foreground">Origem:</span><p className="capitalize">{pedidoDetail.origem}</p></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-muted/50 rounded-xl p-3">
+                  <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Pedido</span>
+                  <p className="font-mono text-xs font-medium mt-0.5">{pedidoDetail.pedido_id.slice(0, 8).toUpperCase()}</p>
+                </div>
+                <div className="bg-muted/50 rounded-xl p-3">
+                  <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Data</span>
+                  <p className="text-sm font-medium mt-0.5">{new Date(pedidoDetail.data).toLocaleDateString("pt-BR")}</p>
+                </div>
+                <div className="bg-muted/50 rounded-xl p-3">
+                  <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Status</span>
+                  <p className="mt-0.5"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${(statusConfig[pedidoDetail.status] || { color: "bg-muted" }).color}`}>{(statusConfig[pedidoDetail.status] || { label: pedidoDetail.status }).label}</span></p>
+                </div>
+                <div className="bg-muted/50 rounded-xl p-3">
+                  <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Origem</span>
+                  <p className="text-sm font-medium mt-0.5 capitalize">{pedidoDetail.origem}</p>
+                </div>
               </div>
-              {pedidoDetail.observacao && (<div className="text-sm"><span className="text-muted-foreground">Observação:</span><p>{pedidoDetail.observacao}</p></div>)}
+
+              {pedidoDetail.observacao && (
+                <div className="bg-accent/30 rounded-xl p-3">
+                  <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Observação</span>
+                  <p className="text-sm mt-0.5">{pedidoDetail.observacao}</p>
+                </div>
+              )}
+
               <div>
-                <h4 className="text-sm font-medium mb-2">Itens</h4>
-                {loadingDetail ? (<div className="space-y-2"><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /></div>) : pedidoItens.length === 0 ? (<p className="text-sm text-muted-foreground">Nenhum item encontrado</p>) : (
-                  <div className="border rounded-lg overflow-hidden">
-                    <Table>
-                      <TableHeader><TableRow><TableHead>Produto</TableHead><TableHead className="text-center">Qtd</TableHead><TableHead className="text-right">Unit.</TableHead><TableHead className="text-right">Subtotal</TableHead></TableRow></TableHeader>
-                      <TableBody>
-                        {pedidoItens.map((item) => (
-                          <TableRow key={item.pedido_item_id}>
-                            <TableCell className="text-sm">{item.produto_nome}</TableCell>
-                            <TableCell className="text-center text-sm">{Number(item.quantidade)}</TableCell>
-                            <TableCell className="text-right text-sm">R$ {Number(item.preco_unitario).toFixed(2)}</TableCell>
-                            <TableCell className="text-right text-sm font-medium">R$ {(Number(item.quantidade) * Number(item.preco_unitario)).toFixed(2)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Itens</h4>
+                {loadingDetail ? (
+                  <div className="space-y-2"><Skeleton className="h-10 w-full rounded-xl" /><Skeleton className="h-10 w-full rounded-xl" /></div>
+                ) : pedidoItens.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum item encontrado</p>
+                ) : (
+                  <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
+                    {pedidoItens.map((item, idx) => (
+                      <div key={item.pedido_item_id} className={`flex justify-between items-center px-4 py-2.5 ${idx > 0 ? "border-t border-border/30" : ""}`}>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm truncate">{item.produto_nome}</p>
+                          <p className="text-xs text-muted-foreground">{Number(item.quantidade)}× R$ {Number(item.preco_unitario).toFixed(2)}</p>
+                        </div>
+                        <span className="text-sm font-medium ml-3">R$ {(Number(item.quantidade) * Number(item.preco_unitario)).toFixed(2)}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
-              <div className="border-t pt-3 space-y-1 text-sm">
-                {pedidoDetail.frete > 0 && (<div className="flex justify-between"><span className="text-muted-foreground">Frete:</span><span>R$ {Number(pedidoDetail.frete).toFixed(2)}</span></div>)}
-                <div className="flex justify-between font-semibold"><span>Total:</span><span>R$ {Number(pedidoDetail.total).toFixed(2)}</span></div>
+
+              <div className="border-t pt-3 space-y-1">
+                {pedidoDetail.frete > 0 && (
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Frete:</span><span>R$ {Number(pedidoDetail.frete).toFixed(2)}</span></div>
+                )}
+                <div className="flex justify-between text-base font-bold">
+                  <span>Total</span>
+                  <span className="text-primary">R$ {Number(pedidoDetail.total).toFixed(2)}</span>
+                </div>
               </div>
             </div>
           )}
