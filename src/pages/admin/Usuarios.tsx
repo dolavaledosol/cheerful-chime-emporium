@@ -44,6 +44,10 @@ const Usuarios = () => {
   const [roleUser, setRoleUser] = useState<UserProfile | null>(null);
   const [newRole, setNewRole] = useState("");
 
+  // Permissions dialog
+  const [permOpen, setPermOpen] = useState(false);
+  const [permUser, setPermUser] = useState<UserProfile | null>(null);
+
   useEffect(() => {
     loadUsers();
   }, []);
