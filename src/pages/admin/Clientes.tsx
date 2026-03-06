@@ -225,6 +225,10 @@ const Clientes = () => {
                 <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
               </div>
             </div>
+            <div className="space-y-2">
+              <Label>Telefone</Label>
+              <Input placeholder="Ex: 11999998888" value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value.replace(/\D/g, "").slice(0, 11) })} />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Tipo</Label>

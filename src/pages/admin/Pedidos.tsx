@@ -224,6 +224,7 @@ const Pedidos = () => {
   const [newClientNome, setNewClientNome] = useState("");
   const [newClientCpf, setNewClientCpf] = useState("");
   const [newClientEmail, setNewClientEmail] = useState("");
+  const [newClientTelefone, setNewClientTelefone] = useState("");
   // Delivery type
   const [newOrderTipoEntrega, setNewOrderTipoEntrega] = useState<"entrega" | "retirada">("retirada");
   const [locaisEstoque, setLocaisEstoque] = useState<{ local_estoque_id: string; nome: string }[]>([]);
@@ -971,6 +972,7 @@ const Pedidos = () => {
     setNewClientNome("");
     setNewClientCpf("");
     setNewClientEmail("");
+    setNewClientTelefone("");
     setSelectedClienteCpf("");
     setCpfCnpjError(null);
     setNewOrderTipoEntrega("retirada");
