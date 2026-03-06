@@ -123,44 +123,56 @@ const Dashboard = () => {
       {/* KPI grid – 2x2 on mobile */}
       <div className="grid grid-cols-2 gap-3">
         {/* Pedidos hoje */}
-        <div className="rounded-xl bg-card border border-border p-3.5 space-y-1">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <ShoppingCart className="h-3.5 w-3.5" />
-            <span className="text-[11px] font-medium uppercase tracking-wide">Hoje</span>
+        <Link to="/admin/pedidos" className="rounded-xl bg-card border border-border p-3.5 space-y-1 hover:border-primary/40 transition-colors group">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <ShoppingCart className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-medium uppercase tracking-wide">Hoje</span>
+            </div>
+            <ChevronRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <p className="text-2xl font-bold text-foreground leading-none">{stats.pedidosHoje}</p>
           <p className="text-xs text-muted-foreground">{fmt(stats.faturamento)}</p>
-        </div>
+        </Link>
 
         {/* Pedidos mês */}
-        <div className="rounded-xl bg-card border border-border p-3.5 space-y-1">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <CalendarDays className="h-3.5 w-3.5" />
-            <span className="text-[11px] font-medium uppercase tracking-wide">Mês</span>
+        <Link to="/admin/pedidos" className="rounded-xl bg-card border border-border p-3.5 space-y-1 hover:border-primary/40 transition-colors group">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <CalendarDays className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-medium uppercase tracking-wide">Mês</span>
+            </div>
+            <ChevronRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <p className="text-2xl font-bold text-foreground leading-none">{stats.pedidosMes}</p>
           <p className="text-xs text-muted-foreground">{fmt(stats.faturamentoMes)}</p>
-        </div>
+        </Link>
 
         {/* Contas a receber */}
-        <div className="rounded-xl bg-[hsl(var(--success))]/5 border border-[hsl(var(--success))]/20 p-3.5 space-y-1">
-          <div className="flex items-center gap-1.5 text-[hsl(var(--success))]">
-            <TrendingUp className="h-3.5 w-3.5" />
-            <span className="text-[11px] font-medium uppercase tracking-wide">A receber</span>
+        <Link to="/admin/financeiro" className="rounded-xl bg-[hsl(var(--success))]/5 border border-[hsl(var(--success))]/20 p-3.5 space-y-1 hover:border-[hsl(var(--success))]/40 transition-colors group">
+          <div className="flex items-center justify-between text-[hsl(var(--success))]">
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-medium uppercase tracking-wide">A receber</span>
+            </div>
+            <ChevronRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <p className="text-xl font-bold text-[hsl(var(--success))] leading-none">{fmt(stats.totalReceber)}</p>
           <p className="text-[11px] text-muted-foreground">{stats.qtdReceber} pendente(s)</p>
-        </div>
+        </Link>
 
         {/* Contas a pagar */}
-        <div className="rounded-xl bg-destructive/5 border border-destructive/20 p-3.5 space-y-1">
-          <div className="flex items-center gap-1.5 text-destructive">
-            <TrendingDown className="h-3.5 w-3.5" />
-            <span className="text-[11px] font-medium uppercase tracking-wide">A pagar</span>
+        <Link to="/admin/financeiro" className="rounded-xl bg-destructive/5 border border-destructive/20 p-3.5 space-y-1 hover:border-destructive/40 transition-colors group">
+          <div className="flex items-center justify-between text-destructive">
+            <div className="flex items-center gap-1.5">
+              <TrendingDown className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-medium uppercase tracking-wide">A pagar</span>
+            </div>
+            <ChevronRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <p className="text-xl font-bold text-destructive leading-none">{fmt(stats.totalPagar)}</p>
           <p className="text-[11px] text-muted-foreground">{stats.qtdPagar} pendente(s)</p>
-        </div>
+        </Link>
       </div>
 
       {/* Pedidos em andamento */}
