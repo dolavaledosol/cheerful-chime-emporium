@@ -116,25 +116,31 @@ const Estoque = () => {
   };
 
   /* ═══════════════════  CONCILIAÇÃO  ═══════════════════ */
-  const exportExcel = () => {
+  const exportExcel = async () => {
+    // Fetch ALL active products (not just those with stock)
+    const { data: allProdutos } = await supabase
+      .from("produto")
+      .select("produto_id, nome, fabricante(nome), familia(nome)")
+      .eq("ativo", true)
+      .order("nome");
+    if (!allProdutos) return;
+
+    // Build pivot rows: one row per product, locais as columns
     const rows: any[] = [];
-    filtered.forEach((g) => {
-      locais.forEach((l) => {
-        const data = g.locais[l.local_estoque_id];
-        if (data) {
-          rows.push({
-            produto_id: g.produto_id,
-            produto: g.nome,
-            fabricante: g.fabricante,
-            familia: g.familia,
-            local_estoque_id: l.local_estoque_id,
-            local: l.nome,
-            estoque: data.estoque,
-            pedidos: data.pedidos,
-          });
-        }
-      });
-    });
+    for (const p of allProdutos as any[]) {
+      const row: any = {
+        produto_id: p.produto_id,
+        produto: p.nome,
+        fabricante: p.fabricante?.nome || "",
+        familia: p.familia?.nome || "",
+      };
+      for (const l of locais) {
+        const estItem = items.find((i) => i.produto_id === p.produto_id && i.local_estoque_id === l.local_estoque_id);
+        // Column name = local name, value = stock quantity
+        row[`${l.nome} (${l.local_estoque_id})`] = estItem ? Number(estItem.quantidade_disponivel) : 0;
+      }
+      rows.push(row);
+    }
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Estoque");
@@ -150,32 +156,44 @@ const Estoque = () => {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json<any>(ws);
 
-    // Build conciliation lines from imported data
+    // Detect local_estoque columns: header contains "(uuid)" pattern
+    const headers = Object.keys(rows[0] || {});
+    const localColumns = headers.filter((h) => {
+      const match = h.match(/\(([0-9a-f-]{36})\)$/);
+      return !!match;
+    });
+
+    // Build conciliation lines from pivot format
     const linhas: ConciliacaoLinha[] = [];
     for (const row of rows) {
       const prodId = row.produto_id;
-      const localId = row.local_estoque_id;
-      const estoqueFisico = Number(row.estoque ?? row.estoque_fisico ?? 0);
-      if (!prodId || !localId) continue;
+      if (!prodId) continue;
 
-      // Find current system stock
-      const sysItem = items.find((i) => i.produto_id === prodId && i.local_estoque_id === localId);
-      const estoqueSistema = sysItem ? Number(sysItem.quantidade_disponivel) : 0;
-      const diff = estoqueFisico - estoqueSistema;
+      for (const colName of localColumns) {
+        const localIdMatch = colName.match(/\(([0-9a-f-]{36})\)$/);
+        if (!localIdMatch) continue;
+        const localId = localIdMatch[1];
+        const estoqueFisico = Number(row[colName] ?? 0);
 
-      linhas.push({
-        produto_id: prodId,
-        nome: sysItem?.produto?.nome || row.produto || prodId,
-        local_estoque_id: localId,
-        local: sysItem?.local_estoque?.nome || row.local || localId,
-        estoque_sistema: estoqueSistema,
-        estoque_fisico: estoqueFisico,
-        diferenca: diff,
-      });
+        // Find current system stock
+        const sysItem = items.find((i) => i.produto_id === prodId && i.local_estoque_id === localId);
+        const estoqueSistema = sysItem ? Number(sysItem.quantidade_disponivel) : 0;
+        const diff = estoqueFisico - estoqueSistema;
+        const localNome = locais.find((l) => l.local_estoque_id === localId)?.nome || colName;
+
+        linhas.push({
+          produto_id: prodId,
+          nome: sysItem?.produto?.nome || row.produto || prodId,
+          local_estoque_id: localId,
+          local: localNome,
+          estoque_sistema: estoqueSistema,
+          estoque_fisico: estoqueFisico,
+          diferenca: diff,
+        });
+      }
     }
     setConciliacaoLinhas(linhas);
     setConciliacaoOpen(true);
-    // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -189,12 +207,20 @@ const Estoque = () => {
     setConciliacaoLoading(true);
     try {
       for (const linha of linhasComDif) {
-        // Update estoque_local
+        // Update or create estoque_local
         const sysItem = items.find((i) => i.produto_id === linha.produto_id && i.local_estoque_id === linha.local_estoque_id);
         if (sysItem) {
           await supabase.from("estoque_local").update({
             quantidade_disponivel: linha.estoque_fisico,
           }).eq("estoque_local_id", sysItem.estoque_local_id);
+        } else {
+          // Create new estoque_local record for product not yet in this location
+          await supabase.from("estoque_local").insert({
+            produto_id: linha.produto_id,
+            local_estoque_id: linha.local_estoque_id,
+            quantidade_disponivel: linha.estoque_fisico,
+            preco: 0,
+          });
         }
 
         // Log movimentação
