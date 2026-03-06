@@ -86,7 +86,7 @@ const Checkout = () => {
   const [endForm, setEndForm] = useState(emptyEndForm);
   const [savingEnd, setSavingEnd] = useState(false);
   const [clienteId, setClienteId] = useState<string | null>(null);
-  const [telefone, setTelefone] = useState("");
+  const [telefones, setTelefones] = useState<string[]>([""]);
   const [telefoneError, setTelefoneError] = useState<string | null>(null);
   const { fetchCep, loading: cepLoading } = useCep();
 
