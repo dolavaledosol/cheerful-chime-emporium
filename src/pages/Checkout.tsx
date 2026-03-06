@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useCep } from "@/hooks/useCep";
 import AppHeader from "@/components/shared/AppHeader";
+import { formatTelefone as formatTelefoneShared, unformatTelefone } from "@/lib/telefone";
 
 // interfaces
 interface Endereco { endereco_id: string; cep: string | null; logradouro: string; numero: string | null; complemento: string | null; bairro: string | null; cidade: string; estado: string; }
@@ -61,9 +62,7 @@ function validateCnpj(cnpj: string): boolean {
   return parseInt(digits[13]) === d2;
 }
 
-// Use shared phone mask
-import { formatTelefone as formatTelefoneLib, unformatTelefone } from "@/lib/telefone";
-function formatTelefone(value: string) { return formatTelefoneLib(value); }
+function formatTelefone(value: string) { return formatTelefoneShared(value); }
 
 function validateCpfCnpj(value: string): string | null {
   const digits = value.replace(/\D/g, "");
