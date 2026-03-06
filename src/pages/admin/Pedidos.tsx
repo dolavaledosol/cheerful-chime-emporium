@@ -841,8 +841,10 @@ const Pedidos = () => {
       // Handle quantidade_pedida_nao_separada
       const localId = editLocalEstoqueId || selectedPedido.local_estoque_id;
 
-      // When moving to aguardando_pagamento and local was just set, increment pedida_nao_separada
-      if (editStatus === "aguardando_pagamento" && selectedPedido.status === "separacao" && localId) {
+      // When moving to aguardando_pagamento and local was just assigned (not already set on the order),
+      // increment pedida_nao_separada. Skip if the order already had a local (e.g. admin-created orders
+      // with retirada already incremented at creation time).
+      if (editStatus === "aguardando_pagamento" && selectedPedido.status === "separacao" && localId && !selectedPedido.local_estoque_id) {
         for (const item of items) {
           const { data: el } = await supabase.from("estoque_local")
             .select("estoque_local_id, quantidade_pedida_nao_separada")
