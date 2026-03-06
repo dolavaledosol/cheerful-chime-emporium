@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Pencil, Trash2, Phone } from "lucide-react";
+import { formatTelefone, unformatTelefone } from "@/lib/telefone";
 
 interface Cliente {
   cliente_id: string;
@@ -66,7 +67,7 @@ const Clientes = () => {
     // Load existing phones
     supabase.from("cliente_telefone").select("cliente_telefone_id, telefone").eq("cliente_id", c.cliente_id).then(({ data }) => {
       if (data && data.length > 0) {
-        setTelefones(data.map(t => ({ id: t.cliente_telefone_id, telefone: t.telefone })));
+        setTelefones(data.map(t => ({ id: t.cliente_telefone_id, telefone: formatTelefone(t.telefone) })));
       } else {
         setTelefones([{ telefone: "" }]);
       }
@@ -134,7 +135,7 @@ const Clientes = () => {
 
       // Save phones
       if (targetId) {
-        const validPhones = telefones.filter(t => t.telefone.replace(/\D/g, "").length > 0);
+        const validPhones = telefones.filter(t => unformatTelefone(t.telefone).length > 0);
         // Delete removed phones
         const { data: existingTels } = await supabase.from("cliente_telefone").select("cliente_telefone_id").eq("cliente_id", targetId);
         const keepIds = validPhones.filter(t => t.id).map(t => t.id!);
@@ -144,7 +145,7 @@ const Clientes = () => {
         }
         // Upsert phones
         for (const tel of validPhones) {
-          const digits = tel.telefone.replace(/\D/g, "");
+          const digits = unformatTelefone(tel.telefone);
           if (tel.id) {
             await supabase.from("cliente_telefone").update({ telefone: digits, is_whatsapp: false }).eq("cliente_telefone_id", tel.id);
           } else {
@@ -266,11 +267,11 @@ const Clientes = () => {
                 <div key={idx} className="flex gap-2 items-center">
                   <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
                   <Input
-                    placeholder="Ex: 11999998888"
+                    placeholder="(00) 00000-0000"
                     value={tel.telefone}
                     onChange={(e) => {
                       const updated = [...telefones];
-                      updated[idx] = { ...updated[idx], telefone: e.target.value.replace(/\D/g, "").slice(0, 11) };
+                      updated[idx] = { ...updated[idx], telefone: formatTelefone(e.target.value) };
                       setTelefones(updated);
                     }}
                   />

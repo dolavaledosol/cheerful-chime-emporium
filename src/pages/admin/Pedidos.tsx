@@ -13,6 +13,7 @@ import { Search, Eye, Truck, Store, Clock, CalendarIcon, AlertTriangle, Split, P
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { useCep } from "@/hooks/useCep";
+import { formatTelefone, unformatTelefone } from "@/lib/telefone";
 
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -1115,7 +1116,7 @@ const Pedidos = () => {
       }
       clienteId = newCliente.cliente_id;
       // Save phones if provided
-      const validPhones = newClientTelefones.map(t => t.replace(/\D/g, "")).filter(t => t.length > 0);
+      const validPhones = newClientTelefones.map(t => unformatTelefone(t)).filter(t => t.length > 0);
       for (const phone of validPhones) {
         await supabase.from("cliente_telefone").insert({ cliente_id: clienteId, telefone: phone, is_whatsapp: false });
       }
@@ -2014,7 +2015,7 @@ const Pedidos = () => {
                       </div>
                       {newClientTelefones.map((tel, idx) => (
                         <div key={idx} className="flex gap-1 items-center">
-                          <Input placeholder="Ex: 11999998888" value={tel} onChange={e => { const updated = [...newClientTelefones]; updated[idx] = e.target.value.replace(/\D/g, "").slice(0, 11); setNewClientTelefones(updated); }} />
+                          <Input placeholder="(00) 00000-0000" value={tel} onChange={e => { const updated = [...newClientTelefones]; updated[idx] = formatTelefone(e.target.value); setNewClientTelefones(updated); }} />
                           {newClientTelefones.length > 1 && (
                             <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setNewClientTelefones(newClientTelefones.filter((_, i) => i !== idx))}>
                               <Trash2 className="h-3 w-3 text-destructive" />
