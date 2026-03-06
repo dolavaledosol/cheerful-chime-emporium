@@ -85,6 +85,16 @@ const Estoque = () => {
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoRow[]>([]);
   const [movSearch, setMovSearch] = useState("");
 
+  /* ── Conciliação state ── */
+  const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
+  const [conciliacaoLoading, setConciliacaoLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  interface ConciliacaoLinha {
+    produto_id: string; nome: string; local: string; local_estoque_id: string;
+    estoque_sistema: number; estoque_fisico: number; diferenca: number;
+  }
+  const [conciliacaoLinhas, setConciliacaoLinhas] = useState<ConciliacaoLinha[]>([]);
+
   const load = async () => {
     const [{ data: est }, { data: prod }, { data: loc }] = await Promise.all([
       supabase.from("estoque_local").select("*, produto(nome, preco, fabricante(nome), familia(nome)), local_estoque(nome)").order("produto_id"),
