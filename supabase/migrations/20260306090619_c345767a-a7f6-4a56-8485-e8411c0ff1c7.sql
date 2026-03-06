@@ -1,0 +1,1 @@
+ALTER TABLE public.movimentacao_estoque ADD COLUMN usuario_id uuid REFERENCES auth.users(id) DEFAULT NULL;
