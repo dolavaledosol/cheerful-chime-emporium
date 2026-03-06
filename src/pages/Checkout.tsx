@@ -64,7 +64,6 @@ function validateCnpj(cnpj: string): boolean {
 // Use shared phone mask
 import { formatTelefone as formatTelefoneLib, unformatTelefone } from "@/lib/telefone";
 function formatTelefone(value: string) { return formatTelefoneLib(value); }
-}
 
 function validateCpfCnpj(value: string): string | null {
   const digits = value.replace(/\D/g, "");
