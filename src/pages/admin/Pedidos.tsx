@@ -224,7 +224,7 @@ const Pedidos = () => {
   const [newClientNome, setNewClientNome] = useState("");
   const [newClientCpf, setNewClientCpf] = useState("");
   const [newClientEmail, setNewClientEmail] = useState("");
-  const [newClientTelefone, setNewClientTelefone] = useState("");
+  const [newClientTelefones, setNewClientTelefones] = useState<string[]>([""]);
   // Delivery type
   const [newOrderTipoEntrega, setNewOrderTipoEntrega] = useState<"entrega" | "retirada">("retirada");
   const [locaisEstoque, setLocaisEstoque] = useState<{ local_estoque_id: string; nome: string }[]>([]);
@@ -972,7 +972,7 @@ const Pedidos = () => {
     setNewClientNome("");
     setNewClientCpf("");
     setNewClientEmail("");
-    setNewClientTelefone("");
+    setNewClientTelefones([""]);
     setSelectedClienteCpf("");
     setCpfCnpjError(null);
     setNewOrderTipoEntrega("retirada");
@@ -1114,10 +1114,10 @@ const Pedidos = () => {
         return;
       }
       clienteId = newCliente.cliente_id;
-      // Save phone if provided
-      const phoneDigits = newClientTelefone.replace(/\D/g, "");
-      if (phoneDigits) {
-        await supabase.from("cliente_telefone").insert({ cliente_id: clienteId, telefone: phoneDigits, is_whatsapp: false });
+      // Save phones if provided
+      const validPhones = newClientTelefones.map(t => t.replace(/\D/g, "")).filter(t => t.length > 0);
+      for (const phone of validPhones) {
+        await supabase.from("cliente_telefone").insert({ cliente_id: clienteId, telefone: phone, is_whatsapp: false });
       }
     }
 
@@ -2005,7 +2005,24 @@ const Pedidos = () => {
                       <Input placeholder="CPF/CNPJ *" value={newClientCpf} onChange={e => { setNewClientCpf(e.target.value.replace(/\D/g, "").slice(0, 14)); setCpfCnpjError(null); }} className={cpfCnpjError && showNewClient ? "border-destructive" : ""} />
                       <Input placeholder="Email" value={newClientEmail} onChange={e => setNewClientEmail(e.target.value)} />
                     </div>
-                    <Input placeholder="Telefone (ex: 11999998888)" value={newClientTelefone} onChange={e => setNewClientTelefone(e.target.value.replace(/\D/g, "").slice(0, 11))} />
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs text-muted-foreground">Telefones</Label>
+                        <Button type="button" variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={() => setNewClientTelefones([...newClientTelefones, ""])}>
+                          <Plus className="h-3 w-3" /> Adicionar
+                        </Button>
+                      </div>
+                      {newClientTelefones.map((tel, idx) => (
+                        <div key={idx} className="flex gap-1 items-center">
+                          <Input placeholder="Ex: 11999998888" value={tel} onChange={e => { const updated = [...newClientTelefones]; updated[idx] = e.target.value.replace(/\D/g, "").slice(0, 11); setNewClientTelefones(updated); }} />
+                          {newClientTelefones.length > 1 && (
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setNewClientTelefones(newClientTelefones.filter((_, i) => i !== idx))}>
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                     {cpfCnpjError && showNewClient && <p className="text-sm text-destructive">{cpfCnpjError}</p>}
                   </div>
                 </div>
