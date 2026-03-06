@@ -276,8 +276,10 @@ const Checkout = () => {
                 value={cpfCnpj}
                 onChange={(e) => handleCpfCnpjChange(e.target.value)}
                 onBlur={handleCpfCnpjBlur}
-                className={`rounded-xl h-12 ${cpfCnpjError ? "border-destructive" : ""}`}
+                disabled={cpfCnpjLocked}
+                className={`rounded-xl h-12 ${cpfCnpjError ? "border-destructive" : ""} ${cpfCnpjLocked ? "bg-muted" : ""}`}
               />
+              {cpfCnpjLocked && <p className="text-[11px] text-muted-foreground">Não pode ser alterado após cadastrado</p>}
               {cpfCnpjError && (
                 <p className="text-xs text-destructive flex items-center gap-1 mt-1">
                   <AlertCircle className="h-3 w-3" /> {cpfCnpjError}
