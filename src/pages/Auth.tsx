@@ -1,14 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Lock, User, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, User, ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
 
 type AuthMode = "login" | "register" | "forgot";
 
@@ -76,85 +71,105 @@ const Auth = () => {
     }
   };
 
+  const title = mode === "login" ? "Bem-vindo de volta" : mode === "register" ? "Criar conta" : "Recuperar senha";
+  const subtitle = mode === "login"
+    ? "Entre para continuar comprando"
+    : mode === "register"
+      ? "Preencha seus dados para começar"
+      : "Informe seu e-mail para redefinir";
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-2xl font-bold tracking-tight">
-            {mode === "login" && "Entrar"}
-            {mode === "register" && "Criar conta"}
-            {mode === "forgot" && "Recuperar senha"}
-          </CardTitle>
-          <CardDescription>
-            {mode === "login" && "Acesse sua conta para continuar"}
-            {mode === "register" && "Preencha os dados para se cadastrar"}
-            {mode === "forgot" && "Informe seu e-mail para recuperar a senha"}
-          </CardDescription>
-        </CardHeader>
+    <div className="flex min-h-[100dvh] flex-col bg-background">
+      {/* Brand header */}
+      <div className="flex items-center justify-center bg-sidebar py-6">
+        <img
+          src="/images/logo-cozinha-dodola-branco.png"
+          alt="Cozinha Do Dola"
+          className="h-14 w-auto"
+        />
+      </div>
 
-        <CardContent>
-          <form onSubmit={mode === "login" ? handleLogin : mode === "register" ? handleRegister : handleForgotPassword}>
-            <div className="space-y-4">
-              {mode === "register" && (
-                <div className="space-y-2">
-                  <Label htmlFor="nome">Nome completo</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="nome"
-                      placeholder="Seu nome"
-                      value={nome}
-                      onChange={(e) => setNome(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
-                </div>
-              )}
+      {/* Form area */}
+      <div className="flex flex-1 flex-col items-center px-4 pt-6 pb-8 md:justify-center md:pt-0">
+        <div className="w-full max-w-sm space-y-6">
+          {/* Title */}
+          <div className="space-y-1 text-center">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+            <p className="text-sm text-muted-foreground">{subtitle}</p>
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
+          {/* Form */}
+          <form
+            onSubmit={mode === "login" ? handleLogin : mode === "register" ? handleRegister : handleForgotPassword}
+            className="space-y-4"
+          >
+            {mode === "register" && (
+              <div className="space-y-1.5">
+                <label htmlFor="nome" className="text-sm font-medium text-foreground">
+                  Nome completo
+                </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    id="nome"
+                    placeholder="Seu nome"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
                     required
+                    className="flex h-12 w-full rounded-xl border border-input bg-card pl-10 pr-4 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-shadow"
                   />
                 </div>
               </div>
+            )}
 
-              {mode !== "forgot" && (
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 pr-10"
-                      required
-                      minLength={6}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="text-sm font-medium text-foreground">
+                E-mail
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="flex h-12 w-full rounded-xl border border-input bg-card pl-10 pr-4 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-shadow"
+                />
+              </div>
+            </div>
+
+            {mode !== "forgot" && (
+              <div className="space-y-1.5">
+                <label htmlFor="password" className="text-sm font-medium text-foreground">
+                  Senha
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className="flex h-12 w-full rounded-xl border border-input bg-card pl-10 pr-12 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-shadow"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
-              )}
+              </div>
+            )}
 
-              {mode === "login" && (
+            {mode === "login" && (
+              <div className="flex justify-end">
                 <button
                   type="button"
                   onClick={() => setMode("forgot")}
@@ -162,42 +177,54 @@ const Auth = () => {
                 >
                   Esqueceu a senha?
                 </button>
-              )}
+              </div>
+            )}
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Aguarde..." : mode === "login" ? "Entrar" : mode === "register" ? "Cadastrar" : "Enviar e-mail"}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-
-        <CardFooter className="flex flex-col gap-2">
-          {mode === "login" && (
-            <p className="text-sm text-muted-foreground">
-              Não tem conta?{" "}
-              <button onClick={() => setMode("register")} className="text-primary hover:underline font-medium">
-                Cadastre-se
-              </button>
-            </p>
-          )}
-          {mode === "register" && (
-            <p className="text-sm text-muted-foreground">
-              Já tem conta?{" "}
-              <button onClick={() => setMode("login")} className="text-primary hover:underline font-medium">
-                Entrar
-              </button>
-            </p>
-          )}
-          {mode === "forgot" && (
             <button
-              onClick={() => setMode("login")}
-              className="flex items-center gap-1 text-sm text-primary hover:underline"
+              type="submit"
+              disabled={loading}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-primary-foreground text-base font-semibold shadow-md hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-60 disabled:pointer-events-none"
             >
-              <ArrowLeft className="h-3 w-3" /> Voltar ao login
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {loading
+                ? "Aguarde..."
+                : mode === "login"
+                  ? "Entrar"
+                  : mode === "register"
+                    ? "Cadastrar"
+                    : "Enviar e-mail"}
             </button>
-          )}
-        </CardFooter>
-      </Card>
+          </form>
+
+          {/* Footer links */}
+          <div className="text-center">
+            {mode === "login" && (
+              <p className="text-sm text-muted-foreground">
+                Não tem conta?{" "}
+                <button onClick={() => setMode("register")} className="font-semibold text-primary hover:underline">
+                  Cadastre-se
+                </button>
+              </p>
+            )}
+            {mode === "register" && (
+              <p className="text-sm text-muted-foreground">
+                Já tem conta?{" "}
+                <button onClick={() => setMode("login")} className="font-semibold text-primary hover:underline">
+                  Entrar
+                </button>
+              </p>
+            )}
+            {mode === "forgot" && (
+              <button
+                onClick={() => setMode("login")}
+                className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" /> Voltar ao login
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
