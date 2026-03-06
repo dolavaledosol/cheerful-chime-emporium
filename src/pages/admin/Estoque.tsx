@@ -52,6 +52,8 @@ interface MovimentacaoRow {
   documento: string | null;
   quantidade: number;
   created_at: string;
+  usuario_id: string | null;
+  usuario_nome?: string;
   produto: { produto_id: string; nome: string; familia: { nome: string } | null } | null;
   local_estoque: { nome: string } | null;
   local_estoque_destino: { nome: string } | null;
@@ -89,6 +91,17 @@ const Estoque = () => {
   const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
   const [conciliacaoLoading, setConciliacaoLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputPedRef = useRef<HTMLInputElement>(null);
+
+  /* ── Conciliação Pedidos state ── */
+  const [concPedOpen, setConcPedOpen] = useState(false);
+  const [concPedLoading, setConcPedLoading] = useState(false);
+  interface ConcPedLinha {
+    produto_id: string; nome: string; local: string; local_estoque_id: string;
+    estoque_local_id: string | null;
+    pedidos_sistema: number; pedidos_fisico: number; diferenca: number;
+  }
+  const [concPedLinhas, setConcPedLinhas] = useState<ConcPedLinha[]>([]);
   interface ConciliacaoLinha {
     produto_id: string; nome: string; local: string; local_estoque_id: string;
     estoque_sistema: number; estoque_fisico: number; diferenca: number;
