@@ -227,7 +227,7 @@ const Clientes = () => {
               <TableRow key={c.cliente_id}>
                 <TableCell className="text-muted-foreground text-xs font-mono">{c.cliente_id.slice(0, 8)}</TableCell>
                 <TableCell className="font-medium">{c.nome}</TableCell>
-                <TableCell className="hidden md:table-cell text-muted-foreground">{c.cpf_cnpj || "—"}</TableCell>
+                <TableCell className="hidden md:table-cell text-muted-foreground">{c.cpf_cnpj ? formatCpfCnpj(c.cpf_cnpj) : "—"}</TableCell>
                 <TableCell className="hidden md:table-cell text-muted-foreground">{c.email || "—"}</TableCell>
                 <TableCell className="hidden sm:table-cell">
                   <span className="text-xs px-2 py-0.5 rounded-full bg-muted">{tipoLabel(c.tipo_cliente)}</span>
