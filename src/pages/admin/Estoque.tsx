@@ -909,6 +909,54 @@ const Estoque = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ═══════════════════  DIALOG CONCILIAÇÃO PEDIDOS  ═══════════════════ */}
+      <Dialog open={concPedOpen} onOpenChange={setConcPedOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Conciliação de Estoque de Pedidos</DialogTitle></DialogHeader>
+          {concPedLinhas.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">Nenhum dado importado.</p>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {concPedLinhas.filter((l) => l.diferenca !== 0).length} item(ns) com diferença de {concPedLinhas.length} importado(s).
+              </p>
+              <div className="border rounded-lg overflow-auto max-h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produto</TableHead>
+                      <TableHead>Local</TableHead>
+                      <TableHead className="text-center">Sistema</TableHead>
+                      <TableHead className="text-center">Planilha</TableHead>
+                      <TableHead className="text-center">Diferença</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {concPedLinhas.map((l) => (
+                      <TableRow key={`${l.produto_id}-${l.local_estoque_id}`} className={l.diferenca !== 0 ? "bg-muted/30" : ""}>
+                        <TableCell className="font-medium">{l.nome}</TableCell>
+                        <TableCell className="text-muted-foreground">{l.local}</TableCell>
+                        <TableCell className="text-center">{l.pedidos_sistema}</TableCell>
+                        <TableCell className="text-center">{l.pedidos_fisico}</TableCell>
+                        <TableCell className={`text-center font-semibold ${l.diferenca > 0 ? "text-green-600" : l.diferenca < 0 ? "text-red-600" : ""}`}>
+                          {l.diferenca > 0 ? `+${l.diferenca}` : l.diferenca}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConcPedOpen(false)}>Cancelar</Button>
+            <Button onClick={saveConciliacaoPedidos} disabled={concPedLoading || concPedLinhas.filter((l) => l.diferenca !== 0).length === 0}>
+              {concPedLoading ? "Aplicando..." : "Aplicar Conciliação de Pedidos"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
