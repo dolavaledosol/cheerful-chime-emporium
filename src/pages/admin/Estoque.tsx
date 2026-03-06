@@ -271,6 +271,112 @@ const Estoque = () => {
     }
   };
 
+  /* ═══════════════════  CONCILIAÇÃO PEDIDOS  ═══════════════════ */
+  const exportPedidosExcel = async () => {
+    const { data: allProdutos } = await supabase
+      .from("produto")
+      .select("produto_id, nome, fabricante(nome), familia(nome)")
+      .eq("ativo", true)
+      .order("nome");
+    if (!allProdutos) return;
+
+    const rows: any[] = [];
+    for (const p of allProdutos as any[]) {
+      const row: any = {
+        produto_id: p.produto_id,
+        produto: p.nome,
+        fabricante: p.fabricante?.nome || "",
+        familia: p.familia?.nome || "",
+      };
+      for (const l of locais) {
+        const estItem = items.find((i) => i.produto_id === p.produto_id && i.local_estoque_id === l.local_estoque_id);
+        row[`${l.nome} (${l.local_estoque_id})`] = estItem ? Number(estItem.quantidade_pedida_nao_separada) : 0;
+      }
+      rows.push(row);
+    }
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Pedidos");
+    XLSX.writeFile(wb, `estoque_pedidos_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+    toast({ title: "Planilha de pedidos exportada com sucesso" });
+  };
+
+  const handleImportPedidosFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const data = await file.arrayBuffer();
+    const wb = XLSX.read(data);
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json<any>(ws);
+
+    const headers = Object.keys(rows[0] || {});
+    const localColumns = headers.filter((h) => !!h.match(/\(([0-9a-f-]{36})\)$/));
+
+    const linhas: ConcPedLinha[] = [];
+    for (const row of rows) {
+      const prodId = row.produto_id;
+      if (!prodId) continue;
+      for (const colName of localColumns) {
+        const localIdMatch = colName.match(/\(([0-9a-f-]{36})\)$/);
+        if (!localIdMatch) continue;
+        const localId = localIdMatch[1];
+        const pedidosFisico = Number(row[colName] ?? 0);
+        const sysItem = items.find((i) => i.produto_id === prodId && i.local_estoque_id === localId);
+        const pedidosSistema = sysItem ? Number(sysItem.quantidade_pedida_nao_separada) : 0;
+        const diff = pedidosFisico - pedidosSistema;
+        const localNome = locais.find((l) => l.local_estoque_id === localId)?.nome || colName;
+        linhas.push({
+          produto_id: prodId,
+          nome: sysItem?.produto?.nome || row.produto || prodId,
+          local_estoque_id: localId,
+          estoque_local_id: sysItem?.estoque_local_id || null,
+          local: localNome,
+          pedidos_sistema: pedidosSistema,
+          pedidos_fisico: pedidosFisico,
+          diferenca: diff,
+        });
+      }
+    }
+    setConcPedLinhas(linhas);
+    setConcPedOpen(true);
+    if (fileInputPedRef.current) fileInputPedRef.current.value = "";
+  };
+
+  const saveConciliacaoPedidos = async () => {
+    const linhasComDif = concPedLinhas.filter((l) => l.diferenca !== 0);
+    if (linhasComDif.length === 0) {
+      toast({ title: "Nenhuma diferença encontrada" });
+      setConcPedOpen(false);
+      return;
+    }
+    setConcPedLoading(true);
+    try {
+      for (const linha of linhasComDif) {
+        if (linha.estoque_local_id) {
+          await supabase.from("estoque_local").update({
+            quantidade_pedida_nao_separada: linha.pedidos_fisico,
+          }).eq("estoque_local_id", linha.estoque_local_id);
+        } else {
+          await supabase.from("estoque_local").insert({
+            produto_id: linha.produto_id,
+            local_estoque_id: linha.local_estoque_id,
+            quantidade_pedida_nao_separada: linha.pedidos_fisico,
+            quantidade_disponivel: 0,
+            preco: 0,
+          });
+        }
+      }
+      toast({ title: `Conciliação de pedidos aplicada: ${linhasComDif.length} item(ns) ajustado(s)` });
+      setConcPedOpen(false);
+      setConcPedLinhas([]);
+      load();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setConcPedLoading(false);
+    }
+  };
+
   useEffect(() => { load(); loadMovimentacoes(); }, []);
 
   /* ── Agrupados for main table ── */
