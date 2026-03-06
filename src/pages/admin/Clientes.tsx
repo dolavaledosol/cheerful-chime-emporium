@@ -20,7 +20,7 @@ interface Cliente {
   ativo: boolean;
 }
 
-const emptyForm = { nome: "", cpf_cnpj: "", email: "", tipo_cliente: "cliente", ativo: true };
+const emptyForm = { nome: "", cpf_cnpj: "", email: "", tipo_cliente: "cliente", ativo: true, telefone: "" };
 
 const Clientes = () => {
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -55,6 +55,11 @@ const Clientes = () => {
       email: c.email || "",
       tipo_cliente: c.tipo_cliente,
       ativo: c.ativo,
+      telefone: "",
+    });
+    // Load existing phone
+    supabase.from("cliente_telefone").select("telefone").eq("cliente_id", c.cliente_id).limit(1).then(({ data }) => {
+      if (data && data.length > 0) setForm(prev => ({ ...prev, telefone: data[0].telefone }));
     });
     setDialogOpen(true);
   };
@@ -105,6 +110,19 @@ const Clientes = () => {
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
+      // Save phone if provided
+      const phoneDigits = form.telefone.replace(/\D/g, "");
+      if (phoneDigits) {
+        const targetId = editId || (await supabase.from("cliente").select("cliente_id").eq("cpf_cnpj", form.cpf_cnpj || "___").maybeSingle()).data?.cliente_id;
+        if (targetId) {
+          const { data: existingTel } = await supabase.from("cliente_telefone").select("cliente_telefone_id").eq("cliente_id", targetId).limit(1);
+          if (existingTel && existingTel.length > 0) {
+            await supabase.from("cliente_telefone").update({ telefone: phoneDigits, is_whatsapp: false }).eq("cliente_telefone_id", existingTel[0].cliente_telefone_id);
+          } else {
+            await supabase.from("cliente_telefone").insert({ cliente_id: targetId, telefone: phoneDigits, is_whatsapp: false });
+          }
+        }
+      }
       toast({ title: actionLabel });
       setDialogOpen(false);
       load();
@@ -206,6 +224,10 @@ const Clientes = () => {
                 <Label>Email</Label>
                 <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Telefone</Label>
+              <Input placeholder="Ex: 11999998888" value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value.replace(/\D/g, "").slice(0, 11) })} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
