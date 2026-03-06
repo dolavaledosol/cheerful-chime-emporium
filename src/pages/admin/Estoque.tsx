@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Search, ArrowRightLeft } from "lucide-react";
+import { Search, ArrowRightLeft, Download, Upload } from "lucide-react";
 import { format } from "date-fns";
+import * as XLSX from "xlsx";
 
 /* ── Types ── */
 interface EstoqueRow {
@@ -84,6 +85,16 @@ const Estoque = () => {
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoRow[]>([]);
   const [movSearch, setMovSearch] = useState("");
 
+  /* ── Conciliação state ── */
+  const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
+  const [conciliacaoLoading, setConciliacaoLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  interface ConciliacaoLinha {
+    produto_id: string; nome: string; local: string; local_estoque_id: string;
+    estoque_sistema: number; estoque_fisico: number; diferenca: number;
+  }
+  const [conciliacaoLinhas, setConciliacaoLinhas] = useState<ConciliacaoLinha[]>([]);
+
   const load = async () => {
     const [{ data: est }, { data: prod }, { data: loc }] = await Promise.all([
       supabase.from("estoque_local").select("*, produto(nome, preco, fabricante(nome), familia(nome)), local_estoque(nome)").order("produto_id"),
@@ -102,6 +113,110 @@ const Estoque = () => {
       .order("created_at", { ascending: false })
       .limit(500);
     if (data) setMovimentacoes(data as any);
+  };
+
+  /* ═══════════════════  CONCILIAÇÃO  ═══════════════════ */
+  const exportExcel = () => {
+    const rows: any[] = [];
+    filtered.forEach((g) => {
+      locais.forEach((l) => {
+        const data = g.locais[l.local_estoque_id];
+        if (data) {
+          rows.push({
+            produto_id: g.produto_id,
+            produto: g.nome,
+            fabricante: g.fabricante,
+            familia: g.familia,
+            local_estoque_id: l.local_estoque_id,
+            local: l.nome,
+            estoque: data.estoque,
+            pedidos: data.pedidos,
+          });
+        }
+      });
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Estoque");
+    XLSX.writeFile(wb, `estoque_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+    toast({ title: "Planilha exportada com sucesso" });
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const data = await file.arrayBuffer();
+    const wb = XLSX.read(data);
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json<any>(ws);
+
+    // Build conciliation lines from imported data
+    const linhas: ConciliacaoLinha[] = [];
+    for (const row of rows) {
+      const prodId = row.produto_id;
+      const localId = row.local_estoque_id;
+      const estoqueFisico = Number(row.estoque ?? row.estoque_fisico ?? 0);
+      if (!prodId || !localId) continue;
+
+      // Find current system stock
+      const sysItem = items.find((i) => i.produto_id === prodId && i.local_estoque_id === localId);
+      const estoqueSistema = sysItem ? Number(sysItem.quantidade_disponivel) : 0;
+      const diff = estoqueFisico - estoqueSistema;
+
+      linhas.push({
+        produto_id: prodId,
+        nome: sysItem?.produto?.nome || row.produto || prodId,
+        local_estoque_id: localId,
+        local: sysItem?.local_estoque?.nome || row.local || localId,
+        estoque_sistema: estoqueSistema,
+        estoque_fisico: estoqueFisico,
+        diferenca: diff,
+      });
+    }
+    setConciliacaoLinhas(linhas);
+    setConciliacaoOpen(true);
+    // Reset file input
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const saveConciliacao = async () => {
+    const linhasComDif = conciliacaoLinhas.filter((l) => l.diferenca !== 0);
+    if (linhasComDif.length === 0) {
+      toast({ title: "Nenhuma diferença encontrada" });
+      setConciliacaoOpen(false);
+      return;
+    }
+    setConciliacaoLoading(true);
+    try {
+      for (const linha of linhasComDif) {
+        // Update estoque_local
+        const sysItem = items.find((i) => i.produto_id === linha.produto_id && i.local_estoque_id === linha.local_estoque_id);
+        if (sysItem) {
+          await supabase.from("estoque_local").update({
+            quantidade_disponivel: linha.estoque_fisico,
+          }).eq("estoque_local_id", sysItem.estoque_local_id);
+        }
+
+        // Log movimentação
+        const tipo = linha.diferenca > 0 ? "entrada" : "saida";
+        await supabase.from("movimentacao_estoque").insert({
+          tipo,
+          produto_id: linha.produto_id,
+          local_estoque_id: linha.local_estoque_id,
+          quantidade: Math.abs(linha.diferenca),
+          documento: "Conciliação de estoque",
+        });
+      }
+      toast({ title: `Conciliação aplicada: ${linhasComDif.length} produto(s) ajustado(s)` });
+      setConciliacaoOpen(false);
+      setConciliacaoLinhas([]);
+      load();
+      loadMovimentacoes();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setConciliacaoLoading(false);
+    }
   };
 
   useEffect(() => { load(); loadMovimentacoes(); }, []);
@@ -337,7 +452,12 @@ const Estoque = () => {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Estoque</h1>
-        <Button onClick={openTransfer} className="gap-2"><ArrowRightLeft className="h-4 w-4" /> Transferir</Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={exportExcel} className="gap-2"><Download className="h-4 w-4" /> Exportar Excel</Button>
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Importar Conciliação</Button>
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
+          <Button onClick={openTransfer} className="gap-2"><ArrowRightLeft className="h-4 w-4" /> Transferir</Button>
+        </div>
       </div>
 
       <Tabs defaultValue="estoque">
@@ -567,7 +687,55 @@ const Estoque = () => {
             {transferOrigem && transferLinhas.length === 0 && (
               <p className="text-center text-muted-foreground py-8">Nenhum produto com estoque disponível neste local.</p>
             )}
-          </div>
+
+      {/* ═══════════════════  DIALOG CONCILIAÇÃO  ═══════════════════ */}
+      <Dialog open={conciliacaoOpen} onOpenChange={setConciliacaoOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Conciliação de Estoque</DialogTitle></DialogHeader>
+          {conciliacaoLinhas.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">Nenhum dado importado.</p>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {conciliacaoLinhas.filter((l) => l.diferenca !== 0).length} produto(s) com diferença de {conciliacaoLinhas.length} importado(s).
+              </p>
+              <div className="border rounded-lg overflow-auto max-h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produto</TableHead>
+                      <TableHead>Local</TableHead>
+                      <TableHead className="text-center">Sistema</TableHead>
+                      <TableHead className="text-center">Físico</TableHead>
+                      <TableHead className="text-center">Diferença</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {conciliacaoLinhas.map((l) => (
+                      <TableRow key={`${l.produto_id}-${l.local_estoque_id}`} className={l.diferenca !== 0 ? "bg-muted/30" : ""}>
+                        <TableCell className="font-medium">{l.nome}</TableCell>
+                        <TableCell className="text-muted-foreground">{l.local}</TableCell>
+                        <TableCell className="text-center">{l.estoque_sistema}</TableCell>
+                        <TableCell className="text-center">{l.estoque_fisico}</TableCell>
+                        <TableCell className={`text-center font-semibold ${l.diferenca > 0 ? "text-green-600" : l.diferenca < 0 ? "text-red-600" : ""}`}>
+                          {l.diferenca > 0 ? `+${l.diferenca}` : l.diferenca}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConciliacaoOpen(false)}>Cancelar</Button>
+            <Button onClick={saveConciliacao} disabled={conciliacaoLoading || conciliacaoLinhas.filter((l) => l.diferenca !== 0).length === 0}>
+              {conciliacaoLoading ? "Aplicando..." : "Aplicar Conciliação"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTransferOpen(false)}>Cancelar</Button>
             <Button onClick={saveTransfer} disabled={transferLoading || checkedTransferLinhas.length === 0 || !transferOrigem || !transferDestino}>

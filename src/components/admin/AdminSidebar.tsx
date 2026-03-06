@@ -22,7 +22,6 @@ const cadastroItems = [
   { title: "Fornecedores", url: "/admin/fornecedores", icon: Truck },
   { title: "Clientes", url: "/admin/clientes", icon: Users },
   { title: "Locais Estoque", url: "/admin/locais-estoque", icon: Warehouse },
-  { title: "Estoque", url: "/admin/estoque", icon: Boxes },
   { title: "Bancos", url: "/admin/bancos", icon: Landmark },
   { title: "Formas Pgto", url: "/admin/formas-pagamento", icon: CreditCard },
 ];
@@ -72,6 +71,7 @@ const AdminSidebar = () => {
               {menuLink({ title: "Dashboard", url: "/admin", icon: LayoutDashboard }, true)}
               {menuLink({ title: "Pedidos", url: "/admin/pedidos", icon: ShoppingCart })}
               {menuLink({ title: "Financeiro", url: "/admin/financeiro", icon: DollarSign })}
+              {menuLink({ title: "Estoque", url: "/admin/estoque", icon: Boxes })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
