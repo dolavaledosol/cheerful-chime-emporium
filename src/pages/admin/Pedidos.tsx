@@ -1114,7 +1114,11 @@ const Pedidos = () => {
         return;
       }
       clienteId = newCliente.cliente_id;
-    }
+      // Save phone if provided
+      const phoneDigits = newClientTelefone.replace(/\D/g, "");
+      if (phoneDigits) {
+        await supabase.from("cliente_telefone").insert({ cliente_id: clienteId, telefone: phoneDigits, is_whatsapp: false });
+      }
 
     // Update CPF for existing client if it was missing
     if (!showNewClient && clienteId) {
