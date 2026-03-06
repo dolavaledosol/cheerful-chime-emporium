@@ -78,6 +78,7 @@ const Checkout = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [cpfCnpj, setCpfCnpj] = useState("");
+  const [cpfCnpjLocked, setCpfCnpjLocked] = useState(false);
   const [cpfCnpjError, setCpfCnpjError] = useState<string | null>(null);
   const [tipoEntrega, setTipoEntrega] = useState<"entrega" | "retirada" | "">("");
   const [enderecos, setEnderecos] = useState<Endereco[]>([]);
