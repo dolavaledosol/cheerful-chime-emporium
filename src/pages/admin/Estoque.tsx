@@ -394,7 +394,10 @@ const Estoque = () => {
   /* ── Agrupados for main table ── */
   const agrupados = useMemo(() => {
     const map = new Map<string, ProdutoAgrupado>();
+    const activeLocalIds = new Set(locais.map((l) => l.local_estoque_id));
     items.forEach((e) => {
+      // Skip records from inactive locals
+      if (!activeLocalIds.has(e.local_estoque_id)) return;
       let grupo = map.get(e.produto_id);
       if (!grupo) {
         grupo = {
@@ -412,7 +415,7 @@ const Estoque = () => {
       grupo.totalPedidos += Number(e.quantidade_pedida_nao_separada);
     });
     return Array.from(map.values());
-  }, [items]);
+  }, [items, locais]);
 
   const filtered = agrupados.filter((g) => {
     const term = search.toLowerCase();
