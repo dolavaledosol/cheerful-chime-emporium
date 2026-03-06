@@ -177,7 +177,13 @@ const Estoque = () => {
     if (!file) return;
     const data = await file.arrayBuffer();
     const wb = XLSX.read(data);
-    const ws = wb.Sheets[wb.SheetNames[0]];
+    const sheetName = wb.SheetNames[0];
+    if (sheetName === "Pedidos") {
+      toast({ title: "Arquivo incorreto", description: "Este é um arquivo de Estoque de Pedidos. Use o botão 'Importar Pedidos'.", variant: "destructive" });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    const ws = wb.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json<any>(ws);
 
     // Detect local_estoque columns: header contains "(uuid)" pattern
@@ -306,7 +312,13 @@ const Estoque = () => {
     if (!file) return;
     const data = await file.arrayBuffer();
     const wb = XLSX.read(data);
-    const ws = wb.Sheets[wb.SheetNames[0]];
+    const sheetName = wb.SheetNames[0];
+    if (sheetName === "Estoque") {
+      toast({ title: "Arquivo incorreto", description: "Este é um arquivo de Estoque Físico. Use o botão 'Importar Estoque'.", variant: "destructive" });
+      if (fileInputPedRef.current) fileInputPedRef.current.value = "";
+      return;
+    }
+    const ws = wb.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json<any>(ws);
 
     const headers = Object.keys(rows[0] || {});
