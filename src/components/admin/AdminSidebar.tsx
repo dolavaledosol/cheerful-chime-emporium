@@ -32,6 +32,7 @@ const cadastroItems: MenuItem[] = [
   { title: "Locais Estoque", url: "/admin/locais-estoque", icon: Warehouse, resource: "locais_estoque" },
   { title: "Bancos", url: "/admin/bancos", icon: Landmark, resource: "bancos" },
   { title: "Formas Pgto", url: "/admin/formas-pagamento", icon: CreditCard, resource: "formas_pagamento" },
+  { title: "Usuários", url: "/admin/usuarios", icon: UserCog, resource: "usuarios" },
 ];
 
 const AdminSidebar = () => {
@@ -125,16 +126,6 @@ const AdminSidebar = () => {
           </SidebarGroup>
         )}
 
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {can("usuarios", "ver") &&
-                menuLink({ title: "Usuários", url: "/admin/usuarios", icon: UserCog, resource: "usuarios" })}
-              {can("configuracoes", "ver") &&
-                menuLink({ title: "Configurações", url: "/admin/configuracoes", icon: Settings, resource: "configuracoes" })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="p-2">
