@@ -9,8 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Search, Shield, UserCog, Plus, Trash2 } from "lucide-react";
+import { Pencil, Search, Shield, UserCog, Plus, Trash2, Lock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import PermissionsDialog from "@/components/admin/PermissionsDialog";
 
 interface UserProfile {
   profile_id: string;
@@ -42,6 +43,10 @@ const Usuarios = () => {
   const [roleOpen, setRoleOpen] = useState(false);
   const [roleUser, setRoleUser] = useState<UserProfile | null>(null);
   const [newRole, setNewRole] = useState("");
+
+  // Permissions dialog
+  const [permOpen, setPermOpen] = useState(false);
+  const [permUser, setPermUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -203,6 +208,9 @@ const Usuarios = () => {
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openRoles(u)}>
                         <Shield className="h-4 w-4" />
                       </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setPermUser(u); setPermOpen(true); }}>
+                        <Lock className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1">
@@ -259,6 +267,9 @@ const Usuarios = () => {
                             </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openRoles(u)} title="Gerenciar roles">
                               <Shield className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setPermUser(u); setPermOpen(true); }} title="Permissões">
+                              <Lock className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -360,6 +371,16 @@ const Usuarios = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Permissions Dialog */}
+      {permUser && (
+        <PermissionsDialog
+          open={permOpen}
+          onOpenChange={setPermOpen}
+          userId={permUser.profile_id}
+          userName={permUser.nome || permUser.email || ""}
+        />
+      )}
     </div>
   );
 };

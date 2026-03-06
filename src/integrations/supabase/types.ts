@@ -1279,6 +1279,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_permissions: {
+        Row: {
+          id: string
+          nivel: Database["public"]["Enums"]["permission_level"]
+          recurso: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          nivel?: Database["public"]["Enums"]["permission_level"]
+          recurso: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          nivel?: Database["public"]["Enums"]["permission_level"]
+          recurso?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -1325,6 +1346,10 @@ export type Database = {
         }
         Returns: string
       }
+      get_permission: {
+        Args: { _recurso: string; _user_id: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1346,6 +1371,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "vendedor" | "cliente"
       origem_pedido: "web" | "whatsapp" | "admin"
+      permission_level: "sem_acesso" | "ver" | "editar"
       status_pedido:
         | "carrinho"
         | "separacao"
@@ -1495,6 +1521,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "vendedor", "cliente"],
       origem_pedido: ["web", "whatsapp", "admin"],
+      permission_level: ["sem_acesso", "ver", "editar"],
       status_pedido: [
         "carrinho",
         "separacao",

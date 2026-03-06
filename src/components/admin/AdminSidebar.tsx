@@ -13,17 +13,25 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { useState } from "react";
+import { usePermissions, type AdminResource } from "@/hooks/usePermissions";
+import { useState, useMemo } from "react";
 
-const cadastroItems = [
-  { title: "Produtos", url: "/admin/produtos", icon: Package },
-  { title: "Famílias", url: "/admin/familias", icon: Layers },
-  { title: "Fabricantes", url: "/admin/fabricantes", icon: Factory },
-  { title: "Fornecedores", url: "/admin/fornecedores", icon: Truck },
-  { title: "Clientes", url: "/admin/clientes", icon: Users },
-  { title: "Locais Estoque", url: "/admin/locais-estoque", icon: Warehouse },
-  { title: "Bancos", url: "/admin/bancos", icon: Landmark },
-  { title: "Formas Pgto", url: "/admin/formas-pagamento", icon: CreditCard },
+interface MenuItem {
+  title: string;
+  url: string;
+  icon: any;
+  resource: AdminResource;
+}
+
+const cadastroItems: MenuItem[] = [
+  { title: "Produtos", url: "/admin/produtos", icon: Package, resource: "produtos" },
+  { title: "Famílias", url: "/admin/familias", icon: Layers, resource: "familias" },
+  { title: "Fabricantes", url: "/admin/fabricantes", icon: Factory, resource: "fabricantes" },
+  { title: "Fornecedores", url: "/admin/fornecedores", icon: Truck, resource: "fornecedores" },
+  { title: "Clientes", url: "/admin/clientes", icon: Users, resource: "clientes" },
+  { title: "Locais Estoque", url: "/admin/locais-estoque", icon: Warehouse, resource: "locais_estoque" },
+  { title: "Bancos", url: "/admin/bancos", icon: Landmark, resource: "bancos" },
+  { title: "Formas Pgto", url: "/admin/formas-pagamento", icon: CreditCard, resource: "formas_pagamento" },
 ];
 
 const AdminSidebar = () => {
@@ -32,16 +40,23 @@ const AdminSidebar = () => {
   const location = useLocation();
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const { can } = usePermissions();
 
   const isActive = (url: string) =>
     url === "/admin"
       ? location.pathname === "/admin"
       : location.pathname.startsWith(url);
 
-  const cadastroActive = cadastroItems.some((i) => isActive(i.url));
+  // Filter cadastro items by permission
+  const visibleCadastroItems = useMemo(
+    () => cadastroItems.filter((i) => can(i.resource, "ver")),
+    [can]
+  );
+
+  const cadastroActive = visibleCadastroItems.some((i) => isActive(i.url));
   const [cadastroOpen, setCadastroOpen] = useState(cadastroActive);
 
-  const menuLink = (item: { title: string; url: string; icon: any }, end = false) => (
+  const menuLink = (item: MenuItem, end = false) => (
     <SidebarMenuItem key={item.title}>
       <SidebarMenuButton asChild>
         <NavLink
@@ -68,47 +83,55 @@ const AdminSidebar = () => {
           )}
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuLink({ title: "Dashboard", url: "/admin", icon: LayoutDashboard }, true)}
-              {menuLink({ title: "Pedidos", url: "/admin/pedidos", icon: ShoppingCart })}
-              {menuLink({ title: "Financeiro", url: "/admin/financeiro", icon: DollarSign })}
-              {menuLink({ title: "Estoque", url: "/admin/estoque", icon: Boxes })}
+              {can("dashboard", "ver") &&
+                menuLink({ title: "Dashboard", url: "/admin", icon: LayoutDashboard, resource: "dashboard" }, true)}
+              {can("pedidos", "ver") &&
+                menuLink({ title: "Pedidos", url: "/admin/pedidos", icon: ShoppingCart, resource: "pedidos" })}
+              {can("financeiro", "ver") &&
+                menuLink({ title: "Financeiro", url: "/admin/financeiro", icon: DollarSign, resource: "financeiro" })}
+              {can("estoque", "ver") &&
+                menuLink({ title: "Estoque", url: "/admin/estoque", icon: Boxes, resource: "estoque" })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Cadastro group */}
-        <SidebarGroup>
-          {collapsed ? (
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {cadastroItems.map((item) => menuLink(item))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          ) : (
-            <Collapsible open={cadastroOpen} onOpenChange={setCadastroOpen}>
-              <CollapsibleTrigger asChild>
-                <button className="flex w-full items-center gap-2 px-3 py-2 text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/40 rounded-md transition-colors">
-                  <FolderOpen className="h-4 w-4 shrink-0" />
-                  <span className="flex-1 text-left">Cadastros</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${cadastroOpen ? "rotate-180" : ""}`} />
-                </button>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <SidebarGroupContent>
-                  <SidebarMenu className="pl-2">
-                    {cadastroItems.map((item) => menuLink(item))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-        </SidebarGroup>
+        {/* Cadastro group - only show if at least one item is visible */}
+        {visibleCadastroItems.length > 0 && (
+          <SidebarGroup>
+            {collapsed ? (
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {visibleCadastroItems.map((item) => menuLink(item))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            ) : (
+              <Collapsible open={cadastroOpen} onOpenChange={setCadastroOpen}>
+                <CollapsibleTrigger asChild>
+                  <button className="flex w-full items-center gap-2 px-3 py-2 text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/40 rounded-md transition-colors">
+                    <FolderOpen className="h-4 w-4 shrink-0" />
+                    <span className="flex-1 text-left">Cadastros</span>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${cadastroOpen ? "rotate-180" : ""}`} />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu className="pl-2">
+                      {visibleCadastroItems.map((item) => menuLink(item))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+          </SidebarGroup>
+        )}
 
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuLink({ title: "Usuários", url: "/admin/usuarios", icon: UserCog })}
-              {menuLink({ title: "Configurações", url: "/admin/configuracoes", icon: Settings })}
+              {can("usuarios", "ver") &&
+                menuLink({ title: "Usuários", url: "/admin/usuarios", icon: UserCog, resource: "usuarios" })}
+              {can("configuracoes", "ver") &&
+                menuLink({ title: "Configurações", url: "/admin/configuracoes", icon: Settings, resource: "configuracoes" })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

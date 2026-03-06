@@ -1,6 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from "react";
 
 interface CartItem {
   produto_id: string;
@@ -78,11 +76,16 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const clearCart = useCallback(() => setItems([]), []);
 
-  const count = items.reduce((acc, i) => acc + i.quantidade, 0);
-  const total = items.reduce((acc, i) => acc + i.preco * i.quantidade, 0);
+  const count = useMemo(() => items.reduce((acc, i) => acc + i.quantidade, 0), [items]);
+  const total = useMemo(() => items.reduce((acc, i) => acc + i.preco * i.quantidade, 0), [items]);
+
+  const value = useMemo(
+    () => ({ items, count, total, addItem, removeItem, updateQuantity, clearCart }),
+    [items, count, total, addItem, removeItem, updateQuantity, clearCart]
+  );
 
   return (
-    <CartContext.Provider value={{ items, count, total, addItem, removeItem, updateQuantity, clearCart }}>
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   );

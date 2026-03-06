@@ -1,14 +1,18 @@
 import { ReactNode, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions, ROUTE_TO_RESOURCE } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ShieldAlert } from "lucide-react";
 
 const AdminLayout = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
+  const { can, loading: permLoading } = usePermissions();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -23,7 +27,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     checkAdmin();
   }, [user, authLoading, navigate]);
 
-  if (authLoading || isAdmin === null) {
+  if (authLoading || isAdmin === null || permLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="space-y-4 w-64">
@@ -35,6 +39,10 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     );
   }
 
+  // Check permission for current route
+  const resource = ROUTE_TO_RESOURCE[location.pathname];
+  const hasAccess = resource ? can(resource, "ver") : true;
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -44,7 +52,15 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
             <SidebarTrigger />
             <span className="text-sm font-semibold text-muted-foreground">Painel Admin</span>
           </header>
-          <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
+          <main className="flex-1 p-4 md:p-6 overflow-auto">
+            {hasAccess ? children : (
+              <div className="flex flex-col items-center justify-center h-64 gap-4 text-muted-foreground">
+                <ShieldAlert className="h-12 w-12" />
+                <p className="text-lg font-medium">Acesso negado</p>
+                <p className="text-sm">Você não tem permissão para acessar este recurso.</p>
+              </div>
+            )}
+          </main>
         </div>
       </div>
     </SidebarProvider>

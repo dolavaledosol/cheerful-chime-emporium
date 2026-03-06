@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
+import { PermissionsProvider } from "@/hooks/usePermissions";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -37,35 +38,37 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <CartProvider>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/perfil" element={<Perfil />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
+          <PermissionsProvider>
+            <CartProvider>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/perfil" element={<Perfil />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
 
-              {/* Admin routes */}
-              <Route path="/admin" element={<AdminLayout><Dashboard /></AdminLayout>} />
-              <Route path="/admin/produtos" element={<AdminLayout><Produtos /></AdminLayout>} />
-              <Route path="/admin/familias" element={<AdminLayout><Familias /></AdminLayout>} />
-              <Route path="/admin/fabricantes" element={<AdminLayout><Fabricantes /></AdminLayout>} />
-              <Route path="/admin/clientes" element={<AdminLayout><Clientes /></AdminLayout>} />
+                {/* Admin routes */}
+                <Route path="/admin" element={<AdminLayout><Dashboard /></AdminLayout>} />
+                <Route path="/admin/produtos" element={<AdminLayout><Produtos /></AdminLayout>} />
+                <Route path="/admin/familias" element={<AdminLayout><Familias /></AdminLayout>} />
+                <Route path="/admin/fabricantes" element={<AdminLayout><Fabricantes /></AdminLayout>} />
+                <Route path="/admin/clientes" element={<AdminLayout><Clientes /></AdminLayout>} />
 
-              <Route path="/admin/pedidos" element={<AdminLayout><Pedidos /></AdminLayout>} />
-              <Route path="/admin/fornecedores" element={<AdminLayout><Fornecedores /></AdminLayout>} />
-              <Route path="/admin/locais-estoque" element={<AdminLayout><LocaisEstoque /></AdminLayout>} />
-              <Route path="/admin/estoque" element={<AdminLayout><Estoque /></AdminLayout>} />
-              <Route path="/admin/bancos" element={<AdminLayout><Bancos /></AdminLayout>} />
-              <Route path="/admin/formas-pagamento" element={<AdminLayout><FormasPagamento /></AdminLayout>} />
-              <Route path="/admin/financeiro" element={<AdminLayout><Financeiro /></AdminLayout>} />
-              <Route path="/admin/configuracoes" element={<AdminLayout><Configuracoes /></AdminLayout>} />
-              <Route path="/admin/usuarios" element={<AdminLayout><Usuarios /></AdminLayout>} />
+                <Route path="/admin/pedidos" element={<AdminLayout><Pedidos /></AdminLayout>} />
+                <Route path="/admin/fornecedores" element={<AdminLayout><Fornecedores /></AdminLayout>} />
+                <Route path="/admin/locais-estoque" element={<AdminLayout><LocaisEstoque /></AdminLayout>} />
+                <Route path="/admin/estoque" element={<AdminLayout><Estoque /></AdminLayout>} />
+                <Route path="/admin/bancos" element={<AdminLayout><Bancos /></AdminLayout>} />
+                <Route path="/admin/formas-pagamento" element={<AdminLayout><FormasPagamento /></AdminLayout>} />
+                <Route path="/admin/financeiro" element={<AdminLayout><Financeiro /></AdminLayout>} />
+                <Route path="/admin/configuracoes" element={<AdminLayout><Configuracoes /></AdminLayout>} />
+                <Route path="/admin/usuarios" element={<AdminLayout><Usuarios /></AdminLayout>} />
 
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </CartProvider>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </CartProvider>
+          </PermissionsProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

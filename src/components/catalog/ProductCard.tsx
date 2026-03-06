@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShoppingCart, Package, Weight, Share2 } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/use-toast";
@@ -32,7 +32,7 @@ const formatPeso = (peso: number | undefined, unidade: string) => {
   return `${peso}${unidadeLabels[unidade] || unidade}`;
 };
 
-const ProductCard = ({
+const ProductCard = memo(function ProductCard({
   produto_id,
   nome,
   preco,
@@ -45,7 +45,7 @@ const ProductCard = ({
   unidade_medida = "un",
   aceita_fracionado = false,
   quantidade_default = 1,
-}: ProductCardProps) => {
+}: ProductCardProps) {
   const { addItem } = useCart();
   const { toast } = useToast();
   const [detailOpen, setDetailOpen] = useState(false);
@@ -157,16 +157,14 @@ const ProductCard = ({
           <DialogHeader>
             <div className="flex items-center justify-between pr-6">
               <DialogTitle>{nome}</DialogTitle>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={handleShare} className="shrink-0 h-8 w-8">
-                      <Share2 className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Compartilhar produto</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={handleShare} className="shrink-0 h-8 w-8">
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Compartilhar produto</TooltipContent>
+              </Tooltip>
             </div>
           </DialogHeader>
           <div className="space-y-4">
@@ -237,6 +235,8 @@ const ProductCard = ({
       </Dialog>
     </>
   );
-};
+});
+
+ProductCard.displayName = "ProductCard";
 
 export default ProductCard;
