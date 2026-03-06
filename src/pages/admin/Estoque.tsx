@@ -207,12 +207,20 @@ const Estoque = () => {
     setConciliacaoLoading(true);
     try {
       for (const linha of linhasComDif) {
-        // Update estoque_local
+        // Update or create estoque_local
         const sysItem = items.find((i) => i.produto_id === linha.produto_id && i.local_estoque_id === linha.local_estoque_id);
         if (sysItem) {
           await supabase.from("estoque_local").update({
             quantidade_disponivel: linha.estoque_fisico,
           }).eq("estoque_local_id", sysItem.estoque_local_id);
+        } else {
+          // Create new estoque_local record for product not yet in this location
+          await supabase.from("estoque_local").insert({
+            produto_id: linha.produto_id,
+            local_estoque_id: linha.local_estoque_id,
+            quantidade_disponivel: linha.estoque_fisico,
+            preco: 0,
+          });
         }
 
         // Log movimentação
