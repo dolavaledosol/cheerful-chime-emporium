@@ -47,7 +47,7 @@ const Index = () => {
     loadFilters();
   }, []);
 
-  // Load products - use produto.preco as the catalog price
+  // Load products
   useEffect(() => {
     const loadProdutos = async () => {
       setLoading(true);
@@ -79,10 +79,8 @@ const Index = () => {
         const isChild = selectedFam?.familia_pai_id != null;
 
         if (isChild) {
-          // Subfamily selected — show only products of this subfamily
           query = query.eq("familia_id", selectedFamilia);
         } else {
-          // Parent selected — show products from all children only (parent has no products itself)
           const childIds = familias
             .filter((f) => f.familia_pai_id === selectedFamilia)
             .map((f) => f.id);
@@ -129,7 +127,6 @@ const Index = () => {
     loadProdutos();
   }, [selectedFamilia, selectedFabricante]);
 
-  // Client-side search filter
   const filtered = useMemo(() => {
     if (!search.trim()) return produtos;
     const term = search.toLowerCase();
@@ -141,7 +138,6 @@ const Index = () => {
     );
   }, [produtos, search]);
 
-  // Fabricantes filtered to only those present in current products (filtered by family)
   const filteredFabricantes = useMemo(() => {
     if (selectedFamilia === "all" || loading) return fabricantes;
     const fabIdsInProducts = new Set(produtos.map((p) => p.fabricante_id).filter(Boolean));
@@ -152,8 +148,9 @@ const Index = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <CatalogHeader search={search} onSearchChange={setSearch} />
 
-      <main className="container mx-auto px-4 py-6 flex-1">
-        <div className="mb-6">
+      {/* Filters - sticky below header */}
+      <div className="sticky top-14 md:top-16 z-30 bg-background/95 backdrop-blur-md border-b border-border/50">
+        <div className="px-4 py-3">
           <CatalogFilters
             familias={familias}
             fabricantes={filteredFabricantes}
@@ -163,29 +160,35 @@ const Index = () => {
             onFabricanteChange={setSelectedFabricante}
           />
         </div>
+      </div>
 
-        <p className="text-sm text-muted-foreground mb-4">
-          {loading ? "Carregando..." : `${filtered.length} produto(s) encontrado(s)`}
+      <main className="flex-1 px-4 py-4 md:px-6 md:py-6 max-w-7xl mx-auto w-full">
+        {/* Count */}
+        <p className="text-xs text-muted-foreground mb-3">
+          {loading ? "Carregando..." : `${filtered.length} produto(s)`}
         </p>
 
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="space-y-3">
-                <Skeleton className="aspect-square rounded-lg" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="aspect-square rounded-xl" />
+                <Skeleton className="h-3 w-2/3 rounded" />
+                <Skeleton className="h-4 w-full rounded" />
+                <Skeleton className="h-5 w-1/2 rounded" />
               </div>
             ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-4">
-            <Package className="h-16 w-16 stroke-1" />
-            <p className="text-lg">Nenhum produto encontrado</p>
+            <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
+              <Package className="h-10 w-10 text-muted-foreground/40" />
+            </div>
+            <p className="text-lg font-medium">Nenhum produto encontrado</p>
             <p className="text-sm">Tente ajustar os filtros ou a busca</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
             {filtered.map((p) => (
               <ProductCard
                 key={p.produto_id}
@@ -207,16 +210,15 @@ const Index = () => {
         )}
       </main>
 
-      {/* Floating privacy policy button */}
-      <Link
-        to="/politica-de-privacidade"
-        className="fixed bottom-4 right-4 z-50 text-xs text-muted-foreground/60 hover:text-muted-foreground bg-background/80 backdrop-blur-sm border rounded-full px-3 py-1.5 shadow-sm transition-colors"
-      >
-        Política de Privacidade
-      </Link>
-
-      <footer className="border-t py-6 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} CozinhaDoDola — Todos os direitos reservados
+      {/* Footer */}
+      <footer className="border-t py-6 text-center text-xs text-muted-foreground">
+        <p>© {new Date().getFullYear()} CozinhaDoDola — Todos os direitos reservados</p>
+        <Link
+          to="/politica-de-privacidade"
+          className="text-xs text-muted-foreground/60 hover:text-muted-foreground mt-1 inline-block"
+        >
+          Política de Privacidade
+        </Link>
       </footer>
     </div>
   );
