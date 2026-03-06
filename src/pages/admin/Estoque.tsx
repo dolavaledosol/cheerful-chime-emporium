@@ -156,32 +156,44 @@ const Estoque = () => {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json<any>(ws);
 
-    // Build conciliation lines from imported data
+    // Detect local_estoque columns: header contains "(uuid)" pattern
+    const headers = Object.keys(rows[0] || {});
+    const localColumns = headers.filter((h) => {
+      const match = h.match(/\(([0-9a-f-]{36})\)$/);
+      return !!match;
+    });
+
+    // Build conciliation lines from pivot format
     const linhas: ConciliacaoLinha[] = [];
     for (const row of rows) {
       const prodId = row.produto_id;
-      const localId = row.local_estoque_id;
-      const estoqueFisico = Number(row.estoque ?? row.estoque_fisico ?? 0);
-      if (!prodId || !localId) continue;
+      if (!prodId) continue;
 
-      // Find current system stock
-      const sysItem = items.find((i) => i.produto_id === prodId && i.local_estoque_id === localId);
-      const estoqueSistema = sysItem ? Number(sysItem.quantidade_disponivel) : 0;
-      const diff = estoqueFisico - estoqueSistema;
+      for (const colName of localColumns) {
+        const localIdMatch = colName.match(/\(([0-9a-f-]{36})\)$/);
+        if (!localIdMatch) continue;
+        const localId = localIdMatch[1];
+        const estoqueFisico = Number(row[colName] ?? 0);
 
-      linhas.push({
-        produto_id: prodId,
-        nome: sysItem?.produto?.nome || row.produto || prodId,
-        local_estoque_id: localId,
-        local: sysItem?.local_estoque?.nome || row.local || localId,
-        estoque_sistema: estoqueSistema,
-        estoque_fisico: estoqueFisico,
-        diferenca: diff,
-      });
+        // Find current system stock
+        const sysItem = items.find((i) => i.produto_id === prodId && i.local_estoque_id === localId);
+        const estoqueSistema = sysItem ? Number(sysItem.quantidade_disponivel) : 0;
+        const diff = estoqueFisico - estoqueSistema;
+        const localNome = locais.find((l) => l.local_estoque_id === localId)?.nome || colName;
+
+        linhas.push({
+          produto_id: prodId,
+          nome: sysItem?.produto?.nome || row.produto || prodId,
+          local_estoque_id: localId,
+          local: localNome,
+          estoque_sistema: estoqueSistema,
+          estoque_fisico: estoqueFisico,
+          diferenca: diff,
+        });
+      }
     }
     setConciliacaoLinhas(linhas);
     setConciliacaoOpen(true);
-    // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
