@@ -116,25 +116,31 @@ const Estoque = () => {
   };
 
   /* ═══════════════════  CONCILIAÇÃO  ═══════════════════ */
-  const exportExcel = () => {
+  const exportExcel = async () => {
+    // Fetch ALL active products (not just those with stock)
+    const { data: allProdutos } = await supabase
+      .from("produto")
+      .select("produto_id, nome, fabricante(nome), familia(nome)")
+      .eq("ativo", true)
+      .order("nome");
+    if (!allProdutos) return;
+
+    // Build pivot rows: one row per product, locais as columns
     const rows: any[] = [];
-    filtered.forEach((g) => {
-      locais.forEach((l) => {
-        const data = g.locais[l.local_estoque_id];
-        if (data) {
-          rows.push({
-            produto_id: g.produto_id,
-            produto: g.nome,
-            fabricante: g.fabricante,
-            familia: g.familia,
-            local_estoque_id: l.local_estoque_id,
-            local: l.nome,
-            estoque: data.estoque,
-            pedidos: data.pedidos,
-          });
-        }
-      });
-    });
+    for (const p of allProdutos as any[]) {
+      const row: any = {
+        produto_id: p.produto_id,
+        produto: p.nome,
+        fabricante: p.fabricante?.nome || "",
+        familia: p.familia?.nome || "",
+      };
+      for (const l of locais) {
+        const estItem = items.find((i) => i.produto_id === p.produto_id && i.local_estoque_id === l.local_estoque_id);
+        // Column name = local name, value = stock quantity
+        row[`${l.nome} (${l.local_estoque_id})`] = estItem ? Number(estItem.quantidade_disponivel) : 0;
+      }
+      rows.push(row);
+    }
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Estoque");
