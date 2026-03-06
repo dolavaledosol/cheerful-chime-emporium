@@ -36,6 +36,7 @@ const Clientes = () => {
   const [statusFilter, setStatusFilter] = useState<"todos" | "ativo" | "inativo">("ativo");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [cpfLocked, setCpfLocked] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [telefones, setTelefones] = useState<TelefoneItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,7 +57,7 @@ const Clientes = () => {
     return matchText && matchStatus;
   });
 
-  const openNew = () => { setEditId(null); setForm(emptyForm); setTelefones([{ telefone: "" }]); setCpfError(null); setDialogOpen(true); };
+  const openNew = () => { setEditId(null); setForm(emptyForm); setTelefones([{ telefone: "" }]); setCpfError(null); setCpfLocked(false); setDialogOpen(true); };
   const openEdit = (c: Cliente) => {
     setEditId(c.cliente_id);
     setCpfError(null);
