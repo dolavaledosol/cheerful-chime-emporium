@@ -78,6 +78,7 @@ const Checkout = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [cpfCnpj, setCpfCnpj] = useState("");
+  const [cpfCnpjLocked, setCpfCnpjLocked] = useState(false);
   const [cpfCnpjError, setCpfCnpjError] = useState<string | null>(null);
   const [tipoEntrega, setTipoEntrega] = useState<"entrega" | "retirada" | "">("");
   const [enderecos, setEnderecos] = useState<Endereco[]>([]);
@@ -95,7 +96,7 @@ const Checkout = () => {
       supabase.from("cliente").select("cliente_id, cpf_cnpj").eq("user_id", user.id).maybeSingle().then(({ data }) => {
         if (data) {
           setClienteId(data.cliente_id);
-          if (data.cpf_cnpj) setCpfCnpj(formatCpfCnpj(data.cpf_cnpj));
+          if (data.cpf_cnpj) { setCpfCnpj(formatCpfCnpj(data.cpf_cnpj)); setCpfCnpjLocked(true); }
           loadEnderecos(data.cliente_id);
           supabase.from("cliente_telefone").select("telefone").eq("cliente_id", data.cliente_id).order("cliente_telefone_id").then(({ data: tels }) => {
             if (tels && tels.length > 0) setTelefones(tels.map(t => formatTelefone(t.telefone)));
@@ -144,7 +145,7 @@ const Checkout = () => {
     );
   }
 
-  const handleCpfCnpjChange = (value: string) => { const digits = value.replace(/\D/g, "").slice(0, 14); setCpfCnpj(formatCpfCnpj(digits)); if (cpfCnpjError) setCpfCnpjError(null); };
+  const handleCpfCnpjChange = (value: string) => { if (cpfCnpjLocked) return; const digits = value.replace(/\D/g, "").slice(0, 14); setCpfCnpj(formatCpfCnpj(digits)); if (cpfCnpjError) setCpfCnpjError(null); };
   const handleCpfCnpjBlur = () => { if (cpfCnpj.replace(/\D/g, "").length > 0) { const err = validateCpfCnpj(cpfCnpj); if (err) setCpfCnpjError(err); } };
   const handleTelefoneChange = (idx: number, value: string) => { const digits = value.replace(/\D/g, "").slice(0, 11); const updated = [...telefones]; updated[idx] = formatTelefone(digits); setTelefones(updated); if (telefoneError) setTelefoneError(null); };
 
@@ -275,8 +276,10 @@ const Checkout = () => {
                 value={cpfCnpj}
                 onChange={(e) => handleCpfCnpjChange(e.target.value)}
                 onBlur={handleCpfCnpjBlur}
-                className={`rounded-xl h-12 ${cpfCnpjError ? "border-destructive" : ""}`}
+                disabled={cpfCnpjLocked}
+                className={`rounded-xl h-12 ${cpfCnpjError ? "border-destructive" : ""} ${cpfCnpjLocked ? "bg-muted" : ""}`}
               />
+              {cpfCnpjLocked && <p className="text-[11px] text-muted-foreground">Não pode ser alterado após cadastrado</p>}
               {cpfCnpjError && (
                 <p className="text-xs text-destructive flex items-center gap-1 mt-1">
                   <AlertCircle className="h-3 w-3" /> {cpfCnpjError}
