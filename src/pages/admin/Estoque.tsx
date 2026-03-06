@@ -713,6 +713,15 @@ const Estoque = () => {
             {transferOrigem && transferLinhas.length === 0 && (
               <p className="text-center text-muted-foreground py-8">Nenhum produto com estoque disponível neste local.</p>
             )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTransferOpen(false)}>Cancelar</Button>
+            <Button onClick={saveTransfer} disabled={transferLoading || checkedTransferLinhas.length === 0 || !transferOrigem || !transferDestino}>
+              {transferLoading ? "Transferindo..." : "Confirmar Transferência"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ═══════════════════  DIALOG CONCILIAÇÃO  ═══════════════════ */}
       <Dialog open={conciliacaoOpen} onOpenChange={setConciliacaoOpen}>
@@ -757,15 +766,6 @@ const Estoque = () => {
             <Button variant="outline" onClick={() => setConciliacaoOpen(false)}>Cancelar</Button>
             <Button onClick={saveConciliacao} disabled={conciliacaoLoading || conciliacaoLinhas.filter((l) => l.diferenca !== 0).length === 0}>
               {conciliacaoLoading ? "Aplicando..." : "Aplicar Conciliação"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTransferOpen(false)}>Cancelar</Button>
-            <Button onClick={saveTransfer} disabled={transferLoading || checkedTransferLinhas.length === 0 || !transferOrigem || !transferDestino}>
-              {transferLoading ? "Transferindo..." : "Confirmar Transferência"}
             </Button>
           </DialogFooter>
         </DialogContent>
