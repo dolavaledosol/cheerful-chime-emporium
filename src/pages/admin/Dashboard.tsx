@@ -1,43 +1,41 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShoppingCart, DollarSign, TrendingDown, TrendingUp, CalendarDays, BarChart3, ClipboardList } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  ShoppingCart, DollarSign, TrendingDown, TrendingUp,
+  CalendarDays, BarChart3, ClipboardList, Globe, MessageCircle, Monitor,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
-const StatCard = ({ title, value, icon: Icon, description }: {
-  title: string; value: string; icon: any; description?: string;
-}) => (
-  <Card>
-    <CardHeader className="flex flex-row items-center justify-between pb-2">
-      <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-      <Icon className="h-4 w-4 text-muted-foreground" />
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">{value}</div>
-      {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
-    </CardContent>
-  </Card>
-);
+const fmt = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 type OrigemFat = { origem: string; total: number; qtd: number };
 type StatusResumo = { status: string; qtd: number; total: number };
 
 const STATUS_LABELS: Record<string, string> = {
   separacao: "Separação",
-  aguardando_pagamento: "Aguardando Pgto",
+  aguardando_pagamento: "Aguard. Pgto",
   pago: "Pago",
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  separacao: "bg-warning/15 text-warning border-warning/30",
+  aguardando_pagamento: "bg-primary/10 text-primary border-primary/30",
+  pago: "bg-[hsl(var(--success))]/15 text-[hsl(var(--success))] border-[hsl(var(--success))]/30",
+};
+
+const ORIGEM_ICONS: Record<string, any> = {
+  web: Globe,
+  whatsapp: MessageCircle,
+  admin: Monitor,
 };
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
-    pedidosHoje: 0,
-    faturamento: 0,
-    pedidosMes: 0,
-    faturamentoMes: 0,
-    totalPagar: 0,
-    qtdPagar: 0,
-    totalReceber: 0,
-    qtdReceber: 0,
+    pedidosHoje: 0, faturamento: 0,
+    pedidosMes: 0, faturamentoMes: 0,
+    totalPagar: 0, qtdPagar: 0,
+    totalReceber: 0, qtdReceber: 0,
   });
   const [origemFat, setOrigemFat] = useState<OrigemFat[]>([]);
   const [statusResumo, setStatusResumo] = useState<StatusResumo[]>([]);
@@ -68,7 +66,6 @@ const Dashboard = () => {
         .filter((p: any) => p.status !== "cancelado")
         .reduce((s: number, p: any) => s + Number(p.total), 0);
 
-      // Faturamento por origem
       const origemMap: Record<string, { total: number; qtd: number }> = {};
       pedidosMesData
         .filter((p: any) => p.status !== "cancelado")
@@ -83,7 +80,6 @@ const Dashboard = () => {
           .sort((a, b) => b.total - a.total)
       );
 
-      // Status resumo (separacao, aguardando_pagamento, pago)
       const targetStatuses = ["separacao", "aguardando_pagamento", "pago"];
       const sMap: Record<string, { qtd: number; total: number }> = {};
       targetStatuses.forEach(s => { sMap[s] = { qtd: 0, total: 0 }; });
@@ -112,109 +108,134 @@ const Dashboard = () => {
     load();
   }, []);
 
+  const totalAndamento = statusResumo.reduce((a, s) => a + s.qtd, 0);
+
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
-
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Pedidos hoje" value={String(stats.pedidosHoje)} icon={ShoppingCart} />
-        <StatCard
-          title="Faturamento hoje"
-          value={`R$ ${stats.faturamento.toFixed(2)}`}
-          icon={DollarSign}
-        />
-        <StatCard title="Pedidos do mês" value={String(stats.pedidosMes)} icon={CalendarDays} />
-        <StatCard
-          title="Faturamento mês"
-          value={`R$ ${stats.faturamentoMes.toFixed(2)}`}
-          icon={BarChart3}
-        />
+    <div className="space-y-4 pb-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">Resumo do mês atual</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-base">Contas a Pagar pendentes</CardTitle>
-            <TrendingDown className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">R$ {stats.totalPagar.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">{stats.qtdPagar} conta(s) em aberto</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-base">Contas a Receber pendentes</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">R$ {stats.totalReceber.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">{stats.qtdReceber} conta(s) em aberto</p>
-          </CardContent>
-        </Card>
+      {/* KPI grid – 2x2 on mobile */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Pedidos hoje */}
+        <div className="rounded-xl bg-card border border-border p-3.5 space-y-1">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <ShoppingCart className="h-3.5 w-3.5" />
+            <span className="text-[11px] font-medium uppercase tracking-wide">Hoje</span>
+          </div>
+          <p className="text-2xl font-bold text-foreground leading-none">{stats.pedidosHoje}</p>
+          <p className="text-xs text-muted-foreground">{fmt(stats.faturamento)}</p>
+        </div>
+
+        {/* Pedidos mês */}
+        <div className="rounded-xl bg-card border border-border p-3.5 space-y-1">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <CalendarDays className="h-3.5 w-3.5" />
+            <span className="text-[11px] font-medium uppercase tracking-wide">Mês</span>
+          </div>
+          <p className="text-2xl font-bold text-foreground leading-none">{stats.pedidosMes}</p>
+          <p className="text-xs text-muted-foreground">{fmt(stats.faturamentoMes)}</p>
+        </div>
+
+        {/* Contas a receber */}
+        <div className="rounded-xl bg-[hsl(var(--success))]/5 border border-[hsl(var(--success))]/20 p-3.5 space-y-1">
+          <div className="flex items-center gap-1.5 text-[hsl(var(--success))]">
+            <TrendingUp className="h-3.5 w-3.5" />
+            <span className="text-[11px] font-medium uppercase tracking-wide">A receber</span>
+          </div>
+          <p className="text-xl font-bold text-[hsl(var(--success))] leading-none">{fmt(stats.totalReceber)}</p>
+          <p className="text-[11px] text-muted-foreground">{stats.qtdReceber} pendente(s)</p>
+        </div>
+
+        {/* Contas a pagar */}
+        <div className="rounded-xl bg-destructive/5 border border-destructive/20 p-3.5 space-y-1">
+          <div className="flex items-center gap-1.5 text-destructive">
+            <TrendingDown className="h-3.5 w-3.5" />
+            <span className="text-[11px] font-medium uppercase tracking-wide">A pagar</span>
+          </div>
+          <p className="text-xl font-bold text-destructive leading-none">{fmt(stats.totalPagar)}</p>
+          <p className="text-[11px] text-muted-foreground">{stats.qtdPagar} pendente(s)</p>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Faturamento por origem (mês)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {origemFat.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum pedido no mês.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Origem</TableHead>
-                    <TableHead className="text-right">Pedidos</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {origemFat.map((o) => (
-                    <TableRow key={o.origem}>
-                      <TableCell className="capitalize">{o.origem}</TableCell>
-                      <TableCell className="text-right">{o.qtd}</TableCell>
-                      <TableCell className="text-right">R$ {o.total.toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <ClipboardList className="h-4 w-4" /> Pedidos em andamento
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {statusResumo.every(s => s.qtd === 0) ? (
-              <p className="text-sm text-muted-foreground">Nenhum pedido em andamento.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Qtd</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {statusResumo.map((s) => (
-                    <TableRow key={s.status}>
-                      <TableCell>{STATUS_LABELS[s.status] || s.status}</TableCell>
-                      <TableCell className="text-right">{s.qtd}</TableCell>
-                      <TableCell className="text-right">R$ {s.total.toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+      {/* Pedidos em andamento */}
+      <div className="rounded-xl bg-card border border-border overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-foreground">Pedidos em andamento</h2>
+          </div>
+          {totalAndamento > 0 && (
+            <Badge variant="secondary" className="text-[11px] font-bold px-2 py-0.5">
+              {totalAndamento}
+            </Badge>
+          )}
+        </div>
+        {statusResumo.every(s => s.qtd === 0) ? (
+          <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+            Nenhum pedido em andamento
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {statusResumo.map((s) => (
+              <div key={s.status} className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_COLORS[s.status] || ""}`}>
+                    {STATUS_LABELS[s.status] || s.status}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 text-right">
+                  <span className="text-sm font-medium text-foreground tabular-nums">{s.qtd}</span>
+                  <span className="text-sm text-muted-foreground tabular-nums min-w-[80px] text-right">{fmt(s.total)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Faturamento por origem */}
+      <div className="rounded-xl bg-card border border-border overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+          <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-foreground">Faturamento por origem</h2>
+        </div>
+        {origemFat.length === 0 ? (
+          <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+            Nenhum pedido no mês
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {origemFat.map((o) => {
+              const Icon = ORIGEM_ICONS[o.origem] || Globe;
+              const maxTotal = Math.max(...origemFat.map(x => x.total));
+              const pct = maxTotal > 0 ? (o.total / maxTotal) * 100 : 0;
+
+              return (
+                <div key={o.origem} className="px-4 py-3 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-sm font-medium capitalize text-foreground">{o.origem}</span>
+                      <span className="text-[11px] text-muted-foreground">({o.qtd})</span>
+                    </div>
+                    <span className="text-sm font-semibold text-foreground tabular-nums">{fmt(o.total)}</span>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all duration-500"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
