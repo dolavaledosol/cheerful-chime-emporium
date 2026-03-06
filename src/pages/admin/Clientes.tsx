@@ -61,6 +61,7 @@ const Clientes = () => {
   const openEdit = (c: Cliente) => {
     setEditId(c.cliente_id);
     setCpfError(null);
+    setCpfLocked(!!c.cpf_cnpj);
     setForm({
       nome: c.nome,
       cpf_cnpj: c.cpf_cnpj ? formatCpfCnpj(c.cpf_cnpj) : "",
@@ -264,9 +265,11 @@ const Clientes = () => {
                 <Input
                   value={form.cpf_cnpj}
                   placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                  onChange={(e) => { setForm({ ...form, cpf_cnpj: formatCpfCnpj(e.target.value) }); setCpfError(null); }}
-                  className={cpfError ? "border-destructive" : ""}
+                  onChange={(e) => { if (!cpfLocked) { setForm({ ...form, cpf_cnpj: formatCpfCnpj(e.target.value) }); setCpfError(null); } }}
+                  disabled={cpfLocked}
+                  className={`${cpfError ? "border-destructive" : ""} ${cpfLocked ? "bg-muted" : ""}`}
                 />
+                {cpfLocked && <p className="text-[11px] text-muted-foreground">Não pode ser alterado após cadastrado</p>}
                 {cpfError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {cpfError}</p>}
               </div>
               <div className="space-y-2">
