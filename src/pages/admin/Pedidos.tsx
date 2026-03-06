@@ -692,11 +692,24 @@ const Pedidos = () => {
       for (const stock of stocks) {
         if (remaining <= 0) break;
         const deduct = Math.min(remaining, Number(stock.quantidade_disponivel));
+        const actualDeduct = allowNegativeStock ? remaining : deduct;
         await supabase
           .from("estoque_local")
-          .update({ quantidade_disponivel: Number(stock.quantidade_disponivel) - (allowNegativeStock ? remaining : deduct) })
+          .update({ quantidade_disponivel: Number(stock.quantidade_disponivel) - actualDeduct })
           .eq("estoque_local_id", stock.estoque_local_id);
-        remaining -= allowNegativeStock ? remaining : deduct;
+
+        // Log saída movimentação
+        if (actualDeduct > 0) {
+          await supabase.from("movimentacao_estoque").insert({
+            tipo: "saida",
+            produto_id: item.produto_id,
+            local_estoque_id: stock.local_estoque_id,
+            quantidade: actualDeduct,
+            documento: `Pedido ${selectedPedido.pedido_id.substring(0, 8)}`,
+          });
+        }
+
+        remaining -= actualDeduct;
       }
     }
   };
