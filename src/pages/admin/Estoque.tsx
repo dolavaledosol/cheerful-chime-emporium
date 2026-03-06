@@ -115,6 +115,110 @@ const Estoque = () => {
     if (data) setMovimentacoes(data as any);
   };
 
+  /* ═══════════════════  CONCILIAÇÃO  ═══════════════════ */
+  const exportExcel = () => {
+    const rows: any[] = [];
+    filtered.forEach((g) => {
+      locais.forEach((l) => {
+        const data = g.locais[l.local_estoque_id];
+        if (data) {
+          rows.push({
+            produto_id: g.produto_id,
+            produto: g.nome,
+            fabricante: g.fabricante,
+            familia: g.familia,
+            local_estoque_id: l.local_estoque_id,
+            local: l.nome,
+            estoque: data.estoque,
+            pedidos: data.pedidos,
+          });
+        }
+      });
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Estoque");
+    XLSX.writeFile(wb, `estoque_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+    toast({ title: "Planilha exportada com sucesso" });
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const data = await file.arrayBuffer();
+    const wb = XLSX.read(data);
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json<any>(ws);
+
+    // Build conciliation lines from imported data
+    const linhas: ConciliacaoLinha[] = [];
+    for (const row of rows) {
+      const prodId = row.produto_id;
+      const localId = row.local_estoque_id;
+      const estoqueFisico = Number(row.estoque ?? row.estoque_fisico ?? 0);
+      if (!prodId || !localId) continue;
+
+      // Find current system stock
+      const sysItem = items.find((i) => i.produto_id === prodId && i.local_estoque_id === localId);
+      const estoqueSistema = sysItem ? Number(sysItem.quantidade_disponivel) : 0;
+      const diff = estoqueFisico - estoqueSistema;
+
+      linhas.push({
+        produto_id: prodId,
+        nome: sysItem?.produto?.nome || row.produto || prodId,
+        local_estoque_id: localId,
+        local: sysItem?.local_estoque?.nome || row.local || localId,
+        estoque_sistema: estoqueSistema,
+        estoque_fisico: estoqueFisico,
+        diferenca: diff,
+      });
+    }
+    setConciliacaoLinhas(linhas);
+    setConciliacaoOpen(true);
+    // Reset file input
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const saveConciliacao = async () => {
+    const linhasComDif = conciliacaoLinhas.filter((l) => l.diferenca !== 0);
+    if (linhasComDif.length === 0) {
+      toast({ title: "Nenhuma diferença encontrada" });
+      setConciliacaoOpen(false);
+      return;
+    }
+    setConciliacaoLoading(true);
+    try {
+      for (const linha of linhasComDif) {
+        // Update estoque_local
+        const sysItem = items.find((i) => i.produto_id === linha.produto_id && i.local_estoque_id === linha.local_estoque_id);
+        if (sysItem) {
+          await supabase.from("estoque_local").update({
+            quantidade_disponivel: linha.estoque_fisico,
+          }).eq("estoque_local_id", sysItem.estoque_local_id);
+        }
+
+        // Log movimentação
+        const tipo = linha.diferenca > 0 ? "entrada" : "saida";
+        await supabase.from("movimentacao_estoque").insert({
+          tipo,
+          produto_id: linha.produto_id,
+          local_estoque_id: linha.local_estoque_id,
+          quantidade: Math.abs(linha.diferenca),
+          documento: "Conciliação de estoque",
+        });
+      }
+      toast({ title: `Conciliação aplicada: ${linhasComDif.length} produto(s) ajustado(s)` });
+      setConciliacaoOpen(false);
+      setConciliacaoLinhas([]);
+      load();
+      loadMovimentacoes();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setConciliacaoLoading(false);
+    }
+  };
+
   useEffect(() => { load(); loadMovimentacoes(); }, []);
 
   /* ── Agrupados for main table ── */
