@@ -9,8 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Search, Shield, UserCog, Plus, Trash2 } from "lucide-react";
+import { Pencil, Search, Shield, UserCog, Plus, Trash2, Lock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import PermissionsDialog from "@/components/admin/PermissionsDialog";
 
 interface UserProfile {
   profile_id: string;
