@@ -1119,6 +1119,7 @@ const Pedidos = () => {
       if (phoneDigits) {
         await supabase.from("cliente_telefone").insert({ cliente_id: clienteId, telefone: phoneDigits, is_whatsapp: false });
       }
+    }
 
     // Update CPF for existing client if it was missing
     if (!showNewClient && clienteId) {
@@ -2004,6 +2005,7 @@ const Pedidos = () => {
                       <Input placeholder="CPF/CNPJ *" value={newClientCpf} onChange={e => { setNewClientCpf(e.target.value.replace(/\D/g, "").slice(0, 14)); setCpfCnpjError(null); }} className={cpfCnpjError && showNewClient ? "border-destructive" : ""} />
                       <Input placeholder="Email" value={newClientEmail} onChange={e => setNewClientEmail(e.target.value)} />
                     </div>
+                    <Input placeholder="Telefone (ex: 11999998888)" value={newClientTelefone} onChange={e => setNewClientTelefone(e.target.value.replace(/\D/g, "").slice(0, 11))} />
                     {cpfCnpjError && showNewClient && <p className="text-sm text-destructive">{cpfCnpjError}</p>}
                   </div>
                 </div>
