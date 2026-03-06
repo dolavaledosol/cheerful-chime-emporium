@@ -870,17 +870,47 @@ const Pedidos = () => {
         await deductStock();
       }
 
-      // When canceling, decrement pedida_nao_separada if was in aguardando_pagamento or separacao with local
-      if (editStatus === "cancelado" && localId && 
-          (selectedPedido.status === "aguardando_pagamento" || (selectedPedido.status === "separacao" && selectedPedido.local_estoque_id))) {
-        for (const item of items) {
-          const { data: el } = await supabase.from("estoque_local")
-            .select("estoque_local_id, quantidade_pedida_nao_separada")
-            .eq("produto_id", item.produto_id).eq("local_estoque_id", localId).maybeSingle();
-          if (el) {
-            await supabase.from("estoque_local").update({
-              quantidade_pedida_nao_separada: Math.max(0, Number(el.quantidade_pedida_nao_separada) - Number(item.quantidade)),
-            }).eq("estoque_local_id", el.estoque_local_id);
+      // When canceling, handle stock and financial reversal based on previous status
+      if (editStatus === "cancelado") {
+        const wasAfterPago = statusOrder.indexOf(selectedPedido.status) >= statusOrder.indexOf("pago");
+        
+        // If was pago/enviado/entregue: reverse stock deduction and remove financial records
+        if (wasAfterPago && localId) {
+          for (const item of items) {
+            // Restore stock by adding back the deducted quantity
+            const { data: el } = await supabase.from("estoque_local")
+              .select("estoque_local_id, quantidade_disponivel")
+              .eq("produto_id", item.produto_id).eq("local_estoque_id", localId).maybeSingle();
+            if (el) {
+              await supabase.from("estoque_local").update({
+                quantidade_disponivel: Number(el.quantidade_disponivel) + Number(item.quantidade),
+              }).eq("estoque_local_id", el.estoque_local_id);
+            }
+            // Log movimentação de devolução
+            await supabase.from("movimentacao_estoque").insert({
+              tipo: "entrada",
+              produto_id: item.produto_id,
+              local_estoque_id: localId,
+              quantidade: Number(item.quantidade),
+              documento: `Cancelamento Pedido ${selectedPedido.pedido_id.substring(0, 8)}`,
+            });
+          }
+          // Remove financial records
+          await supabase.from("pedido_pagamento").delete().eq("pedido_id", selectedPedido.pedido_id);
+          await supabase.from("contas_receber").delete().eq("pedido_id", selectedPedido.pedido_id);
+        }
+        // If was aguardando_pagamento or separacao with local: decrement pedida_nao_separada
+        else if (localId && 
+            (selectedPedido.status === "aguardando_pagamento" || (selectedPedido.status === "separacao" && selectedPedido.local_estoque_id))) {
+          for (const item of items) {
+            const { data: el } = await supabase.from("estoque_local")
+              .select("estoque_local_id, quantidade_pedida_nao_separada")
+              .eq("produto_id", item.produto_id).eq("local_estoque_id", localId).maybeSingle();
+            if (el) {
+              await supabase.from("estoque_local").update({
+                quantidade_pedida_nao_separada: Math.max(0, Number(el.quantidade_pedida_nao_separada) - Number(item.quantidade)),
+              }).eq("estoque_local_id", el.estoque_local_id);
+            }
           }
         }
       }
