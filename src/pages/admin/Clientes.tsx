@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Pencil, Trash2, Phone } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Phone, AlertCircle } from "lucide-react";
 import { formatTelefone, unformatTelefone } from "@/lib/telefone";
+import { formatCpfCnpj, unformatCpfCnpj, validateCpfCnpj } from "@/lib/cpfCnpj";
 
 interface Cliente {
   cliente_id: string;
@@ -22,6 +23,7 @@ interface Cliente {
 }
 
 const emptyForm = { nome: "", cpf_cnpj: "", email: "", tipo_cliente: "cliente", ativo: true };
+
 
 interface TelefoneItem {
   id?: string; // cliente_telefone_id if existing
