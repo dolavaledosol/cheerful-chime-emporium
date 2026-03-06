@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, MapPin, Phone, User, Package, Loader2, MessageCircle, Eye, Shield, ChevronRight } from "lucide-react";
 import { formatTelefone, unformatTelefone } from "@/lib/telefone";
+import { formatCpfCnpj } from "@/lib/cpfCnpj";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCep } from "@/hooks/useCep";
 import { Switch } from "@/components/ui/switch";
@@ -291,7 +292,7 @@ const Perfil = () => {
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-sm">CPF/CNPJ</Label>
-                  <Input value={editCpf} onChange={(e) => { if (!cliente?.cpf_cnpj) setEditCpf(e.target.value); }} disabled={!!cliente?.cpf_cnpj} className={`rounded-xl h-12 ${cliente?.cpf_cnpj ? "bg-muted" : ""}`} />
+                  <Input value={formatCpfCnpj(editCpf)} onChange={(e) => { if (!cliente?.cpf_cnpj) setEditCpf(e.target.value.replace(/\D/g, "").slice(0, 14)); }} disabled={!!cliente?.cpf_cnpj} className={`rounded-xl h-12 ${cliente?.cpf_cnpj ? "bg-muted" : ""}`} />
                   {cliente?.cpf_cnpj && <p className="text-[11px] text-muted-foreground">Não pode ser alterado após cadastrado</p>}
                 </div>
                 <div className="space-y-1.5">
