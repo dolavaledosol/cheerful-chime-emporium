@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Search, ArrowRightLeft, ClipboardCheck, Download, Upload } from "lucide-react";
+import { Search, ArrowRightLeft, Download, Upload } from "lucide-react";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
 
