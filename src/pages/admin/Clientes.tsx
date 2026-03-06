@@ -56,12 +56,13 @@ const Clientes = () => {
     return matchText && matchStatus;
   });
 
-  const openNew = () => { setEditId(null); setForm(emptyForm); setTelefones([{ telefone: "" }]); setDialogOpen(true); };
+  const openNew = () => { setEditId(null); setForm(emptyForm); setTelefones([{ telefone: "" }]); setCpfError(null); setDialogOpen(true); };
   const openEdit = (c: Cliente) => {
     setEditId(c.cliente_id);
+    setCpfError(null);
     setForm({
       nome: c.nome,
-      cpf_cnpj: c.cpf_cnpj || "",
+      cpf_cnpj: c.cpf_cnpj ? formatCpfCnpj(c.cpf_cnpj) : "",
       email: c.email || "",
       tipo_cliente: c.tipo_cliente,
       ativo: c.ativo,
@@ -79,10 +80,17 @@ const Clientes = () => {
   };
 
   const save = async () => {
+    // Validate CPF/CNPJ
+    const cpfDigits = unformatCpfCnpj(form.cpf_cnpj);
+    if (cpfDigits.length > 0) {
+      const err = validateCpfCnpj(cpfDigits);
+      if (err) { setCpfError(err); toast({ title: err, variant: "destructive" }); return; }
+    }
+
     setLoading(true);
     const payload: any = {
       nome: form.nome,
-      cpf_cnpj: form.cpf_cnpj || null,
+      cpf_cnpj: cpfDigits || null,
       email: form.email || null,
       tipo_cliente: form.tipo_cliente,
       ativo: form.ativo,
