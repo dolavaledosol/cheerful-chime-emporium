@@ -371,6 +371,16 @@ const Usuarios = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Permissions Dialog */}
+      {permUser && (
+        <PermissionsDialog
+          open={permOpen}
+          onOpenChange={setPermOpen}
+          userId={permUser.profile_id}
+          userName={permUser.nome || permUser.email || ""}
+        />
+      )}
     </div>
   );
 };
