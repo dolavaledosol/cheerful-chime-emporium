@@ -415,7 +415,7 @@ const Estoque = () => {
       grupo.totalPedidos += Number(e.quantidade_pedida_nao_separada);
     });
     return Array.from(map.values());
-  }, [items]);
+  }, [items, locais]);
 
   const filtered = agrupados.filter((g) => {
     const term = search.toLowerCase();
