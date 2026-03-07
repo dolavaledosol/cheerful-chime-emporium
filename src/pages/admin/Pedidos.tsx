@@ -515,14 +515,13 @@ const Pedidos = () => {
     const clienteIds = [...new Set(filtered.map((p) => p.cliente_id).filter(Boolean))];
     const { data: phones } = await supabase
       .from("cliente_telefone")
-      .select("cliente_id, from")
+      .select("cliente_id, telefone")
       .in("cliente_id", clienteIds)
-      .eq("verificado", true)
       .eq("is_whatsapp", true);
     const phoneMap: Record<string, { from: string | null }> = {};
     if (phones) {
       for (const ph of phones) {
-        if (!phoneMap[ph.cliente_id]) phoneMap[ph.cliente_id] = { from: ph.from };
+        if (!phoneMap[ph.cliente_id]) phoneMap[ph.cliente_id] = { from: ph.telefone };
       }
     }
 

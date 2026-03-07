@@ -244,15 +244,14 @@ const Financeiro = () => {
     if (clienteIds.length > 0) {
       const { data: phones } = await supabase
         .from("cliente_telefone")
-        .select("cliente_id, from")
+        .select("cliente_id, telefone")
         .in("cliente_id", clienteIds)
-        .eq("verificado", true)
         .eq("is_whatsapp", true);
       if (phones) {
         for (const p of phones) {
-          // Pega o primeiro telefone verificado+whatsapp por cliente
+          // Pega o primeiro telefone whatsapp por cliente
           if (!phoneMap[p.cliente_id]) {
-            phoneMap[p.cliente_id] = { from: p.from || "" };
+            phoneMap[p.cliente_id] = { from: p.telefone || "" };
           }
         }
       }

@@ -22,6 +22,8 @@ interface Cliente {
   ativo: boolean;
 }
 
+import { defaultTelefone } from "@/lib/telefone";
+
 const emptyForm = { nome: "", cpf_cnpj: "", email: "", tipo_cliente: "cliente", ativo: true };
 
 
