@@ -298,7 +298,7 @@ const Checkout = () => {
               {telefones.map((tel, idx) => (
                 <div key={idx} className="flex gap-2 items-center">
                   <Input
-                    placeholder="(00) 00000-0000"
+                    placeholder="+55 (31) 90000-0000"
                     value={tel}
                     onChange={(e) => handleTelefoneChange(idx, e.target.value)}
                     className={`rounded-xl h-12 ${telefoneError && idx === 0 ? "border-destructive" : ""}`}

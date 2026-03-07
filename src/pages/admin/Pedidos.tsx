@@ -2017,7 +2017,7 @@ const Pedidos = () => {
                       </div>
                       {newClientTelefones.map((tel, idx) => (
                         <div key={idx} className="flex gap-1 items-center">
-                          <Input placeholder="(00) 00000-0000" value={tel} onChange={e => { const updated = [...newClientTelefones]; updated[idx] = formatTelefone(e.target.value); setNewClientTelefones(updated); }} />
+                          <Input placeholder="+55 (31) 90000-0000" value={tel} onChange={e => { const updated = [...newClientTelefones]; updated[idx] = formatTelefone(e.target.value); setNewClientTelefones(updated); }} />
                           {newClientTelefones.length > 1 && (
                             <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setNewClientTelefones(newClientTelefones.filter((_, i) => i !== idx))}>
                               <Trash2 className="h-3 w-3 text-destructive" />

@@ -469,7 +469,7 @@ const Perfil = () => {
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label className="text-sm">Telefone</Label>
-              <Input placeholder="(00) 00000-0000" value={telForm} onChange={(e) => setTelForm(formatTelefone(e.target.value))} className="rounded-xl h-12" />
+              <Input placeholder="+55 (31) 90000-0000" value={telForm} onChange={(e) => setTelForm(formatTelefone(e.target.value))} className="rounded-xl h-12" />
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={telWhatsapp} onCheckedChange={setTelWhatsapp} />
