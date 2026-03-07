@@ -10,7 +10,7 @@ export function formatTelefone(value: string): string {
   // Extract only digits
   let digits = value.replace(/\D/g, "");
 
-  // If starts with 55 and has more than 11 digits, strip country code
+  // If starts with 55 and has more than 11 digits, strip country code for formatting
   if (digits.startsWith("55") && digits.length > 11) {
     digits = digits.slice(2);
   }
@@ -30,15 +30,27 @@ export function formatTelefone(value: string): string {
 }
 
 /**
- * Extract only the national digits (DDD + number), max 11.
+ * Extract digits for DB persistence: always includes country code 55.
+ * e.g. "5531900000000" (13 digits for mobile)
  */
 export function unformatTelefone(value: string): string {
   let digits = value.replace(/\D/g, "");
-  // Strip country code if present
-  if (digits.startsWith("55") && digits.length > 11) {
-    digits = digits.slice(2);
+
+  // If already starts with 55 and has 12-13 digits, it's complete
+  if (digits.startsWith("55") && digits.length >= 12) {
+    return digits.slice(0, 13);
   }
-  return digits.slice(0, 11);
+
+  // If it's national digits only (10-11), prepend 55
+  if (digits.length >= 10 && digits.length <= 11) {
+    return "55" + digits;
+  }
+
+  // Partial or empty — return as-is (won't pass validation anyway)
+  if (digits.startsWith("55")) {
+    return digits.slice(0, 13);
+  }
+  return digits.length > 0 ? "55" + digits.slice(0, 11) : "";
 }
 
 /**
