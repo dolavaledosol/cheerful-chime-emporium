@@ -91,6 +91,16 @@ const Clientes = () => {
       if (err) { setCpfError(err); toast({ title: err, variant: "destructive" }); return; }
     }
 
+    // Validate phones
+    const validPhones = telefones.filter(t => unformatTelefone(t.telefone).length > 0);
+    for (const tel of validPhones) {
+      const phoneErr = validateTelefone(unformatTelefone(tel.telefone));
+      if (phoneErr) {
+        toast({ title: phoneErr, variant: "destructive" });
+        return;
+      }
+    }
+
     setLoading(true);
     const payload: any = {
       nome: form.nome,
