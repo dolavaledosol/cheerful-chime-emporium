@@ -10,8 +10,8 @@ export function formatTelefone(value: string): string {
   // Extract only digits
   let digits = value.replace(/\D/g, "");
 
-  // If starts with 55 and has more than 11 digits, strip country code for formatting
-  if (digits.startsWith("55") && digits.length > 11) {
+  // Always strip leading country code 55 so we work with national digits only
+  if (digits.startsWith("55") && digits.length > 2) {
     digits = digits.slice(2);
   }
 
