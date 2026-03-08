@@ -2324,6 +2324,34 @@ const Pedidos = () => {
             </div>
           </div>
 
+          {isMobile ? (
+            <div className="space-y-2">
+              {filteredCompras.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">Nenhum pedido de compra encontrado</p>
+              ) : filteredCompras.map((c) => {
+                const nfMatch = c.descricao.match(/NF\s+([^\s-]+)/i);
+                const nfNum = nfMatch ? nfMatch[1] : "—";
+                const st = c.status_compra || "pendente";
+                return (
+                  <button key={c.contas_pagar_id} onClick={() => openCompraEdit(c)} className="w-full text-left border rounded-xl p-3 space-y-1.5 bg-card hover:bg-muted/50 transition-colors active:scale-[0.98]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-mono text-primary">{c.contas_pagar_id.slice(0, 8)}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${statusCompraColors[st] || "bg-muted text-muted-foreground"}`}>
+                        {statusCompraLabels[st] || st}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground truncate mr-2">{c.fornecedor?.nome || "—"}</span>
+                      <span className="text-xs text-muted-foreground">NF {nfNum}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {c.created_at ? format(new Date(c.created_at), "dd/MM/yyyy") : "—"}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
           <div className="border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
@@ -2363,6 +2391,7 @@ const Pedidos = () => {
               </TableBody>
             </Table>
           </div>
+          )}
         </TabsContent>
       </Tabs>
 
