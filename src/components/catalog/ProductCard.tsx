@@ -144,9 +144,6 @@ const ProductCard = memo(function ProductCard({
             <span className="text-lg font-bold text-primary">
               R$ {preco.toFixed(2)}
             </span>
-            <span className="text-[11px] text-muted-foreground ml-1">
-              / {unidadeLabels[unidade_medida] || unidade_medida}
-            </span>
           </div>
         </div>
       </div>
