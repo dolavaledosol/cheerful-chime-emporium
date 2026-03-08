@@ -6,7 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, Store } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const AdminLayout = ({ children }: { children: ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
@@ -39,7 +40,6 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  // Check permission for current route
   const resource = ROUTE_TO_RESOURCE[location.pathname];
   const hasAccess = resource ? can(resource, "ver") : true;
 
@@ -48,14 +48,25 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       <div className="min-h-screen flex w-full">
         <AdminSidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-12 flex items-center gap-2 border-b px-3 bg-background sticky top-0 z-30">
-            <SidebarTrigger />
-            <Link to="/admin" className="flex items-center shrink-0">
-              <img src="/images/logo-cozinha-dodola.png" alt="CozinhaDoDola" className="h-8 w-auto" />
-            </Link>
-            <span className="text-sm font-semibold text-muted-foreground">Painel Admin</span>
+          <header className="h-12 flex items-center justify-between gap-2 border-b px-3 bg-background sticky top-0 z-30">
+            <div className="flex items-center gap-2 min-w-0">
+              <SidebarTrigger />
+              <Link to="/admin" className="flex items-center shrink-0">
+                <img src="/images/logo-cozinha-dodola.png" alt="CozinhaDoDola" className="h-8 w-auto" />
+              </Link>
+              <span className="text-sm font-semibold text-muted-foreground hidden sm:inline">Painel Admin</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-xs text-muted-foreground hover:text-foreground shrink-0"
+              onClick={() => navigate("/")}
+            >
+              <Store className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Catálogo</span>
+            </Button>
           </header>
-          <main className="flex-1 p-4 md:p-6 overflow-auto">
+          <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto">
             {hasAccess ? children : (
               <div className="flex flex-col items-center justify-center h-64 gap-4 text-muted-foreground">
                 <ShieldAlert className="h-12 w-12" />

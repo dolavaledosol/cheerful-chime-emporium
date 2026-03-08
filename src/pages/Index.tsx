@@ -5,7 +5,7 @@ import CatalogHeader from "@/components/catalog/CatalogHeader";
 import CatalogFilters from "@/components/catalog/CatalogFilters";
 import ProductCard from "@/components/catalog/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package } from "lucide-react";
+import { Package, Search as SearchIcon } from "lucide-react";
 
 interface ProdutoComPreco {
   produto_id: string;
@@ -25,6 +25,18 @@ interface ProdutoComPreco {
   quantidade_default: number;
 }
 
+const ProductSkeleton = () => (
+  <div className="bg-card rounded-xl overflow-hidden border border-border/50">
+    <Skeleton className="aspect-square w-full rounded-none" />
+    <div className="p-3 space-y-2">
+      <Skeleton className="h-2.5 w-16 rounded" />
+      <Skeleton className="h-4 w-full rounded" />
+      <Skeleton className="h-3 w-20 rounded" />
+      <Skeleton className="h-6 w-24 rounded" />
+    </div>
+  </div>
+);
+
 const Index = () => {
   const [search, setSearch] = useState("");
   const [selectedFamilia, setSelectedFamilia] = useState("all");
@@ -34,7 +46,6 @@ const Index = () => {
   const [fabricantes, setFabricantes] = useState<{ id: string; nome: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load filters
   useEffect(() => {
     const loadFilters = async () => {
       const [famRes, fabRes] = await Promise.all([
@@ -47,7 +58,6 @@ const Index = () => {
     loadFilters();
   }, []);
 
-  // Load products
   useEffect(() => {
     const loadProdutos = async () => {
       setLoading(true);
@@ -55,20 +65,9 @@ const Index = () => {
       let query = supabase
         .from("produto")
         .select(`
-          produto_id,
-          nome,
-          slug,
-          descricao,
-          preco,
-          peso_bruto,
-          peso_liquido,
-          unidade_medida,
-          aceita_fracionado,
-          quantidade_default,
-          familia_id,
-          fabricante_id,
-          familia:familia_id (nome),
-          fabricante:fabricante_id (nome),
+          produto_id, nome, slug, descricao, preco, peso_bruto, peso_liquido,
+          unidade_medida, aceita_fracionado, quantidade_default, familia_id, fabricante_id,
+          familia:familia_id (nome), fabricante:fabricante_id (nome),
           produto_imagem (url_imagem, ordem)
         `)
         .eq("ativo", true)
@@ -77,18 +76,11 @@ const Index = () => {
       if (selectedFamilia !== "all") {
         const selectedFam = familias.find((f) => f.id === selectedFamilia);
         const isChild = selectedFam?.familia_pai_id != null;
-
         if (isChild) {
           query = query.eq("familia_id", selectedFamilia);
         } else {
-          const childIds = familias
-            .filter((f) => f.familia_pai_id === selectedFamilia)
-            .map((f) => f.id);
-          if (childIds.length > 0) {
-            query = query.in("familia_id", childIds);
-          } else {
-            query = query.eq("familia_id", selectedFamilia);
-          }
+          const childIds = familias.filter((f) => f.familia_pai_id === selectedFamilia).map((f) => f.id);
+          query = childIds.length > 0 ? query.in("familia_id", childIds) : query.eq("familia_id", selectedFamilia);
         }
       }
       if (selectedFabricante !== "all") {
@@ -101,20 +93,12 @@ const Index = () => {
         const mapped: ProdutoComPreco[] = data.map((p: any) => {
           const imgs = p.produto_imagem || [];
           const sorted = [...imgs].sort((a: any, b: any) => a.ordem - b.ordem);
-
           return {
-            produto_id: p.produto_id,
-            nome: p.nome,
-            slug: p.slug,
-            descricao: p.descricao,
-            familia_id: p.familia_id,
-            fabricante_id: p.fabricante_id,
-            familia_nome: p.familia?.nome ?? null,
-            fabricante_nome: p.fabricante?.nome ?? null,
-            preco: p.preco ?? 0,
-            url_imagem: sorted[0]?.url_imagem ?? null,
-            peso_bruto: p.peso_bruto,
-            peso_liquido: p.peso_liquido,
+            produto_id: p.produto_id, nome: p.nome, slug: p.slug, descricao: p.descricao,
+            familia_id: p.familia_id, fabricante_id: p.fabricante_id,
+            familia_nome: p.familia?.nome ?? null, fabricante_nome: p.fabricante?.nome ?? null,
+            preco: p.preco ?? 0, url_imagem: sorted[0]?.url_imagem ?? null,
+            peso_bruto: p.peso_bruto, peso_liquido: p.peso_liquido,
             unidade_medida: p.unidade_medida || "un",
             aceita_fracionado: p.aceita_fracionado ?? false,
             quantidade_default: p.quantidade_default ?? 1,
@@ -145,7 +129,7 @@ const Index = () => {
   }, [fabricantes, produtos, selectedFamilia, loading]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-[100dvh] bg-background flex flex-col">
       <CatalogHeader search={search} onSearchChange={setSearch} />
 
       {/* Filters - sticky below header */}
@@ -171,54 +155,76 @@ const Index = () => {
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="aspect-square rounded-xl" />
-                <Skeleton className="h-3 w-2/3 rounded" />
-                <Skeleton className="h-4 w-full rounded" />
-                <Skeleton className="h-5 w-1/2 rounded" />
-              </div>
+              <ProductSkeleton key={i} />
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-4">
-            <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
-              <Package className="h-10 w-10 text-muted-foreground/40" />
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
+            <div className="h-24 w-24 rounded-2xl bg-muted/60 flex items-center justify-center">
+              {search.trim() ? (
+                <SearchIcon className="h-10 w-10 text-muted-foreground/30" />
+              ) : (
+                <Package className="h-10 w-10 text-muted-foreground/30" />
+              )}
             </div>
-            <p className="text-lg font-medium">Nenhum produto encontrado</p>
-            <p className="text-sm">Tente ajustar os filtros ou a busca</p>
+            <p className="text-base font-semibold text-foreground">
+              {search.trim() ? "Nenhum resultado" : "Nenhum produto encontrado"}
+            </p>
+            <p className="text-sm text-center max-w-xs">
+              {search.trim()
+                ? `Não encontramos produtos para "${search}". Tente outro termo.`
+                : "Tente ajustar os filtros selecionados"}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-            {filtered.map((p) => (
-              <ProductCard
+            {filtered.map((p, i) => (
+              <div
                 key={p.produto_id}
-                produto_id={p.produto_id}
-                nome={p.nome}
-                preco={p.preco}
-                descricao={p.descricao ?? undefined}
-                url_imagem={p.url_imagem ?? undefined}
-                familia_nome={p.familia_nome ?? undefined}
-                fabricante_nome={p.fabricante_nome ?? undefined}
-                peso_bruto={p.peso_bruto ?? undefined}
-                peso_liquido={p.peso_liquido ?? undefined}
-                unidade_medida={p.unidade_medida}
-                aceita_fracionado={p.aceita_fracionado}
-                quantidade_default={p.quantidade_default}
-              />
+                className="animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both"
+                style={{ animationDelay: `${Math.min(i * 30, 300)}ms` }}
+              >
+                <ProductCard
+                  produto_id={p.produto_id}
+                  nome={p.nome}
+                  preco={p.preco}
+                  descricao={p.descricao ?? undefined}
+                  url_imagem={p.url_imagem ?? undefined}
+                  familia_nome={p.familia_nome ?? undefined}
+                  fabricante_nome={p.fabricante_nome ?? undefined}
+                  peso_bruto={p.peso_bruto ?? undefined}
+                  peso_liquido={p.peso_liquido ?? undefined}
+                  unidade_medida={p.unidade_medida}
+                  aceita_fracionado={p.aceita_fracionado}
+                  quantidade_default={p.quantidade_default}
+                />
+              </div>
             ))}
           </div>
         )}
       </main>
 
       {/* Footer */}
-      <footer className="border-t py-6 text-center text-xs text-muted-foreground">
-        <p>© {new Date().getFullYear()} CozinhaDoDola — Todos os direitos reservados</p>
-        <Link
-          to="/politica-de-privacidade"
-          className="text-xs text-muted-foreground/60 hover:text-muted-foreground mt-1 inline-block"
-        >
-          Política de Privacidade
-        </Link>
+      <footer className="border-t bg-card/50 py-8 px-4">
+        <div className="max-w-7xl mx-auto flex flex-col items-center gap-4">
+          <img
+            src="/images/logo-cozinha-dodola.png"
+            alt="CozinhaDoDola"
+            className="h-10 w-auto opacity-60"
+          />
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <Link to="/politica-de-privacidade" className="hover:text-foreground transition-colors">
+              Política de Privacidade
+            </Link>
+            <span className="hidden sm:inline">·</span>
+            <Link to="/auth" className="hover:text-foreground transition-colors">
+              Entrar / Cadastrar
+            </Link>
+          </div>
+          <p className="text-[11px] text-muted-foreground/60">
+            © {new Date().getFullYear()} CozinhaDoDola — Todos os direitos reservados
+          </p>
+        </div>
       </footer>
     </div>
   );
