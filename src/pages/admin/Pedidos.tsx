@@ -1119,7 +1119,7 @@ const Pedidos = () => {
       }
       clienteId = newCliente.cliente_id;
       // Save phones if provided
-      const validPhones = newClientTelefones.map(t => unformatTelefone(t)).filter(t => t.length > 0);
+      const validPhones = newClientTelefones.map(t => phoneToDigits(t)).filter(t => t.length > 0);
       for (const phone of validPhones) {
         await supabase.from("cliente_telefone").insert({ cliente_id: clienteId, telefone: phone, is_whatsapp: false });
       }
