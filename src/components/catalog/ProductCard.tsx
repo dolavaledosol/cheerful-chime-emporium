@@ -88,6 +88,16 @@ const ProductCard = memo(function ProductCard({
   };
 
   const pesoStr = formatPeso(peso_liquido, unidade_medida) || formatPeso(peso_bruto, unidade_medida);
+  const ul = unidadeLabels[unidade_medida] || unidade_medida;
+
+  // For fractional products: show proportional weight for default quantity
+  const pesoBase = peso_liquido ?? peso_bruto;
+  const pesoPorcao = aceita_fracionado && pesoBase && quantidade_default !== pesoBase
+    ? formatPeso(Math.round(quantidade_default * 10) / 10, unidade_medida)
+    : null;
+
+  // Price for the default quantity
+  const precoDefault = preco * quantidade_default;
 
   return (
     <>
@@ -134,6 +144,11 @@ const ProductCard = memo(function ProductCard({
                 <Weight className="h-3 w-3" /> {pesoStr}
               </span>
             )}
+            {aceita_fracionado && pesoPorcao && (
+              <span className="text-[10px] text-muted-foreground">
+                · porção {pesoPorcao}
+              </span>
+            )}
             {aceita_fracionado && (
               <span className="text-[10px] uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded-full font-semibold">
                 Fracionado
@@ -141,9 +156,20 @@ const ProductCard = memo(function ProductCard({
             )}
           </div>
           <div className="pt-1">
-            <span className="text-lg font-bold text-primary">
-              R$ {preco.toFixed(2)}
-            </span>
+            {aceita_fracionado ? (
+              <>
+                <span className="text-lg font-bold text-primary">
+                  R$ {precoDefault.toFixed(2)}
+                </span>
+                <p className="text-[11px] text-muted-foreground">
+                  R$ {preco.toFixed(2)} / {ul}
+                </p>
+              </>
+            ) : (
+              <span className="text-lg font-bold text-primary">
+                R$ {preco.toFixed(2)}
+              </span>
+            )}
           </div>
         </div>
       </div>
