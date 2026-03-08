@@ -1,0 +1,1 @@
+ALTER TABLE public.contas_receber ADD COLUMN cobrar_auto boolean NOT NULL DEFAULT false;

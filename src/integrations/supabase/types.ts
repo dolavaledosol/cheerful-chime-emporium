@@ -403,6 +403,7 @@ export type Database = {
         Row: {
           banco_id: string | null
           cliente_id: string | null
+          cobrar_auto: boolean
           contas_receber_id: string
           created_at: string
           data_recebimento: string | null
@@ -416,6 +417,7 @@ export type Database = {
         Insert: {
           banco_id?: string | null
           cliente_id?: string | null
+          cobrar_auto?: boolean
           contas_receber_id?: string
           created_at?: string
           data_recebimento?: string | null
@@ -429,6 +431,7 @@ export type Database = {
         Update: {
           banco_id?: string | null
           cliente_id?: string | null
+          cobrar_auto?: boolean
           contas_receber_id?: string
           created_at?: string
           data_recebimento?: string | null
