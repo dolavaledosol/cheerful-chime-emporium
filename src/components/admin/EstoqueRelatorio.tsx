@@ -20,7 +20,7 @@ interface ProdutoEstoque {
   preco: number;
   familia: string;
   fabricante: string;
-  slug: string | null;
+  imagem_url: string | null;
   total_estoque: number;
   checked: boolean;
 }
@@ -62,7 +62,7 @@ const EstoqueRelatorio = () => {
 
   const loadData = async () => {
     const [{ data: estoque }, { data: fam }, { data: fab }] = await Promise.all([
-      supabase.from("estoque_local").select("produto_id, quantidade_disponivel, produto(nome, descricao, preco, slug, familia(familia_id, nome), fabricante(fabricante_id, nome))"),
+      supabase.from("estoque_local").select("produto_id, quantidade_disponivel, produto(nome, descricao, preco, familia(familia_id, nome), fabricante(fabricante_id, nome), produto_imagem(url_imagem, ordem))"),
       supabase.from("familia").select("familia_id, nome").eq("ativo", true).order("nome"),
       supabase.from("fabricante").select("fabricante_id, nome").eq("ativo", true).order("nome"),
     ]);
@@ -75,6 +75,10 @@ const EstoqueRelatorio = () => {
       for (const e of estoque as any[]) {
         const pid = e.produto_id;
         if (!map.has(pid)) {
+          const imagens = e.produto?.produto_imagem || [];
+          const imgPrincipal = imagens.length > 0
+            ? imagens.sort((a: any, b: any) => a.ordem - b.ordem)[0].url_imagem
+            : null;
           map.set(pid, {
             produto_id: pid,
             nome: e.produto?.nome || "—",
@@ -82,7 +86,7 @@ const EstoqueRelatorio = () => {
             preco: e.produto?.preco || 0,
             familia: e.produto?.familia?.nome || "—",
             fabricante: e.produto?.fabricante?.nome || "—",
-            slug: e.produto?.slug || null,
+            imagem_url: imgPrincipal,
             total_estoque: 0,
             checked: false,
           });
@@ -256,7 +260,7 @@ const EstoqueRelatorio = () => {
         descricao: p.descricao,
         familia: p.familia,
         fabricante: p.fabricante,
-        url: p.slug ? `${window.location.origin}/produto/${p.slug}` : null,
+        imagem_url: p.imagem_url,
       })),
       clientes: clientes.map((c) => ({
         cliente_id: c.cliente_id,
