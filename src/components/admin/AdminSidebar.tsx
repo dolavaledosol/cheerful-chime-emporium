@@ -92,6 +92,7 @@ const AdminSidebar = () => {
                 menuLink({ title: "Financeiro", url: "/admin/financeiro", icon: DollarSign, resource: "financeiro" })}
               {can("estoque", "ver") &&
                 menuLink({ title: "Estoque", url: "/admin/estoque", icon: Boxes, resource: "estoque" })}
+              {menuLink({ title: "Configurações", url: "/admin/configuracoes", icon: Settings, resource: "configuracoes" as any })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

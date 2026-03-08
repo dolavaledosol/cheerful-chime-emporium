@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Pencil, Trash2, Check, Download } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Check, Download, Send, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 /* ── Shared types ── */
 interface Fornecedor { fornecedor_id: string; nome: string; }
@@ -18,6 +19,7 @@ interface Cliente { cliente_id: string; nome: string; }
 interface Banco { banco_id: string; nome: string; }
 interface FormaPagamento { forma_pagamento_id: string; nome: string; }
 
+interface PhoneOption { cliente_telefone_id: string; telefone: string; pn: string | null; lid: string | null; }
 
 interface ContaPagar {
   contas_pagar_id: string; descricao: string; valor: number;
@@ -31,7 +33,7 @@ interface ContaReceber {
   contas_receber_id: string; descricao: string; valor: number;
   data_vencimento: string; data_recebimento: string | null;
   recebido: boolean; observacao: string | null;
-  created_at: string;
+  created_at: string; cobrar_auto: boolean;
   cliente_id: string | null; banco_id: string | null; pedido_id: string | null;
   cliente: { nome: string } | null; banco: { nome: string } | null;
   _forma: string; _banco_pag: string;
@@ -145,6 +147,13 @@ const Financeiro = () => {
   const [editReceberId, setEditReceberId] = useState<string | null>(null);
   const [formReceber, setFormReceber] = useState(emptyReceber);
   const [loadingReceber, setLoadingReceber] = useState(false);
+  const [sendingWebhook, setSendingWebhook] = useState(false);
+
+  /* Phone selection dialog state */
+  const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
+  const [phoneOptions, setPhoneOptions] = useState<{ cliente_id: string; clienteNome: string; phones: PhoneOption[] }[]>([]);
+  const [selectedPhones, setSelectedPhones] = useState<Record<string, string>>({});
+  const [pendingWebhookData, setPendingWebhookData] = useState<any[] | null>(null);
 
   const loadReceber = async () => {
     const { data } = await supabase
@@ -226,10 +235,16 @@ const Financeiro = () => {
     loadReceber();
   };
 
-
   const marcarRecebido = async (id: string) => {
     await supabase.from("contas_receber").update({ recebido: true, data_recebimento: new Date().toISOString().slice(0, 10) }).eq("contas_receber_id", id);
     toast({ title: "Marcado como recebido" });
+    loadReceber();
+  };
+
+  const toggleCobrarAuto = async (id: string, current: boolean) => {
+    const { error } = await supabase.from("contas_receber").update({ cobrar_auto: !current }).eq("contas_receber_id", id);
+    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+    toast({ title: !current ? "Cobrança automática ativada" : "Cobrança automática desativada" });
     loadReceber();
   };
 
@@ -237,24 +252,44 @@ const Financeiro = () => {
   const fmtDate = (d: string | null) => d ? format(new Date(d + "T00:00:00"), "dd/MM/yyyy") : "—";
   const fmtMoney = (v: number) => `R$ ${Number(v).toFixed(2)}`;
 
-  const exportReceber = async () => {
-    // Buscar telefones verificados e WhatsApp de todos os clientes
-    const clienteIds = [...new Set(filteredReceber.map((c) => c.cliente_id).filter(Boolean))] as string[];
+  /* ── Build export rows (shared between CSV and webhook) ── */
+  const buildExportRows = async (items: ContaReceber[], phoneOverrides?: Record<string, string>) => {
+    const clienteIds = [...new Set(items.map((c) => c.cliente_id).filter(Boolean))] as string[];
+    let allPhones: Record<string, PhoneOption[]> = {};
     let phoneMap: Record<string, { from: string; pn: string; lid: string }> = {};
+
     if (clienteIds.length > 0) {
       const { data: phones } = await supabase
         .from("cliente_telefone")
-        .select("cliente_id, telefone, pn, lid")
+        .select("cliente_telefone_id, cliente_id, telefone, pn, lid, is_whatsapp, verificado")
         .in("cliente_id", clienteIds)
         .eq("is_whatsapp", true);
       if (phones) {
         for (const p of phones) {
-          if (!phoneMap[p.cliente_id]) {
-            phoneMap[p.cliente_id] = { from: p.telefone || "", pn: p.pn || "", lid: p.lid || "" };
-          }
+          if (!allPhones[p.cliente_id]) allPhones[p.cliente_id] = [];
+          allPhones[p.cliente_id].push({
+            cliente_telefone_id: p.cliente_telefone_id,
+            telefone: p.telefone,
+            pn: p.pn,
+            lid: p.lid,
+          });
+        }
+        for (const [cid, plist] of Object.entries(allPhones)) {
+          // Use override if provided, else pick the first with lid
+          const overrideId = phoneOverrides?.[cid];
+          const chosen = overrideId
+            ? plist.find(p => p.cliente_telefone_id === overrideId) || plist[0]
+            : plist.find(p => p.lid) || plist[0];
+          phoneMap[cid] = { from: chosen.telefone || "", pn: chosen.pn || "", lid: chosen.lid || "" };
         }
       }
     }
+
+    return { phoneMap, allPhones };
+  };
+
+  const exportReceber = async () => {
+    const { phoneMap } = await buildExportRows(filteredReceber);
 
     const headers = ["Código", "Cliente", "Cliente ID", "WhatsApp (from)", "PN", "LID", "Cód. Pedido", "Data Pedido", "Criação", "Vencimento", "Forma", "Banco", "Valor", "Status"];
     const rows = filteredReceber.map((c) => {
@@ -285,6 +320,110 @@ const Financeiro = () => {
     a.download = `contas-receber-${format(new Date(), "yyyy-MM-dd")}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  /* ── Webhook export ── */
+  const webhookExport = async () => {
+    const autorizadas = filteredReceber.filter(c => c.cobrar_auto && !c.recebido);
+    if (autorizadas.length === 0) {
+      toast({ title: "Nenhuma conta autorizada para cobrança automática encontrada", variant: "destructive" });
+      return;
+    }
+
+    const { phoneMap, allPhones } = await buildExportRows(autorizadas);
+
+    // Check if any client has multiple eligible phones (is_whatsapp + verified + lid not empty)
+    const clientsWithMultiplePhones: { cliente_id: string; clienteNome: string; phones: PhoneOption[] }[] = [];
+    for (const c of autorizadas) {
+      if (!c.cliente_id || !allPhones[c.cliente_id]) continue;
+      const eligible = allPhones[c.cliente_id].filter(p => p.lid);
+      if (eligible.length > 1 && !clientsWithMultiplePhones.find(x => x.cliente_id === c.cliente_id)) {
+        clientsWithMultiplePhones.push({
+          cliente_id: c.cliente_id,
+          clienteNome: c.cliente?.nome || c.cliente_id,
+          phones: eligible,
+        });
+      }
+    }
+
+    if (clientsWithMultiplePhones.length > 0) {
+      // Need user to pick phones
+      setPhoneOptions(clientsWithMultiplePhones);
+      const defaults: Record<string, string> = {};
+      for (const cp of clientsWithMultiplePhones) {
+        defaults[cp.cliente_id] = cp.phones[0].cliente_telefone_id;
+      }
+      setSelectedPhones(defaults);
+      setPendingWebhookData(autorizadas as any);
+      setPhoneDialogOpen(true);
+      return;
+    }
+
+    await sendWebhook(autorizadas, phoneMap);
+  };
+
+  const confirmPhoneAndSend = async () => {
+    if (!pendingWebhookData) return;
+    const { phoneMap } = await buildExportRows(pendingWebhookData, selectedPhones);
+    setPhoneDialogOpen(false);
+    await sendWebhook(pendingWebhookData, phoneMap);
+    setPendingWebhookData(null);
+  };
+
+  const sendWebhook = async (items: ContaReceber[], phoneMap: Record<string, { from: string; pn: string; lid: string }>) => {
+    // Get webhook config
+    const { data: configs } = await supabase
+      .from("configuracao")
+      .select("chave, valor")
+      .is("user_id", null)
+      .in("chave", ["webhook_cobranca_url", "webhook_cobranca_apikey"]);
+
+    const cfgMap: Record<string, string> = {};
+    if (configs) for (const c of configs) cfgMap[c.chave] = c.valor || "";
+
+    const webhookUrl = cfgMap["webhook_cobranca_url"];
+    if (!webhookUrl) {
+      toast({ title: "URL do webhook não configurada", description: "Acesse Configurações para cadastrar a URL do webhook de cobrança.", variant: "destructive" });
+      return;
+    }
+
+    const payload = items.map((c) => {
+      const phone = c.cliente_id ? phoneMap[c.cliente_id] : null;
+      const pedido = (c as any).pedido;
+      return {
+        codigo: c.contas_receber_id.slice(0, 8).toUpperCase(),
+        contas_receber_id: c.contas_receber_id,
+        cliente: c.cliente?.nome || "",
+        cliente_id: c.cliente_id || "",
+        whatsapp_from: phone?.from || "",
+        pn: phone?.pn || "",
+        lid: phone?.lid || "",
+        pedido_id: c.pedido_id || "",
+        pedido_codigo: c.pedido_id ? c.pedido_id.slice(0, 8).toUpperCase() : "",
+        data_pedido: pedido?.data || "",
+        created_at: c.created_at,
+        data_vencimento: c.data_vencimento,
+        forma: c._forma,
+        banco: c._banco_pag,
+        valor: Number(c.valor),
+        status: c.recebido ? "Recebido" : "Pendente",
+      };
+    });
+
+    setSendingWebhook(true);
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const apikey = cfgMap["webhook_cobranca_apikey"];
+      if (apikey) headers["Authorization"] = `Bearer ${apikey}`;
+
+      const res = await fetch(webhookUrl, { method: "POST", headers, body: JSON.stringify(payload) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      toast({ title: `Webhook enviado com ${items.length} cobranças` });
+    } catch (err: any) {
+      toast({ title: "Erro ao enviar webhook", description: err.message, variant: "destructive" });
+    } finally {
+      setSendingWebhook(false);
+    }
   };
 
   return (
@@ -367,6 +506,10 @@ const Financeiro = () => {
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={exportReceber} className="gap-2"><Download className="h-4 w-4" /> Exportar</Button>
+              <Button variant="outline" onClick={webhookExport} disabled={sendingWebhook} className="gap-2">
+                {sendingWebhook ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Cobrar
+              </Button>
               <Button onClick={openNewReceber} className="gap-2"><Plus className="h-4 w-4" /> Nova Conta</Button>
             </div>
           </div>
@@ -382,11 +525,12 @@ const Financeiro = () => {
                    <TableHead className="hidden md:table-cell">Banco</TableHead>
                    <TableHead>Valor</TableHead>
                    <TableHead>Status</TableHead>
+                   <TableHead className="w-20 text-center" title="Cobrança automática">Auto</TableHead>
                  </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredReceber.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
                 ) : filteredReceber.map((c) => {
                   return (
                   <TableRow key={c.contas_receber_id}>
@@ -405,6 +549,13 @@ const Financeiro = () => {
                        <span className={`text-xs px-2 py-0.5 rounded-full ${c.recebido ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
                          {c.recebido ? "Recebido" : "Pendente"}
                        </span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Switch
+                        checked={c.cobrar_auto}
+                        onCheckedChange={() => toggleCobrarAuto(c.contas_receber_id, c.cobrar_auto)}
+                        disabled={c.recebido}
+                      />
                     </TableCell>
                   </TableRow>
                   );
@@ -499,6 +650,40 @@ const Financeiro = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogReceber(false)}>Cancelar</Button>
             <Button onClick={saveReceber} disabled={loadingReceber || !formReceber.descricao || !formReceber.valor || !formReceber.data_vencimento}>{loadingReceber ? "Salvando..." : "Salvar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ══════════ DIALOG SELEÇÃO DE TELEFONE ══════════ */}
+      <Dialog open={phoneDialogOpen} onOpenChange={setPhoneDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Selecionar telefone para cobrança</DialogTitle></DialogHeader>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            <p className="text-sm text-muted-foreground">Os clientes abaixo possuem mais de um telefone WhatsApp com LID. Selecione qual utilizar:</p>
+            {phoneOptions.map((opt) => (
+              <div key={opt.cliente_id} className="space-y-2 border rounded-lg p-3">
+                <Label className="font-semibold">{opt.clienteNome}</Label>
+                <RadioGroup
+                  value={selectedPhones[opt.cliente_id] || ""}
+                  onValueChange={(v) => setSelectedPhones(prev => ({ ...prev, [opt.cliente_id]: v }))}
+                >
+                  {opt.phones.map((p) => (
+                    <div key={p.cliente_telefone_id} className="flex items-center gap-2">
+                      <RadioGroupItem value={p.cliente_telefone_id} id={p.cliente_telefone_id} />
+                      <Label htmlFor={p.cliente_telefone_id} className="font-normal text-sm cursor-pointer">
+                        {p.telefone} {p.lid ? `(LID: ${p.lid})` : ""} {p.pn ? `(PN: ${p.pn})` : ""}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPhoneDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={confirmPhoneAndSend} disabled={sendingWebhook}>
+              {sendingWebhook ? "Enviando..." : "Confirmar e Enviar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
