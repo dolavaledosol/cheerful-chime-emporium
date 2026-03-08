@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Search, ArrowRightLeft, Download, Upload } from "lucide-react";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
+import EstoqueRelatorio from "@/components/admin/EstoqueRelatorio";
 
 /* ── Types ── */
 interface EstoqueRow {
@@ -642,6 +643,7 @@ const Estoque = () => {
         <TabsList>
           <TabsTrigger value="estoque">Estoque</TabsTrigger>
           <TabsTrigger value="movimentacao">Movimentação</TabsTrigger>
+          <TabsTrigger value="relatorio">Relatório</TabsTrigger>
         </TabsList>
 
         {/* ── Tab Estoque ── */}
@@ -756,6 +758,10 @@ const Estoque = () => {
               </TableBody>
             </Table>
           </div>
+        </TabsContent>
+        {/* ── Tab Relatório ── */}
+        <TabsContent value="relatorio">
+          <EstoqueRelatorio />
         </TabsContent>
       </Tabs>
 
