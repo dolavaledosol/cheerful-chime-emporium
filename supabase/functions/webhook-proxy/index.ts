@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { webhook_url, webhook_apikey, payload } = body;
+    const { webhook_url, webhook_apikey, payload, log_tipo } = body;
 
     if (!webhook_url) {
       return new Response(
