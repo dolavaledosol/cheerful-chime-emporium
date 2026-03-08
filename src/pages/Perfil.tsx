@@ -207,12 +207,12 @@ const Perfil = () => {
   };
 
   const openNewTel = () => { setEditTelId(null); setTelForm(""); setTelWhatsapp(false); setTelDialogOpen(true); };
-  const openEditTel = (t: Telefone) => { setEditTelId(t.cliente_telefone_id); setTelForm(formatTelefone(t.telefone)); setTelWhatsapp(t.is_whatsapp); setTelDialogOpen(true); };
+  const openEditTel = (t: Telefone) => { setEditTelId(t.cliente_telefone_id); setTelForm(digitsToPhone(t.telefone)); setTelWhatsapp(t.is_whatsapp); setTelDialogOpen(true); };
 
   const saveTelefone = async () => {
     if (!cliente) return;
-    const digits = unformatTelefone(telForm);
-    if (digits.length < 10) { toast({ title: "Telefone inválido", description: "Informe ao menos 10 dígitos", variant: "destructive" }); return; }
+    if (!telForm || !isValidPhoneNumber(telForm)) { toast({ title: "Telefone inválido", description: "Informe um número válido", variant: "destructive" }); return; }
+    const digits = phoneToDigits(telForm);
     setSaving(true);
     if (editTelId) { await supabase.from("cliente_telefone").update({ telefone: digits, is_whatsapp: false }).eq("cliente_telefone_id", editTelId); }
     else { await supabase.from("cliente_telefone").insert({ cliente_id: cliente.cliente_id, telefone: digits, is_whatsapp: false }); }
