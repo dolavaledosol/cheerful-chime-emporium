@@ -40,6 +40,7 @@ const Clientes = () => {
   const [cpfLocked, setCpfLocked] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [telefones, setTelefones] = useState<TelefoneItem[]>([]);
+  const [telefonePreferencialId, setTelefonePreferencialId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [cpfError, setCpfError] = useState<string | null>(null);
   const { toast } = useToast();
