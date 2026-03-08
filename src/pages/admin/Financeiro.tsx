@@ -829,6 +829,7 @@ const Financeiro = () => {
         </DialogContent>
       </Dialog>
     </div>
+    </PullToRefresh>
   );
 };
 
