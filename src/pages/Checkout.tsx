@@ -12,7 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useCep } from "@/hooks/useCep";
 import AppHeader from "@/components/shared/AppHeader";
-import { formatTelefone as formatTelefoneShared } from "@/lib/telefone";
+import { PhoneInput, phoneToDigits, digitsToPhone } from "@/components/ui/phone-input";
+import { isValidPhoneNumber } from "react-phone-number-input";
 
 // interfaces
 interface Endereco { endereco_id: string; cep: string | null; logradouro: string; numero: string | null; complemento: string | null; bairro: string | null; cidade: string; estado: string; }
@@ -61,7 +62,7 @@ function validateCnpj(cnpj: string): boolean {
   return parseInt(digits[13]) === d2;
 }
 
-function formatTelefone(value: string) { return formatTelefoneShared(value); }
+
 
 function validateCpfCnpj(value: string): string | null {
   const digits = value.replace(/\D/g, "");
@@ -99,7 +100,8 @@ const Checkout = () => {
           if (data.cpf_cnpj) { setCpfCnpj(formatCpfCnpj(data.cpf_cnpj)); setCpfCnpjLocked(true); }
           loadEnderecos(data.cliente_id);
           supabase.from("cliente_telefone").select("telefone").eq("cliente_id", data.cliente_id).order("cliente_telefone_id").then(({ data: tels }) => {
-            if (tels && tels.length > 0) setTelefones(tels.map(t => formatTelefone(t.telefone)));
+            if (tels && tels.length > 0) setTelefones(tels.map(t => digitsToPhone(t.telefone)));
+            else setTelefones([""]);
           });
         }
       });
@@ -147,7 +149,7 @@ const Checkout = () => {
 
   const handleCpfCnpjChange = (value: string) => { if (cpfCnpjLocked) return; const digits = value.replace(/\D/g, "").slice(0, 14); setCpfCnpj(formatCpfCnpj(digits)); if (cpfCnpjError) setCpfCnpjError(null); };
   const handleCpfCnpjBlur = () => { if (cpfCnpj.replace(/\D/g, "").length > 0) { const err = validateCpfCnpj(cpfCnpj); if (err) setCpfCnpjError(err); } };
-  const handleTelefoneChange = (idx: number, value: string) => { const digits = value.replace(/\D/g, "").slice(0, 11); const updated = [...telefones]; updated[idx] = formatTelefone(digits); setTelefones(updated); if (telefoneError) setTelefoneError(null); };
+  const handleTelefoneChange = (idx: number, value: string) => { const updated = [...telefones]; updated[idx] = value; setTelefones(updated); if (telefoneError) setTelefoneError(null); };
 
   const handleCepBlur = async () => {
     const cep = endForm.cep.replace(/\D/g, "");
@@ -188,8 +190,7 @@ const Checkout = () => {
   const handleFinalize = async () => {
     const error = validateCpfCnpj(cpfCnpj);
     if (error) { setCpfCnpjError(error); return; }
-    const firstTelDigits = telefones[0]?.replace(/\D/g, "") || "";
-    if (firstTelDigits.length < 10) { setTelefoneError("Telefone deve ter pelo menos 10 dígitos"); return; }
+    if (!telefones[0] || !isValidPhoneNumber(telefones[0])) { setTelefoneError("Telefone inválido"); return; }
     if (!tipoEntrega) { toast({ title: "Selecione o tipo de entrega", variant: "destructive" }); return; }
     if (tipoEntrega === "entrega" && !enderecoSelecionado) { toast({ title: "Selecione ou cadastre um endereço de entrega", variant: "destructive" }); return; }
 
@@ -199,7 +200,7 @@ const Checkout = () => {
       await loadEnderecos(cId);
 
       // Save all phones
-      const validPhones = telefones.map(t => t.replace(/\D/g, "")).filter(t => t.length >= 10);
+      const validPhones = telefones.map(t => phoneToDigits(t)).filter(t => t.length >= 10);
       // Delete existing phones for this client
       const { data: existingTels } = await supabase.from("cliente_telefone").select("cliente_telefone_id").eq("cliente_id", cId!);
       if (existingTels) {
@@ -233,7 +234,7 @@ const Checkout = () => {
 
   const cpfCnpjDigits = cpfCnpj.replace(/\D/g, "");
   const isCpfCnpjValid = (cpfCnpjDigits.length === 11 && validateCpf(cpfCnpjDigits)) || (cpfCnpjDigits.length === 14 && validateCnpj(cpfCnpjDigits));
-  const canSubmit = !loading && isCpfCnpjValid && !cpfCnpjError && (telefones[0]?.replace(/\D/g, "").length ?? 0) >= 10 && !telefoneError && tipoEntrega !== "" && (tipoEntrega === "retirada" || enderecoSelecionado !== "");
+  const canSubmit = !loading && isCpfCnpjValid && !cpfCnpjError && telefones[0] && isValidPhoneNumber(telefones[0]) && !telefoneError && tipoEntrega !== "" && (tipoEntrega === "retirada" || enderecoSelecionado !== "");
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -297,11 +298,10 @@ const Checkout = () => {
               </div>
               {telefones.map((tel, idx) => (
                 <div key={idx} className="flex gap-2 items-center">
-                  <Input
-                    placeholder="+55 (31) 90000-0000"
+                  <PhoneInput
                     value={tel}
-                    onChange={(e) => handleTelefoneChange(idx, e.target.value)}
-                    className={`rounded-xl h-12 ${telefoneError && idx === 0 ? "border-destructive" : ""}`}
+                    onChange={(val) => handleTelefoneChange(idx, val)}
+                    className={`flex-1 ${telefoneError && idx === 0 ? "[&_.PhoneInputInput]:border-destructive" : ""} [&_.PhoneInputInput]:rounded-xl [&_.PhoneInputInput]:h-12 [&_.PhoneInputCountry]:h-12 [&_.PhoneInputCountry]:rounded-xl`}
                   />
                   {telefones.length > 1 && (
                     <button type="button" onClick={() => setTelefones(telefones.filter((_, i) => i !== idx))} className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-destructive/10 transition-colors shrink-0">

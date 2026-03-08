@@ -118,6 +118,26 @@
 }
 
 @layer utilities {
+  /* react-phone-number-input styling */
+  .phone-input-wrapper .PhoneInput {
+    @apply flex gap-2;
+  }
+  .phone-input-wrapper .PhoneInputCountry {
+    @apply flex items-center gap-1 px-2 rounded-md border border-input bg-background h-10;
+  }
+  .phone-input-wrapper .PhoneInputCountryIcon {
+    @apply h-4 w-6;
+  }
+  .phone-input-wrapper .PhoneInputCountrySelectArrow {
+    @apply ml-1 opacity-60;
+  }
+  .phone-input-wrapper .PhoneInputInput {
+    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm;
+  }
+  .phone-input-wrapper .PhoneInputCountrySelect {
+    @apply absolute inset-0 opacity-0 cursor-pointer;
+  }
+
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }

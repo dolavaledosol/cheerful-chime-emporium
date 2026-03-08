@@ -10,7 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, MapPin, Phone, User, Package, Loader2, MessageCircle, Eye, Shield, ChevronRight } from "lucide-react";
-import { formatTelefone, unformatTelefone } from "@/lib/telefone";
+import { PhoneInput, phoneToDigits, digitsToPhone, displayPhone } from "@/components/ui/phone-input";
+import { isValidPhoneNumber } from "react-phone-number-input";
 import { formatCpfCnpj } from "@/lib/cpfCnpj";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCep } from "@/hooks/useCep";
@@ -206,12 +207,12 @@ const Perfil = () => {
   };
 
   const openNewTel = () => { setEditTelId(null); setTelForm(""); setTelWhatsapp(false); setTelDialogOpen(true); };
-  const openEditTel = (t: Telefone) => { setEditTelId(t.cliente_telefone_id); setTelForm(formatTelefone(t.telefone)); setTelWhatsapp(t.is_whatsapp); setTelDialogOpen(true); };
+  const openEditTel = (t: Telefone) => { setEditTelId(t.cliente_telefone_id); setTelForm(digitsToPhone(t.telefone)); setTelWhatsapp(t.is_whatsapp); setTelDialogOpen(true); };
 
   const saveTelefone = async () => {
     if (!cliente) return;
-    const digits = unformatTelefone(telForm);
-    if (digits.length < 10) { toast({ title: "Telefone inválido", description: "Informe ao menos 10 dígitos", variant: "destructive" }); return; }
+    if (!telForm || !isValidPhoneNumber(telForm)) { toast({ title: "Telefone inválido", description: "Informe um número válido", variant: "destructive" }); return; }
+    const digits = phoneToDigits(telForm);
     setSaving(true);
     if (editTelId) { await supabase.from("cliente_telefone").update({ telefone: digits, is_whatsapp: false }).eq("cliente_telefone_id", editTelId); }
     else { await supabase.from("cliente_telefone").insert({ cliente_id: cliente.cliente_id, telefone: digits, is_whatsapp: false }); }
@@ -332,7 +333,7 @@ const Perfil = () => {
                           <Phone className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <div>
-                          <span className="text-sm font-medium">{formatTelefone(t.telefone)}</span>
+                          <span className="text-sm font-medium">{displayPhone(t.telefone)}</span>
                           {t.is_whatsapp && (
                             <span className="ml-2 inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
                               <MessageCircle className="h-2.5 w-2.5" /> WhatsApp
@@ -469,7 +470,7 @@ const Perfil = () => {
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label className="text-sm">Telefone</Label>
-              <Input placeholder="+55 (31) 90000-0000" value={telForm} onChange={(e) => setTelForm(formatTelefone(e.target.value))} className="rounded-xl h-12" />
+              <PhoneInput value={telForm} onChange={setTelForm} className="[&_.PhoneInputInput]:rounded-xl [&_.PhoneInputInput]:h-12 [&_.PhoneInputCountry]:h-12 [&_.PhoneInputCountry]:rounded-xl" />
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={telWhatsapp} onCheckedChange={setTelWhatsapp} />

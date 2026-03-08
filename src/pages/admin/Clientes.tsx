@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Pencil, Trash2, Phone, AlertCircle } from "lucide-react";
-import { formatTelefone, unformatTelefone, validateTelefone } from "@/lib/telefone";
+import { PhoneInput, phoneToDigits, digitsToPhone, displayPhone } from "@/components/ui/phone-input";
 import { formatCpfCnpj, unformatCpfCnpj, validateCpfCnpj } from "@/lib/cpfCnpj";
+import { isValidPhoneNumber } from "react-phone-number-input";
 
 interface Cliente {
   cliente_id: string;
@@ -22,15 +23,12 @@ interface Cliente {
   ativo: boolean;
 }
 
-import { defaultTelefone } from "@/lib/telefone";
+interface TelefoneItem {
+  id?: string;
+  telefone: string; // E.164 format
+}
 
 const emptyForm = { nome: "", cpf_cnpj: "", email: "", tipo_cliente: "cliente", ativo: true };
-
-
-interface TelefoneItem {
-  id?: string; // cliente_telefone_id if existing
-  telefone: string;
-}
 
 const Clientes = () => {
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -59,7 +57,7 @@ const Clientes = () => {
     return matchText && matchStatus;
   });
 
-  const openNew = () => { setEditId(null); setForm(emptyForm); setTelefones([{ telefone: defaultTelefone() }]); setCpfError(null); setCpfLocked(false); setDialogOpen(true); };
+  const openNew = () => { setEditId(null); setForm(emptyForm); setTelefones([{ telefone: "" }]); setCpfError(null); setCpfLocked(false); setDialogOpen(true); };
   const openEdit = (c: Cliente) => {
     setEditId(c.cliente_id);
     setCpfError(null);
@@ -72,19 +70,17 @@ const Clientes = () => {
       ativo: c.ativo,
     });
     setTelefones([]);
-    // Load existing phones
     supabase.from("cliente_telefone").select("cliente_telefone_id, telefone").eq("cliente_id", c.cliente_id).then(({ data }) => {
       if (data && data.length > 0) {
-        setTelefones(data.map(t => ({ id: t.cliente_telefone_id, telefone: formatTelefone(t.telefone) })));
+        setTelefones(data.map(t => ({ id: t.cliente_telefone_id, telefone: digitsToPhone(t.telefone) })));
       } else {
-        setTelefones([{ telefone: defaultTelefone() }]);
+        setTelefones([{ telefone: "" }]);
       }
     });
     setDialogOpen(true);
   };
 
   const save = async () => {
-    // Validate CPF/CNPJ
     const cpfDigits = unformatCpfCnpj(form.cpf_cnpj);
     if (cpfDigits.length > 0) {
       const err = validateCpfCnpj(cpfDigits);
@@ -92,11 +88,10 @@ const Clientes = () => {
     }
 
     // Validate phones
-    const validPhones = telefones.filter(t => unformatTelefone(t.telefone).length > 0);
+    const validPhones = telefones.filter(t => t.telefone && phoneToDigits(t.telefone).length > 0);
     for (const tel of validPhones) {
-      const phoneErr = validateTelefone(unformatTelefone(tel.telefone));
-      if (phoneErr) {
-        toast({ title: phoneErr, variant: "destructive" });
+      if (!isValidPhoneNumber(tel.telefone)) {
+        toast({ title: "Telefone inválido", description: `Verifique o número: ${tel.telefone}`, variant: "destructive" });
         return;
       }
     }
@@ -114,20 +109,12 @@ const Clientes = () => {
     let actionLabel = "";
 
     if (editId) {
-      // Editando diretamente
       const res = await supabase.from("cliente").update(payload).eq("cliente_id", editId);
       error = res.error;
       actionLabel = "Cliente atualizado";
     } else if (form.cpf_cnpj) {
-      // Novo: buscar por CPF/CNPJ se existir
-      const { data: existing } = await supabase
-        .from("cliente")
-        .select("cliente_id")
-        .eq("cpf_cnpj", form.cpf_cnpj)
-        .maybeSingle();
-
+      const { data: existing } = await supabase.from("cliente").select("cliente_id").eq("cpf_cnpj", form.cpf_cnpj).maybeSingle();
       if (existing) {
-        // CPF já existe — atualiza o registro (inclusive o email)
         const res = await supabase.from("cliente").update(payload).eq("cliente_id", existing.cliente_id);
         error = res.error;
         actionLabel = "Cliente encontrado por CPF/CNPJ e atualizado";
@@ -146,31 +133,26 @@ const Clientes = () => {
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      // Determine target client ID
       let targetId = editId;
       if (!targetId && form.cpf_cnpj) {
         const { data: found } = await supabase.from("cliente").select("cliente_id").eq("cpf_cnpj", form.cpf_cnpj).maybeSingle();
         targetId = found?.cliente_id || null;
       }
       if (!targetId) {
-        // For new clients without cpf, get the latest inserted
         const { data: latest } = await supabase.from("cliente").select("cliente_id").eq("nome", form.nome).order("created_at", { ascending: false }).limit(1);
         targetId = latest?.[0]?.cliente_id || null;
       }
 
-      // Save phones
       if (targetId) {
-        const validPhones = telefones.filter(t => unformatTelefone(t.telefone).length > 0);
-        // Delete removed phones
+        const validPhonesForSave = telefones.filter(t => t.telefone && phoneToDigits(t.telefone).length > 0);
         const { data: existingTels } = await supabase.from("cliente_telefone").select("cliente_telefone_id").eq("cliente_id", targetId);
-        const keepIds = validPhones.filter(t => t.id).map(t => t.id!);
+        const keepIds = validPhonesForSave.filter(t => t.id).map(t => t.id!);
         const toDelete = (existingTels || []).filter(t => !keepIds.includes(t.cliente_telefone_id));
         for (const del of toDelete) {
           await supabase.from("cliente_telefone").delete().eq("cliente_telefone_id", del.cliente_telefone_id);
         }
-        // Upsert phones
-        for (const tel of validPhones) {
-          const digits = unformatTelefone(tel.telefone);
+        for (const tel of validPhonesForSave) {
+          const digits = phoneToDigits(tel.telefone);
           if (tel.id) {
             await supabase.from("cliente_telefone").update({ telefone: digits, is_whatsapp: false }).eq("cliente_telefone_id", tel.id);
           } else {
@@ -298,15 +280,14 @@ const Clientes = () => {
               </div>
               {telefones.map((tel, idx) => (
                 <div key={idx} className="flex gap-2 items-center">
-                  <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <Input
-                    placeholder="+55 (31) 90000-0000"
+                  <PhoneInput
                     value={tel.telefone}
-                    onChange={(e) => {
+                    onChange={(val) => {
                       const updated = [...telefones];
-                      updated[idx] = { ...updated[idx], telefone: formatTelefone(e.target.value) };
+                      updated[idx] = { ...updated[idx], telefone: val };
                       setTelefones(updated);
                     }}
+                    className="flex-1"
                   />
                   {telefones.length > 1 && (
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setTelefones(telefones.filter((_, i) => i !== idx))}>
