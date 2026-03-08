@@ -240,24 +240,23 @@ const Financeiro = () => {
   const exportReceber = async () => {
     // Buscar telefones verificados e WhatsApp de todos os clientes
     const clienteIds = [...new Set(filteredReceber.map((c) => c.cliente_id).filter(Boolean))] as string[];
-    let phoneMap: Record<string, { from: string }> = {};
+    let phoneMap: Record<string, { from: string; pn: string; lid: string }> = {};
     if (clienteIds.length > 0) {
       const { data: phones } = await supabase
         .from("cliente_telefone")
-        .select("cliente_id, telefone")
+        .select("cliente_id, telefone, pn, lid")
         .in("cliente_id", clienteIds)
         .eq("is_whatsapp", true);
       if (phones) {
         for (const p of phones) {
-          // Pega o primeiro telefone whatsapp por cliente
           if (!phoneMap[p.cliente_id]) {
-            phoneMap[p.cliente_id] = { from: p.telefone || "" };
+            phoneMap[p.cliente_id] = { from: p.telefone || "", pn: p.pn || "", lid: p.lid || "" };
           }
         }
       }
     }
 
-    const headers = ["Código", "Cliente", "Cliente ID", "WhatsApp (from)", "Cód. Pedido", "Data Pedido", "Criação", "Vencimento", "Forma", "Banco", "Valor", "Status"];
+    const headers = ["Código", "Cliente", "Cliente ID", "WhatsApp (from)", "PN", "LID", "Cód. Pedido", "Data Pedido", "Criação", "Vencimento", "Forma", "Banco", "Valor", "Status"];
     const rows = filteredReceber.map((c) => {
       const phone = c.cliente_id ? phoneMap[c.cliente_id] : null;
       const pedido = (c as any).pedido;
@@ -266,6 +265,8 @@ const Financeiro = () => {
         c.cliente?.nome || "—",
         c.cliente_id || "—",
         phone?.from || "—",
+        phone?.pn || "—",
+        phone?.lid || "—",
         c.pedido_id ? c.pedido_id.slice(0, 8).toUpperCase() : "—",
         pedido?.data ? format(new Date(pedido.data), "dd/MM/yy HH:mm") : "—",
         format(new Date(c.created_at), "dd/MM/yy HH:mm"),
