@@ -348,6 +348,9 @@ const Financeiro = () => {
     for (const c of autorizadas) {
       if (!c.cliente_id || !allPhones[c.cliente_id]) continue;
       const eligible = allPhones[c.cliente_id].filter(p => p.lid);
+      const prefId = prefMap[c.cliente_id];
+      // Skip if client already has a preferred phone set and it's in the eligible list
+      if (prefId && eligible.find(p => p.cliente_telefone_id === prefId)) continue;
       if (eligible.length > 1 && !clientsWithMultiplePhones.find(x => x.cliente_id === c.cliente_id)) {
         clientsWithMultiplePhones.push({
           cliente_id: c.cliente_id,
