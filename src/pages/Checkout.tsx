@@ -298,11 +298,10 @@ const Checkout = () => {
               </div>
               {telefones.map((tel, idx) => (
                 <div key={idx} className="flex gap-2 items-center">
-                  <Input
-                    placeholder="+55 (31) 90000-0000"
+                  <PhoneInput
                     value={tel}
-                    onChange={(e) => handleTelefoneChange(idx, e.target.value)}
-                    className={`rounded-xl h-12 ${telefoneError && idx === 0 ? "border-destructive" : ""}`}
+                    onChange={(val) => handleTelefoneChange(idx, val)}
+                    className={`flex-1 ${telefoneError && idx === 0 ? "[&_.PhoneInputInput]:border-destructive" : ""} [&_.PhoneInputInput]:rounded-xl [&_.PhoneInputInput]:h-12 [&_.PhoneInputCountry]:h-12 [&_.PhoneInputCountry]:rounded-xl`}
                   />
                   {telefones.length > 1 && (
                     <button type="button" onClick={() => setTelefones(telefones.filter((_, i) => i !== idx))} className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-destructive/10 transition-colors shrink-0">

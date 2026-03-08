@@ -13,7 +13,8 @@ import { Search, Eye, Truck, Store, Clock, CalendarIcon, AlertTriangle, Split, P
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { useCep } from "@/hooks/useCep";
-import { formatTelefone, unformatTelefone, defaultTelefone } from "@/lib/telefone";
+import { PhoneInput, phoneToDigits, digitsToPhone } from "@/components/ui/phone-input";
+import { isValidPhoneNumber } from "react-phone-number-input";
 import { formatCpfCnpj, unformatCpfCnpj } from "@/lib/cpfCnpj";
 
 import { Badge } from "@/components/ui/badge";
