@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import CatalogHeader from "@/components/catalog/CatalogHeader";
 import CatalogFilters from "@/components/catalog/CatalogFilters";
 import ProductCard from "@/components/catalog/ProductCard";
+import PullToRefresh from "@/components/shared/PullToRefresh";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Package, Search as SearchIcon } from "lucide-react";
 
@@ -58,58 +59,57 @@ const Index = () => {
     loadFilters();
   }, []);
 
-  useEffect(() => {
-    const loadProdutos = async () => {
-      setLoading(true);
+  const loadProdutos = useCallback(async () => {
+    setLoading(true);
 
-      let query = supabase
-        .from("produto")
-        .select(`
-          produto_id, nome, slug, descricao, preco, peso_bruto, peso_liquido,
-          unidade_medida, aceita_fracionado, quantidade_default, familia_id, fabricante_id,
-          familia:familia_id (nome), fabricante:fabricante_id (nome),
-          produto_imagem (url_imagem, ordem)
-        `)
-        .eq("ativo", true)
-        .order("nome");
+    let query = supabase
+      .from("produto")
+      .select(`
+        produto_id, nome, slug, descricao, preco, peso_bruto, peso_liquido,
+        unidade_medida, aceita_fracionado, quantidade_default, familia_id, fabricante_id,
+        familia:familia_id (nome), fabricante:fabricante_id (nome),
+        produto_imagem (url_imagem, ordem)
+      `)
+      .eq("ativo", true)
+      .order("nome");
 
-      if (selectedFamilia !== "all") {
-        const selectedFam = familias.find((f) => f.id === selectedFamilia);
-        const isChild = selectedFam?.familia_pai_id != null;
-        if (isChild) {
-          query = query.eq("familia_id", selectedFamilia);
-        } else {
-          const childIds = familias.filter((f) => f.familia_pai_id === selectedFamilia).map((f) => f.id);
-          query = childIds.length > 0 ? query.in("familia_id", childIds) : query.eq("familia_id", selectedFamilia);
-        }
+    if (selectedFamilia !== "all") {
+      const selectedFam = familias.find((f) => f.id === selectedFamilia);
+      const isChild = selectedFam?.familia_pai_id != null;
+      if (isChild) {
+        query = query.eq("familia_id", selectedFamilia);
+      } else {
+        const childIds = familias.filter((f) => f.familia_pai_id === selectedFamilia).map((f) => f.id);
+        query = childIds.length > 0 ? query.in("familia_id", childIds) : query.eq("familia_id", selectedFamilia);
       }
-      if (selectedFabricante !== "all") {
-        query = query.eq("fabricante_id", selectedFabricante);
-      }
+    }
+    if (selectedFabricante !== "all") {
+      query = query.eq("fabricante_id", selectedFabricante);
+    }
 
-      const { data } = await query;
+    const { data } = await query;
 
-      if (data) {
-        const mapped: ProdutoComPreco[] = data.map((p: any) => {
-          const imgs = p.produto_imagem || [];
-          const sorted = [...imgs].sort((a: any, b: any) => a.ordem - b.ordem);
-          return {
-            produto_id: p.produto_id, nome: p.nome, slug: p.slug, descricao: p.descricao,
-            familia_id: p.familia_id, fabricante_id: p.fabricante_id,
-            familia_nome: p.familia?.nome ?? null, fabricante_nome: p.fabricante?.nome ?? null,
-            preco: p.preco ?? 0, url_imagem: sorted[0]?.url_imagem ?? null,
-            peso_bruto: p.peso_bruto, peso_liquido: p.peso_liquido,
-            unidade_medida: p.unidade_medida || "un",
-            aceita_fracionado: p.aceita_fracionado ?? false,
-            quantidade_default: p.quantidade_default ?? 1,
-          };
-        });
-        setProdutos(mapped);
-      }
-      setLoading(false);
-    };
-    loadProdutos();
-  }, [selectedFamilia, selectedFabricante]);
+    if (data) {
+      const mapped: ProdutoComPreco[] = data.map((p: any) => {
+        const imgs = p.produto_imagem || [];
+        const sorted = [...imgs].sort((a: any, b: any) => a.ordem - b.ordem);
+        return {
+          produto_id: p.produto_id, nome: p.nome, slug: p.slug, descricao: p.descricao,
+          familia_id: p.familia_id, fabricante_id: p.fabricante_id,
+          familia_nome: p.familia?.nome ?? null, fabricante_nome: p.fabricante?.nome ?? null,
+          preco: p.preco ?? 0, url_imagem: sorted[0]?.url_imagem ?? null,
+          peso_bruto: p.peso_bruto, peso_liquido: p.peso_liquido,
+          unidade_medida: p.unidade_medida || "un",
+          aceita_fracionado: p.aceita_fracionado ?? false,
+          quantidade_default: p.quantidade_default ?? 1,
+        };
+      });
+      setProdutos(mapped);
+    }
+    setLoading(false);
+  }, [selectedFamilia, selectedFabricante, familias]);
+
+  useEffect(() => { loadProdutos(); }, [loadProdutos]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return produtos;
@@ -146,6 +146,7 @@ const Index = () => {
         </div>
       </div>
 
+      <PullToRefresh onRefresh={loadProdutos}>
       <main className="flex-1 px-4 py-4 md:px-6 md:py-6 max-w-7xl mx-auto w-full">
         {/* Count */}
         <p className="text-xs text-muted-foreground mb-3">
@@ -203,6 +204,7 @@ const Index = () => {
           </div>
         )}
       </main>
+      </PullToRefresh>
 
       {/* Footer */}
       <footer className="border-t bg-card/50 py-8 px-4">

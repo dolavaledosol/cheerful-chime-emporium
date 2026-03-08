@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import PullToRefresh from "@/components/shared/PullToRefresh";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1481,7 +1482,10 @@ const Pedidos = () => {
     }, "image/png");
   };
 
+  const handleRefresh = useCallback(async () => { await load(); await loadCompras(); }, []);
+
   return (
+    <PullToRefresh onRefresh={handleRefresh} enabled={isMobile}>
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Pedidos</h1>
 
@@ -2558,6 +2562,7 @@ const Pedidos = () => {
         </DialogContent>
       </Dialog>
     </div>
+    </PullToRefresh>
   );
 };
 

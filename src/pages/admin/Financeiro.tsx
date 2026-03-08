@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import PullToRefresh from "@/components/shared/PullToRefresh";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -468,7 +469,10 @@ const Financeiro = () => {
     }
   };
 
+  const handleRefresh = useCallback(async () => { await loadPagar(); await loadReceber(); }, []);
+
   return (
+    <PullToRefresh onRefresh={handleRefresh} enabled={isMobile}>
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Financeiro</h1>
 
@@ -825,6 +829,7 @@ const Financeiro = () => {
         </DialogContent>
       </Dialog>
     </div>
+    </PullToRefresh>
   );
 };
 
