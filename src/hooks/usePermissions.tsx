@@ -19,6 +19,8 @@ export const ADMIN_RESOURCES = [
   "formas_pagamento",
   "usuarios",
   "configuracoes",
+  "receitas",
+  "producao",
 ] as const;
 
 export type AdminResource = (typeof ADMIN_RESOURCES)[number];
