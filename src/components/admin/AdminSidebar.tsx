@@ -33,6 +33,9 @@ const cadastroItems: MenuItem[] = [
   { title: "Bancos", url: "/admin/bancos", icon: Landmark, resource: "bancos" },
   { title: "Formas Pgto", url: "/admin/formas-pagamento", icon: CreditCard, resource: "formas_pagamento" },
   { title: "Usuários", url: "/admin/usuarios", icon: UserCog, resource: "usuarios" },
+  { title: "Receitas", url: "/admin/receitas", icon: FlaskConical, resource: "receitas" as any },
+  { title: "Produção", url: "/admin/producao", icon: ChefHat, resource: "producao" as any },
+  { title: "Configurações", url: "/admin/configuracoes", icon: Settings, resource: "configuracoes" as any },
 ];
 
 const AdminSidebar = () => {
@@ -92,11 +95,6 @@ const AdminSidebar = () => {
                 menuLink({ title: "Financeiro", url: "/admin/financeiro", icon: DollarSign, resource: "financeiro" })}
               {can("estoque", "ver") &&
                 menuLink({ title: "Estoque", url: "/admin/estoque", icon: Boxes, resource: "estoque" })}
-              {can("receitas" as any, "ver") &&
-                menuLink({ title: "Receitas", url: "/admin/receitas", icon: FlaskConical, resource: "receitas" as any })}
-              {can("producao" as any, "ver") &&
-                menuLink({ title: "Produção", url: "/admin/producao", icon: ChefHat, resource: "producao" as any })}
-              {menuLink({ title: "Configurações", url: "/admin/configuracoes", icon: Settings, resource: "configuracoes" as any })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
