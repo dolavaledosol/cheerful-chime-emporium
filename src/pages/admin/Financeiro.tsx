@@ -256,7 +256,7 @@ const Financeiro = () => {
       }
     }
 
-    const headers = ["Código", "Cliente", "Cliente ID", "WhatsApp (from)", "Cód. Pedido", "Data Pedido", "Criação", "Vencimento", "Forma", "Banco", "Valor", "Status"];
+    const headers = ["Código", "Cliente", "Cliente ID", "WhatsApp (from)", "PN", "LID", "Cód. Pedido", "Data Pedido", "Criação", "Vencimento", "Forma", "Banco", "Valor", "Status"];
     const rows = filteredReceber.map((c) => {
       const phone = c.cliente_id ? phoneMap[c.cliente_id] : null;
       const pedido = (c as any).pedido;
@@ -265,6 +265,8 @@ const Financeiro = () => {
         c.cliente?.nome || "—",
         c.cliente_id || "—",
         phone?.from || "—",
+        phone?.pn || "—",
+        phone?.lid || "—",
         c.pedido_id ? c.pedido_id.slice(0, 8).toUpperCase() : "—",
         pedido?.data ? format(new Date(pedido.data), "dd/MM/yy HH:mm") : "—",
         format(new Date(c.created_at), "dd/MM/yy HH:mm"),
