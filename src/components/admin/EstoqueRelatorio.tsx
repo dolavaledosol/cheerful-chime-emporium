@@ -20,6 +20,7 @@ interface ProdutoEstoque {
   preco: number;
   familia: string;
   fabricante: string;
+  slug: string | null;
   total_estoque: number;
   checked: boolean;
 }
@@ -61,7 +62,7 @@ const EstoqueRelatorio = () => {
 
   const loadData = async () => {
     const [{ data: estoque }, { data: fam }, { data: fab }] = await Promise.all([
-      supabase.from("estoque_local").select("produto_id, quantidade_disponivel, produto(nome, descricao, preco, familia(familia_id, nome), fabricante(fabricante_id, nome))"),
+      supabase.from("estoque_local").select("produto_id, quantidade_disponivel, produto(nome, descricao, preco, slug, familia(familia_id, nome), fabricante(fabricante_id, nome))"),
       supabase.from("familia").select("familia_id, nome").eq("ativo", true).order("nome"),
       supabase.from("fabricante").select("fabricante_id, nome").eq("ativo", true).order("nome"),
     ]);
@@ -81,6 +82,7 @@ const EstoqueRelatorio = () => {
             preco: e.produto?.preco || 0,
             familia: e.produto?.familia?.nome || "—",
             fabricante: e.produto?.fabricante?.nome || "—",
+            slug: e.produto?.slug || null,
             total_estoque: 0,
             checked: false,
           });
@@ -254,6 +256,7 @@ const EstoqueRelatorio = () => {
         descricao: p.descricao,
         familia: p.familia,
         fabricante: p.fabricante,
+        url: p.slug ? `${window.location.origin}/produto/${p.slug}` : null,
       })),
       clientes: clientes.map((c) => ({
         cliente_id: c.cliente_id,
