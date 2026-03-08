@@ -17,15 +17,26 @@ interface Configuracao {
 
 const emptyForm = { chave: "", valor: "" };
 
-const WEBHOOK_KEYS = [
-  { chave: "webhook_cobranca_url", label: "URL do Webhook de Cobrança", placeholder: "https://exemplo.com/webhook" },
-  { chave: "webhook_cobranca_apikey", label: "API Key do Webhook de Cobrança", placeholder: "Bearer token ou chave de autenticação" },
+const WEBHOOK_SECTIONS = [
+  {
+    title: "Webhook de Cobrança",
+    description: "Configure a URL e a chave de autenticação para envio automático de cobranças via webhook.",
+    keys: [
+      { chave: "webhook_cobranca_url", label: "URL do Webhook de Cobrança", placeholder: "https://exemplo.com/webhook" },
+      { chave: "webhook_cobranca_apikey", label: "API Key do Webhook de Cobrança", placeholder: "Bearer token ou chave de autenticação" },
+    ],
+  },
+  {
+    title: "Webhook de Estoque",
+    description: "Configure a URL e a chave de autenticação para envio de relatórios de estoque e clientes via webhook.",
+    keys: [
+      { chave: "webhook_estoque_url", label: "URL do Webhook de Estoque", placeholder: "https://exemplo.com/webhook-estoque" },
+      { chave: "webhook_estoque_apikey", label: "API Key do Webhook de Estoque", placeholder: "Bearer token ou chave de autenticação" },
+    ],
+  },
 ];
 
-const WEBHOOK_ESTOQUE_KEYS = [
-  { chave: "webhook_estoque_url", label: "URL do Webhook de Estoque", placeholder: "https://exemplo.com/webhook-estoque" },
-  { chave: "webhook_estoque_apikey", label: "API Key do Webhook de Estoque", placeholder: "Bearer token ou chave de autenticação" },
-];
+const ALL_WEBHOOK_KEYS = WEBHOOK_SECTIONS.flatMap((s) => s.keys.map((k) => k.chave));
 
 const Configuracoes = () => {
   const [items, setItems] = useState<Configuracao[]>([]);
@@ -34,9 +45,8 @@ const Configuracoes = () => {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [webhookValues, setWebhookValues] = useState<Record<string, string>>({});
-  const [webhookEstoqueValues, setWebhookEstoqueValues] = useState<Record<string, string>>({});
-  const [savingWebhook, setSavingWebhook] = useState(false);
-  const [savingWebhookEstoque, setSavingWebhookEstoque] = useState(false);
+  const [savingSection, setSavingSection] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const load = async () => {
     const { data } = await supabase
@@ -46,11 +56,10 @@ const Configuracoes = () => {
       .order("chave");
     if (data) {
       setItems(data);
-      // Populate webhook values
       const wv: Record<string, string> = {};
-      for (const wk of WEBHOOK_KEYS) {
-        const found = data.find(d => d.chave === wk.chave);
-        wv[wk.chave] = found?.valor || "";
+      for (const key of ALL_WEBHOOK_KEYS) {
+        const found = data.find((d) => d.chave === key);
+        wv[key] = found?.valor || "";
       }
       setWebhookValues(wv);
     }
@@ -87,10 +96,10 @@ const Configuracoes = () => {
     load();
   };
 
-  const saveWebhook = async () => {
-    setSavingWebhook(true);
-    for (const wk of WEBHOOK_KEYS) {
-      const existing = items.find(i => i.chave === wk.chave);
+  const saveWebhookSection = async (sectionTitle: string, keys: typeof WEBHOOK_SECTIONS[0]["keys"]) => {
+    setSavingSection(sectionTitle);
+    for (const wk of keys) {
+      const existing = items.find((i) => i.chave === wk.chave);
       const val = webhookValues[wk.chave] || null;
       if (existing) {
         await supabase.from("configuracao").update({ valor: val }).eq("configuracao_id", existing.configuracao_id);
@@ -98,42 +107,42 @@ const Configuracoes = () => {
         await supabase.from("configuracao").insert({ chave: wk.chave, valor: val, user_id: null });
       }
     }
-    setSavingWebhook(false);
-    toast({ title: "Configurações do webhook salvas" });
+    setSavingSection(null);
+    toast({ title: `Configurações de ${sectionTitle.toLowerCase()} salvas` });
     load();
   };
 
-  // Filter out webhook keys from the general table
-  const generalItems = items.filter(i => !WEBHOOK_KEYS.some(wk => wk.chave === i.chave));
+  const generalItems = items.filter((i) => !ALL_WEBHOOK_KEYS.includes(i.chave));
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Configurações</h1>
 
-      {/* Webhook Config Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Webhook className="h-5 w-5" /> Webhook de Cobrança</CardTitle>
-          <CardDescription>Configure a URL e a chave de autenticação para envio automático de cobranças via webhook.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {WEBHOOK_KEYS.map((wk) => (
-            <div key={wk.chave} className="space-y-2">
-              <Label>{wk.label}</Label>
-              <Input
-                value={webhookValues[wk.chave] || ""}
-                onChange={(e) => setWebhookValues(prev => ({ ...prev, [wk.chave]: e.target.value }))}
-                placeholder={wk.placeholder}
-                type={wk.chave.includes("apikey") ? "password" : "text"}
-              />
-            </div>
-          ))}
-          <Button onClick={saveWebhook} disabled={savingWebhook} className="gap-2">
-            <Save className="h-4 w-4" />
-            {savingWebhook ? "Salvando..." : "Salvar Webhook"}
-          </Button>
-        </CardContent>
-      </Card>
+      {WEBHOOK_SECTIONS.map((section) => (
+        <Card key={section.title}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Webhook className="h-5 w-5" /> {section.title}</CardTitle>
+            <CardDescription>{section.description}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {section.keys.map((wk) => (
+              <div key={wk.chave} className="space-y-2">
+                <Label>{wk.label}</Label>
+                <Input
+                  value={webhookValues[wk.chave] || ""}
+                  onChange={(e) => setWebhookValues((prev) => ({ ...prev, [wk.chave]: e.target.value }))}
+                  placeholder={wk.placeholder}
+                  type={wk.chave.includes("apikey") ? "password" : "text"}
+                />
+              </div>
+            ))}
+            <Button onClick={() => saveWebhookSection(section.title, section.keys)} disabled={savingSection === section.title} className="gap-2">
+              <Save className="h-4 w-4" />
+              {savingSection === section.title ? "Salvando..." : `Salvar ${section.title}`}
+            </Button>
+          </CardContent>
+        </Card>
+      ))}
 
       {/* General Configs */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
