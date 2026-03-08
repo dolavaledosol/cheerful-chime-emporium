@@ -75,8 +75,6 @@ const Configuracoes = () => {
     load();
   };
 
-  const generalItems = items.filter((i) => !ALL_WEBHOOK_KEYS.includes(i.chave));
-
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Configurações</h1>
