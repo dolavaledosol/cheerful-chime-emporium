@@ -40,6 +40,8 @@ export const RESOURCE_LABELS: Record<AdminResource, string> = {
   formas_pagamento: "Formas Pagamento",
   usuarios: "Usuários",
   configuracoes: "Configurações",
+  receitas: "Receitas",
+  producao: "Produção",
 };
 
 /** Maps route paths to resource keys */
