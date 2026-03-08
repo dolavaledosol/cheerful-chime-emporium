@@ -1,0 +1,1 @@
+ALTER TABLE public.cliente ADD COLUMN telefone_preferencial_id uuid REFERENCES public.cliente_telefone(cliente_telefone_id) ON DELETE SET NULL;

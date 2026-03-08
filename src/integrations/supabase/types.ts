@@ -124,6 +124,7 @@ export type Database = {
           created_at: string
           email: string | null
           nome: string
+          telefone_preferencial_id: string | null
           tipo_cliente: Database["public"]["Enums"]["tipo_cliente"]
           updated_at: string
           user_id: string | null
@@ -136,6 +137,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           nome: string
+          telefone_preferencial_id?: string | null
           tipo_cliente?: Database["public"]["Enums"]["tipo_cliente"]
           updated_at?: string
           user_id?: string | null
@@ -148,6 +150,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           nome?: string
+          telefone_preferencial_id?: string | null
           tipo_cliente?: Database["public"]["Enums"]["tipo_cliente"]
           updated_at?: string
           user_id?: string | null
@@ -159,6 +162,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clientewhats"
             referencedColumns: ["clientewhats_id"]
+          },
+          {
+            foreignKeyName: "cliente_telefone_preferencial_id_fkey"
+            columns: ["telefone_preferencial_id"]
+            isOneToOne: false
+            referencedRelation: "cliente_telefone"
+            referencedColumns: ["cliente_telefone_id"]
           },
         ]
       }
