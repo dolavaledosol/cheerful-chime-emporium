@@ -156,6 +156,10 @@ const Financeiro = () => {
   const [selectedPhones, setSelectedPhones] = useState<Record<string, string>>({});
   const [pendingWebhookData, setPendingWebhookData] = useState<any[] | null>(null);
 
+  /* Billing confirmation dialog state */
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [recentLogs, setRecentLogs] = useState<{ created_at: string; status: string | null; payload: any }[]>([]);
+  const [pendingConfirmAction, setPendingConfirmAction] = useState<(() => void) | null>(null);
   const loadReceber = async () => {
     const { data } = await supabase
       .from("contas_receber")
