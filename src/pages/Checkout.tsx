@@ -62,7 +62,7 @@ function validateCnpj(cnpj: string): boolean {
   return parseInt(digits[13]) === d2;
 }
 
-function formatTelefone(value: string) { return formatTelefoneShared(value); }
+function formatTelefone(value: string) { return value; }
 
 function validateCpfCnpj(value: string): string | null {
   const digits = value.replace(/\D/g, "");
