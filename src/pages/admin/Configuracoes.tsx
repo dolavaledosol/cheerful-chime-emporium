@@ -36,10 +36,6 @@ const ALL_WEBHOOK_KEYS = WEBHOOK_SECTIONS.flatMap((s) => s.keys.map((k) => k.cha
 
 const Configuracoes = () => {
   const [items, setItems] = useState<Configuracao[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [loading, setLoading] = useState(false);
   const [webhookValues, setWebhookValues] = useState<Record<string, string>>({});
   const [savingSection, setSavingSection] = useState<string | null>(null);
   const { toast } = useToast();
