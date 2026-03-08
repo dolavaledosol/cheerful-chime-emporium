@@ -470,7 +470,7 @@ const Perfil = () => {
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label className="text-sm">Telefone</Label>
-              <Input placeholder="+55 (31) 90000-0000" value={telForm} onChange={(e) => setTelForm(formatTelefone(e.target.value))} className="rounded-xl h-12" />
+              <PhoneInput value={telForm} onChange={setTelForm} className="[&_.PhoneInputInput]:rounded-xl [&_.PhoneInputInput]:h-12 [&_.PhoneInputCountry]:h-12 [&_.PhoneInputCountry]:rounded-xl" />
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={telWhatsapp} onCheckedChange={setTelWhatsapp} />
