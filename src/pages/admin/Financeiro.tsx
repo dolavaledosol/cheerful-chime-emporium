@@ -375,6 +375,12 @@ const Financeiro = () => {
 
   const confirmPhoneAndSend = async () => {
     if (!pendingWebhookData) return;
+
+    // Save selected phones as preferred for each client
+    for (const [clienteId, phoneId] of Object.entries(selectedPhones)) {
+      await supabase.from("cliente").update({ telefone_preferencial_id: phoneId } as any).eq("cliente_id", clienteId);
+    }
+
     const { phoneMap } = await buildExportRows(pendingWebhookData, selectedPhones);
     setPhoneDialogOpen(false);
     await sendWebhook(pendingWebhookData, phoneMap);
