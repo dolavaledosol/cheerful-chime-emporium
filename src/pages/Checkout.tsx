@@ -148,7 +148,7 @@ const Checkout = () => {
 
   const handleCpfCnpjChange = (value: string) => { if (cpfCnpjLocked) return; const digits = value.replace(/\D/g, "").slice(0, 14); setCpfCnpj(formatCpfCnpj(digits)); if (cpfCnpjError) setCpfCnpjError(null); };
   const handleCpfCnpjBlur = () => { if (cpfCnpj.replace(/\D/g, "").length > 0) { const err = validateCpfCnpj(cpfCnpj); if (err) setCpfCnpjError(err); } };
-  const handleTelefoneChange = (idx: number, value: string) => { const digits = value.replace(/\D/g, "").slice(0, 11); const updated = [...telefones]; updated[idx] = formatTelefone(digits); setTelefones(updated); if (telefoneError) setTelefoneError(null); };
+  const handleTelefoneChange = (idx: number, value: string) => { const updated = [...telefones]; updated[idx] = value; setTelefones(updated); if (telefoneError) setTelefoneError(null); };
 
   const handleCepBlur = async () => {
     const cep = endForm.cep.replace(/\D/g, "");
