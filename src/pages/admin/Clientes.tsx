@@ -154,14 +154,29 @@ const Clientes = () => {
         for (const del of toDelete) {
           await supabase.from("cliente_telefone").delete().eq("cliente_telefone_id", del.cliente_telefone_id);
         }
-        for (const tel of validPhonesForSave) {
+        // Track new phone IDs for preferencial mapping
+        const newPhoneIds: Record<number, string> = {};
+        for (let i = 0; i < validPhonesForSave.length; i++) {
+          const tel = validPhonesForSave[i];
           const digits = phoneToDigits(tel.telefone);
           if (tel.id) {
             await supabase.from("cliente_telefone").update({ telefone: digits, is_whatsapp: false }).eq("cliente_telefone_id", tel.id);
           } else {
-            await supabase.from("cliente_telefone").insert({ cliente_id: targetId, telefone: digits, is_whatsapp: false });
+            const { data: inserted } = await supabase.from("cliente_telefone").insert({ cliente_id: targetId, telefone: digits, is_whatsapp: false }).select("cliente_telefone_id").single();
+            if (inserted) {
+              tel.id = inserted.cliente_telefone_id;
+            }
           }
         }
+
+        // Save preferred phone
+        let prefId = telefonePreferencialId;
+        // If preferred was a new phone (no id before save), find by index
+        const prefPhone = validPhonesForSave.find(t => t.id === prefId);
+        if (!prefPhone && validPhonesForSave.length > 0) {
+          prefId = validPhonesForSave[0].id || null;
+        }
+        await supabase.from("cliente").update({ telefone_preferencial_id: prefId || null } as any).eq("cliente_id", targetId);
       }
 
       toast({ title: actionLabel });
