@@ -412,12 +412,12 @@ const Financeiro = () => {
 
     setSendingWebhook(true);
     try {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
       const apikey = cfgMap["webhook_cobranca_apikey"];
-      if (apikey) headers["Authorization"] = `Bearer ${apikey}`;
-
-      const res = await fetch(webhookUrl, { method: "POST", headers, body: JSON.stringify(payload) });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { data, error } = await supabase.functions.invoke("webhook-proxy", {
+        body: { webhook_url: webhookUrl, webhook_apikey: apikey || "", payload },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       toast({ title: `Webhook enviado com ${items.length} cobranças` });
     } catch (err: any) {
       toast({ title: "Erro ao enviar webhook", description: err.message, variant: "destructive" });
