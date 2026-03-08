@@ -51,6 +51,7 @@ const emptyReceber = {
 };
 
 const Financeiro = () => {
+  const isMobile = useIsMobile();
   const { toast } = useToast();
 
   /* ── Lookup data ── */
