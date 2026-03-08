@@ -341,7 +341,7 @@ const Financeiro = () => {
       return;
     }
 
-    const { phoneMap, allPhones } = await buildExportRows(autorizadas);
+    const { phoneMap, allPhones, prefMap } = await buildExportRows(autorizadas);
 
     // Check if any client has multiple eligible phones (is_whatsapp + verified + lid not empty)
     const clientsWithMultiplePhones: { cliente_id: string; clienteNome: string; phones: PhoneOption[] }[] = [];
