@@ -102,6 +102,7 @@ const Checkout = () => {
           supabase.from("cliente_telefone").select("telefone").eq("cliente_id", data.cliente_id).order("cliente_telefone_id").then(({ data: tels }) => {
             if (tels && tels.length > 0) setTelefones(tels.map(t => digitsToPhone(t.telefone)));
             else setTelefones([""]);
+          });
         }
       });
     }
