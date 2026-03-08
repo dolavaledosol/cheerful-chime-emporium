@@ -21,6 +21,7 @@ interface Cliente {
   email: string | null;
   tipo_cliente: string;
   ativo: boolean;
+  telefone_preferencial_id: string | null;
 }
 
 interface TelefoneItem {
