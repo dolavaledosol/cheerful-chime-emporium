@@ -257,6 +257,7 @@ const Financeiro = () => {
     const clienteIds = [...new Set(items.map((c) => c.cliente_id).filter(Boolean))] as string[];
     let allPhones: Record<string, PhoneOption[]> = {};
     let phoneMap: Record<string, { from: string; pn: string; lid: string }> = {};
+    let prefMap: Record<string, string | null> = {};
 
     if (clienteIds.length > 0) {
       // Fetch preferred phone ids from cliente table
