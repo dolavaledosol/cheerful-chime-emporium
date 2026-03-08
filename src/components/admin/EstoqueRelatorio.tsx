@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback, memo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,40 @@ interface ClienteCompra {
 
 interface FamiliaOption { familia_id: string; nome: string; }
 interface FabricanteOption { fabricante_id: string; nome: string; }
+
+// Memoized product row to avoid re-rendering all rows on single toggle
+const ProductRow = memo(({ p, onToggle }: { p: ProdutoEstoque; onToggle: (id: string, checked: boolean) => void }) => (
+  <TableRow className={p.checked ? "bg-muted/30" : ""}>
+    <TableCell>
+      <Checkbox checked={p.checked} onCheckedChange={(v) => onToggle(p.produto_id, !!v)} />
+    </TableCell>
+    <TableCell className="font-medium">{p.nome}</TableCell>
+    <TableCell className="text-muted-foreground">{p.familia}</TableCell>
+    <TableCell className="text-muted-foreground">{p.fabricante}</TableCell>
+    <TableCell className="text-right">R$ {p.preco.toFixed(2)}</TableCell>
+    <TableCell className="text-center font-semibold">{p.total_estoque}</TableCell>
+  </TableRow>
+));
+ProductRow.displayName = "ProductRow";
+
+// Helper: fetch LIDs for a list of cliente_ids
+async function fetchLids(clienteIds: string[]): Promise<Map<string, string>> {
+  const lidMap = new Map<string, string>();
+  if (clienteIds.length === 0) return lidMap;
+
+  const { data: telefones } = await supabase
+    .from("cliente_telefone")
+    .select("cliente_id, lid")
+    .in("cliente_id", clienteIds)
+    .not("lid", "is", null);
+
+  if (telefones) {
+    for (const t of telefones as any[]) {
+      if (t.lid) lidMap.set(t.cliente_id, t.lid);
+    }
+  }
+  return lidMap;
+}
 
 const EstoqueRelatorio = () => {
   const [produtos, setProdutos] = useState<ProdutoEstoque[]>([]);
@@ -98,8 +132,8 @@ const EstoqueRelatorio = () => {
   };
 
   const filtered = useMemo(() => {
+    const term = search.toLowerCase();
     return produtos.filter((p) => {
-      const term = search.toLowerCase();
       const matchSearch = !term || p.nome.toLowerCase().includes(term) || p.produto_id.toLowerCase().includes(term);
       const matchFamilia = filterFamilia === "all" || p.familia === filterFamilia;
       const matchFabricante = filterFabricante === "all" || p.fabricante === filterFabricante;
@@ -107,16 +141,21 @@ const EstoqueRelatorio = () => {
     });
   }, [produtos, search, filterFamilia, filterFabricante]);
 
-  const checkedProducts = produtos.filter((p) => p.checked);
+  const checkedProducts = useMemo(() => produtos.filter((p) => p.checked), [produtos]);
 
-  const toggleAll = (checked: boolean) => {
+  const allFilteredChecked = useMemo(
+    () => filtered.length > 0 && filtered.every((p) => p.checked),
+    [filtered]
+  );
+
+  const toggleAll = useCallback((checked: boolean) => {
     const filteredIds = new Set(filtered.map((p) => p.produto_id));
     setProdutos((prev) => prev.map((p) => filteredIds.has(p.produto_id) ? { ...p, checked } : p));
-  };
+  }, [filtered]);
 
-  const toggleProduct = (produto_id: string, checked: boolean) => {
+  const toggleProduct = useCallback((produto_id: string, checked: boolean) => {
     setProdutos((prev) => prev.map((p) => p.produto_id === produto_id ? { ...p, checked } : p));
-  };
+  }, []);
 
   const loadClientes = async () => {
     if (checkedProducts.length === 0) {
@@ -126,8 +165,9 @@ const EstoqueRelatorio = () => {
     setLoadingClientes(true);
 
     const prodIds = checkedProducts.map((p) => p.produto_id);
+    // Pre-build lookup map to avoid .find() inside loop
+    const prodNomeMap = new Map(checkedProducts.map((p) => [p.produto_id, p.nome]));
 
-    // Fetch pedido_items for selected products in the period
     const { data: pedidoItems } = await supabase
       .from("pedido_item")
       .select("produto_id, quantidade, pedido:pedido_id(pedido_id, data, cliente_id, status, cliente:cliente_id(cliente_id, nome, clientewhats_id))")
@@ -140,88 +180,35 @@ const EstoqueRelatorio = () => {
       return;
     }
 
-    // Filter by period and valid statuses
     const inicio = new Date(dataInicio + "T00:00:00");
     const fim = new Date(dataFim + "T23:59:59");
-    const validStatuses = ["separacao", "aguardando_pagamento", "pago", "enviado", "entregue"];
+    const validStatuses = new Set(["separacao", "aguardando_pagamento", "pago", "enviado", "entregue"]);
 
     const results: ClienteCompra[] = [];
-    const clienteWhatsIds = new Set<number>();
 
     for (const item of pedidoItems as any[]) {
       const pedido = item.pedido;
       if (!pedido || !pedido.cliente) continue;
       const pedidoDate = new Date(pedido.data);
       if (pedidoDate < inicio || pedidoDate > fim) continue;
-      if (!validStatuses.includes(pedido.status)) continue;
-
-      if (pedido.cliente.clientewhats_id) {
-        clienteWhatsIds.add(pedido.cliente.clientewhats_id);
-      }
+      if (!validStatuses.has(pedido.status)) continue;
 
       results.push({
         cliente_id: pedido.cliente.cliente_id,
         nome: pedido.cliente.nome,
-        lid: null, // will be filled from clientewhats
+        lid: null,
         data_compra: pedido.data,
         quantidade: Number(item.quantidade),
         produto_id: item.produto_id,
-        produto_nome: checkedProducts.find((p) => p.produto_id === item.produto_id)?.nome || "—",
+        produto_nome: prodNomeMap.get(item.produto_id) || "—",
       });
     }
 
-    // Fetch LIDs from clientewhats
-    if (clienteWhatsIds.size > 0) {
-      const { data: whatsData } = await supabase
-        .from("clientewhats")
-        .select("clientewhats_id, from")
-        .in("clientewhats_id", Array.from(clienteWhatsIds));
-
-      if (whatsData) {
-        const whatsMap = new Map<number, string>();
-        for (const w of whatsData as any[]) {
-          whatsMap.set(w.clientewhats_id, w.from || "");
-        }
-
-        // Also get LID from cliente_telefone
-        const clienteIds = [...new Set(results.map((r) => r.cliente_id))];
-        const { data: telefones } = await supabase
-          .from("cliente_telefone")
-          .select("cliente_id, lid")
-          .in("cliente_id", clienteIds)
-          .not("lid", "is", null);
-
-        const lidMap = new Map<string, string>();
-        if (telefones) {
-          for (const t of telefones as any[]) {
-            if (t.lid) lidMap.set(t.cliente_id, t.lid);
-          }
-        }
-
-        for (const r of results) {
-          r.lid = lidMap.get(r.cliente_id) || null;
-        }
-      }
-    } else {
-      // Still try to get LIDs from cliente_telefone
-      const clienteIds = [...new Set(results.map((r) => r.cliente_id))];
-      if (clienteIds.length > 0) {
-        const { data: telefones } = await supabase
-          .from("cliente_telefone")
-          .select("cliente_id, lid")
-          .in("cliente_id", clienteIds)
-          .not("lid", "is", null);
-
-        const lidMap = new Map<string, string>();
-        if (telefones) {
-          for (const t of telefones as any[]) {
-            if (t.lid) lidMap.set(t.cliente_id, t.lid);
-          }
-        }
-        for (const r of results) {
-          r.lid = lidMap.get(r.cliente_id) || null;
-        }
-      }
+    // Fetch LIDs (deduplicated logic)
+    const uniqueClienteIds = [...new Set(results.map((r) => r.cliente_id))];
+    const lidMap = await fetchLids(uniqueClienteIds);
+    for (const r of results) {
+      r.lid = lidMap.get(r.cliente_id) || null;
     }
 
     setClientes(results);
@@ -230,7 +217,6 @@ const EstoqueRelatorio = () => {
   };
 
   const sendWebhook = async () => {
-    // Fetch webhook config
     const { data: configs } = await supabase
       .from("configuracao")
       .select("chave, valor")
@@ -274,7 +260,7 @@ const EstoqueRelatorio = () => {
     };
 
     try {
-      const { data, error } = await supabase.functions.invoke("webhook-proxy", {
+      const { error } = await supabase.functions.invoke("webhook-proxy", {
         body: {
           webhook_url: webhookUrl,
           webhook_apikey: webhookApikey,
@@ -344,7 +330,7 @@ const EstoqueRelatorio = () => {
             <TableRow>
               <TableHead className="w-10">
                 <Checkbox
-                  checked={filtered.length > 0 && filtered.every((p) => p.checked)}
+                  checked={allFilteredChecked}
                   onCheckedChange={(v) => toggleAll(!!v)}
                 />
               </TableHead>
@@ -359,16 +345,7 @@ const EstoqueRelatorio = () => {
             {filtered.length === 0 ? (
               <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
             ) : filtered.map((p) => (
-              <TableRow key={p.produto_id} className={p.checked ? "bg-muted/30" : ""}>
-                <TableCell>
-                  <Checkbox checked={p.checked} onCheckedChange={(v) => toggleProduct(p.produto_id, !!v)} />
-                </TableCell>
-                <TableCell className="font-medium">{p.nome}</TableCell>
-                <TableCell className="text-muted-foreground">{p.familia}</TableCell>
-                <TableCell className="text-muted-foreground">{p.fabricante}</TableCell>
-                <TableCell className="text-right">R$ {p.preco.toFixed(2)}</TableCell>
-                <TableCell className="text-center font-semibold">{p.total_estoque}</TableCell>
-              </TableRow>
+              <ProductRow key={p.produto_id} p={p} onToggle={toggleProduct} />
             ))}
           </TableBody>
         </Table>
