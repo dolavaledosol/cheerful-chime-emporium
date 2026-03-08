@@ -172,6 +172,24 @@ export type Database = {
           },
         ]
       }
+      cliente_adm: {
+        Row: {
+          cliente_adm_id: number
+          created_at: string
+          lid: string | null
+        }
+        Insert: {
+          cliente_adm_id?: number
+          created_at?: string
+          lid?: string | null
+        }
+        Update: {
+          cliente_adm_id?: number
+          created_at?: string
+          lid?: string | null
+        }
+        Relationships: []
+      }
       cliente_endereco: {
         Row: {
           cliente_id: string
@@ -1159,7 +1177,9 @@ export type Database = {
       }
       producao: {
         Row: {
+          cancelado: boolean
           created_at: string
+          custo_total: number
           local_estoque_id: string
           observacao: string | null
           producao_id: string
@@ -1169,7 +1189,9 @@ export type Database = {
           usuario_id: string | null
         }
         Insert: {
+          cancelado?: boolean
           created_at?: string
+          custo_total?: number
           local_estoque_id: string
           observacao?: string | null
           producao_id?: string
@@ -1179,7 +1201,9 @@ export type Database = {
           usuario_id?: string | null
         }
         Update: {
+          cancelado?: boolean
           created_at?: string
+          custo_total?: number
           local_estoque_id?: string
           observacao?: string | null
           producao_id?: string

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, X, AlertTriangle } from "lucide-react";
+import { Plus, X, AlertTriangle, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -26,6 +26,9 @@ interface ProdItem {
   produto_id: string;
   quantidade: number;
 }
+
+const formatBRL = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const Producao = () => {
   const qc = useQueryClient();
@@ -40,7 +43,6 @@ const Producao = () => {
   const [observacao, setObservacao] = useState("");
   const [itens, setItens] = useState<ProdItem[]>([]);
 
-  // Fetch data
   const { data: produtos = [] } = useQuery({
     queryKey: ["produtos-ativos"],
     queryFn: async () => {
@@ -68,7 +70,7 @@ const Producao = () => {
   const { data: estoquesLocal = [] } = useQuery({
     queryKey: ["estoques-local-all"],
     queryFn: async () => {
-      const { data } = await supabase.from("estoque_local").select("produto_id, local_estoque_id, quantidade_disponivel");
+      const { data } = await supabase.from("estoque_local").select("produto_id, local_estoque_id, quantidade_disponivel, preco_custo");
       return data || [];
     },
   });
@@ -88,14 +90,27 @@ const Producao = () => {
   const produtoMap = Object.fromEntries(produtos.map((p) => [p.produto_id, p]));
   const localMap = Object.fromEntries(locais.map((l) => [l.local_estoque_id, l]));
 
-  // Recipes for selected product
   const receitasForProduto = receitas.filter((r: any) => r.produto_id === produtoId);
 
-  // Get available stock for a product at the selected location
   const getEstoque = (pid: string) => {
     const e = estoquesLocal.find((el) => el.produto_id === pid && el.local_estoque_id === localEstoqueId);
     return e?.quantidade_disponivel ?? 0;
   };
+
+  const getCusto = (pid: string): number => {
+    const e = estoquesLocal.find((el) => el.produto_id === pid && el.local_estoque_id === localEstoqueId);
+    return Number(e?.preco_custo ?? 0);
+  };
+
+  // Calculate total production cost
+  const custoTotal = useMemo(() => {
+    return itens.reduce((sum, item) => {
+      if (!item.produto_id || !localEstoqueId) return sum;
+      return sum + getCusto(item.produto_id) * item.quantidade;
+    }, 0);
+  }, [itens, localEstoqueId, estoquesLocal]);
+
+  const custoUnitario = qtdProduzir > 0 ? custoTotal / qtdProduzir : 0;
 
   const selectReceita = (rid: string) => {
     setReceitaId(rid);
@@ -126,24 +141,23 @@ const Producao = () => {
 
   const producaoMutation = useMutation({
     mutationFn: async () => {
-      // 1. Insert producao
       const { data: prod } = await supabase.from("producao").insert({
         produto_id: produtoId,
         receita_id: receitaId || null,
         local_estoque_id: localEstoqueId,
         quantidade_produzida: qtdProduzir,
+        custo_total: custoTotal,
         observacao: observacao || null,
         usuario_id: user?.id || null,
       }).select("producao_id").single().throwOnError();
 
-      // 2. Insert producao_item
       if (itens.length > 0) {
         await supabase.from("producao_item").insert(
           itens.map((i) => ({ producao_id: prod!.producao_id, produto_id: i.produto_id, quantidade: i.quantidade }))
         ).throwOnError();
       }
 
-      // 3. Deduct ingredients from stock
+      // Deduct ingredients
       for (const item of itens) {
         const estoque = estoquesLocal.find(
           (el) => el.produto_id === item.produto_id && el.local_estoque_id === localEstoqueId
@@ -155,7 +169,6 @@ const Producao = () => {
             .eq("local_estoque_id", localEstoqueId)
             .throwOnError();
         }
-        // Log movement: saída
         await supabase.from("movimentacao_estoque").insert({
           produto_id: item.produto_id,
           local_estoque_id: localEstoqueId,
@@ -167,7 +180,7 @@ const Producao = () => {
         }).throwOnError();
       }
 
-      // 4. Add finished product to stock
+      // Add finished product
       const estoqueFinal = estoquesLocal.find(
         (el) => el.produto_id === produtoId && el.local_estoque_id === localEstoqueId
       );
@@ -186,7 +199,6 @@ const Producao = () => {
         }).throwOnError();
       }
 
-      // Log movement: entrada
       await supabase.from("movimentacao_estoque").insert({
         produto_id: produtoId,
         local_estoque_id: localEstoqueId,
@@ -204,6 +216,79 @@ const Producao = () => {
       toast.success("Produção registrada com sucesso!");
     },
     onError: (e: any) => toast.error("Erro: " + e.message),
+  });
+
+  // Cancel production: reverse all stock movements
+  const cancelMutation = useMutation({
+    mutationFn: async (prod: any) => {
+      // Re-fetch current stock for accurate values
+      const ingredientIds = (prod.producao_item || []).map((i: any) => i.produto_id);
+      const allIds = [...ingredientIds, prod.produto_id];
+
+      const { data: currentEstoques } = await supabase
+        .from("estoque_local")
+        .select("produto_id, local_estoque_id, quantidade_disponivel")
+        .eq("local_estoque_id", prod.local_estoque_id)
+        .in("produto_id", allIds);
+
+      const estoqueMap = Object.fromEntries(
+        (currentEstoques || []).map((e) => [`${e.produto_id}_${e.local_estoque_id}`, e])
+      );
+
+      // Return ingredients to stock
+      for (const item of (prod.producao_item || [])) {
+        const key = `${item.produto_id}_${prod.local_estoque_id}`;
+        const est = estoqueMap[key];
+        if (est) {
+          await supabase.from("estoque_local")
+            .update({ quantidade_disponivel: Number(est.quantidade_disponivel) + Number(item.quantidade) })
+            .eq("produto_id", item.produto_id)
+            .eq("local_estoque_id", prod.local_estoque_id)
+            .throwOnError();
+        }
+        await supabase.from("movimentacao_estoque").insert({
+          produto_id: item.produto_id,
+          local_estoque_id: prod.local_estoque_id,
+          tipo: "entrada_cancelamento_producao",
+          quantidade: Number(item.quantidade),
+          documento: prod.producao_id,
+          observacao: `Cancelamento produção: ${produtoMap[prod.produto_id]?.nome || ""}`,
+          usuario_id: user?.id || null,
+        }).throwOnError();
+      }
+
+      // Remove finished product from stock
+      const keyFinal = `${prod.produto_id}_${prod.local_estoque_id}`;
+      const estFinal = estoqueMap[keyFinal];
+      if (estFinal) {
+        await supabase.from("estoque_local")
+          .update({ quantidade_disponivel: Math.max(0, Number(estFinal.quantidade_disponivel) - Number(prod.quantidade_produzida)) })
+          .eq("produto_id", prod.produto_id)
+          .eq("local_estoque_id", prod.local_estoque_id)
+          .throwOnError();
+      }
+      await supabase.from("movimentacao_estoque").insert({
+        produto_id: prod.produto_id,
+        local_estoque_id: prod.local_estoque_id,
+        tipo: "saida_cancelamento_producao",
+        quantidade: Number(prod.quantidade_produzida),
+        documento: prod.producao_id,
+        observacao: `Cancelamento produção de ${prod.quantidade_produzida}x ${produtoMap[prod.produto_id]?.nome || ""}`,
+        usuario_id: user?.id || null,
+      }).throwOnError();
+
+      // Mark as cancelled
+      await supabase.from("producao")
+        .update({ cancelado: true })
+        .eq("producao_id", prod.producao_id)
+        .throwOnError();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["producao-historico"] });
+      qc.invalidateQueries({ queryKey: ["estoques-local-all"] });
+      toast.success("Produção cancelada e estoque revertido!");
+    },
+    onError: (e: any) => toast.error("Erro ao cancelar: " + e.message),
   });
 
   const openNew = () => {
@@ -243,22 +328,27 @@ const Producao = () => {
                   <TableHead>Produto Fabricado</TableHead>
                   <TableHead>Qtd</TableHead>
                   <TableHead>Local</TableHead>
+                  <TableHead>Custo Total</TableHead>
                   <TableHead>Ingredientes</TableHead>
-                  <TableHead>Obs</TableHead>
+                  <TableHead>Status</TableHead>
+                  {canEdit && <TableHead className="w-20">Ações</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {historicoLoading ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
                 ) : historico.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhuma produção registrada</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma produção registrada</TableCell></TableRow>
                 ) : (
                   historico.map((p: any) => (
-                    <TableRow key={p.producao_id}>
+                    <TableRow key={p.producao_id} className={p.cancelado ? "opacity-50" : ""}>
                       <TableCell className="whitespace-nowrap">{format(new Date(p.created_at), "dd/MM/yy HH:mm")}</TableCell>
                       <TableCell className="font-medium">{produtoMap[p.produto_id]?.nome || p.produto_id}</TableCell>
                       <TableCell>{p.quantidade_produzida}</TableCell>
                       <TableCell>{localMap[p.local_estoque_id]?.nome || "-"}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {Number(p.custo_total) > 0 ? formatBRL(Number(p.custo_total)) : "-"}
+                      </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {(p.producao_item || []).map((i: any) => (
@@ -268,7 +358,29 @@ const Producao = () => {
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-xs max-w-[200px] truncate">{p.observacao || "-"}</TableCell>
+                      <TableCell>
+                        {p.cancelado ? (
+                          <Badge variant="destructive">Cancelado</Badge>
+                        ) : (
+                          <Badge variant="default">Concluído</Badge>
+                        )}
+                      </TableCell>
+                      {canEdit && (
+                        <TableCell>
+                          {!p.cancelado && (
+                            <Button size="icon" variant="ghost" className="text-destructive"
+                              title="Cancelar produção e reverter estoque"
+                              disabled={cancelMutation.isPending}
+                              onClick={() => {
+                                if (confirm("Cancelar esta produção? O estoque será revertido (ingredientes devolvidos e produto fabricado removido).")) {
+                                  cancelMutation.mutate(p);
+                                }
+                              }}>
+                              <Undo2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}
@@ -353,6 +465,7 @@ const Producao = () => {
               {itens.map((item, idx) => {
                 const estoqueDisp = item.produto_id && localEstoqueId ? getEstoque(item.produto_id) : null;
                 const insufficient = estoqueDisp !== null && estoqueDisp < item.quantidade;
+                const custoItem = item.produto_id && localEstoqueId ? getCusto(item.produto_id) * item.quantidade : 0;
                 return (
                   <div key={idx} className="space-y-1">
                     <div className="flex items-center gap-2">
@@ -371,6 +484,9 @@ const Producao = () => {
                       <span className="text-xs text-muted-foreground w-8">
                         {produtoMap[item.produto_id]?.unidade_medida || ""}
                       </span>
+                      <span className="text-xs font-medium w-20 text-right whitespace-nowrap">
+                        {custoItem > 0 ? formatBRL(custoItem) : "-"}
+                      </span>
                       <Button type="button" size="icon" variant="ghost" onClick={() => removeItem(idx)}>
                         <X className="h-4 w-4" />
                       </Button>
@@ -378,13 +494,35 @@ const Producao = () => {
                     {item.produto_id && localEstoqueId && (
                       <div className={`text-xs pl-1 ${insufficient ? "text-destructive" : "text-muted-foreground"}`}>
                         {insufficient && <AlertTriangle className="h-3 w-3 inline mr-1" />}
-                        Estoque disponível: {estoqueDisp}
+                        Estoque: {estoqueDisp} | Custo unit.: {getCusto(item.produto_id) > 0 ? formatBRL(getCusto(item.produto_id)) : "não definido"}
                       </div>
                     )}
                   </div>
                 );
               })}
             </div>
+
+            {/* Cost Summary */}
+            {itens.length > 0 && localEstoqueId && (
+              <div className="bg-muted/50 border rounded-md p-3 space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Custo total dos ingredientes:</span>
+                  <span className="font-semibold">{formatBRL(custoTotal)}</span>
+                </div>
+                {qtdProduzir > 1 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Custo unitário por produto:</span>
+                    <span className="font-medium">{formatBRL(custoUnitario)}</span>
+                  </div>
+                )}
+                {custoTotal === 0 && itens.some((i) => i.produto_id) && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Alguns ingredientes não possuem preço de custo cadastrado neste local
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Observação</Label>
