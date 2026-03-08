@@ -27,6 +27,7 @@ import FormasPagamento from "./pages/admin/FormasPagamento";
 import Financeiro from "./pages/admin/Financeiro";
 
 import Usuarios from "./pages/admin/Usuarios";
+import Configuracoes from "./pages/admin/Configuracoes";
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
 
 const queryClient = new QueryClient();
