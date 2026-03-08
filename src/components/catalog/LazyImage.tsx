@@ -8,7 +8,7 @@ interface LazyImageProps {
 }
 
 const LazyImage = memo(function LazyImage({ src, alt, className }: LazyImageProps) {
-  const imgRef = useRef<HTMLImageElement>(null);
+  const imgRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -23,7 +23,7 @@ const LazyImage = memo(function LazyImage({ src, alt, className }: LazyImageProp
           observer.disconnect();
         }
       },
-      { rootMargin: "200px 0px" } // start loading 200px before visible
+      { rootMargin: "200px 0px" }
     );
 
     observer.observe(el);
@@ -31,17 +31,23 @@ const LazyImage = memo(function LazyImage({ src, alt, className }: LazyImageProp
   }, []);
 
   return (
-    <img
-      ref={imgRef}
-      src={isVisible ? src : undefined}
-      alt={alt}
-      onLoad={() => setIsLoaded(true)}
-      className={cn(
-        "transition-opacity duration-500",
-        isLoaded ? "opacity-100" : "opacity-0",
-        className
+    <div ref={imgRef} className={cn("relative overflow-hidden", className)}>
+      {/* Skeleton placeholder */}
+      {!isLoaded && (
+        <div className="absolute inset-0 bg-muted animate-pulse rounded" />
       )}
-    />
+      {isVisible && (
+        <img
+          src={src}
+          alt={alt}
+          onLoad={() => setIsLoaded(true)}
+          className={cn(
+            "h-full w-full object-cover transition-opacity duration-500",
+            isLoaded ? "opacity-100" : "opacity-0"
+          )}
+        />
+      )}
+    </div>
   );
 });
 
