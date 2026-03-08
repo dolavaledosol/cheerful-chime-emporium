@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Pencil, Trash2, Check, Download, Send, Loader2 } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Check, Download, Send, Loader2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
@@ -155,6 +155,10 @@ const Financeiro = () => {
   const [selectedPhones, setSelectedPhones] = useState<Record<string, string>>({});
   const [pendingWebhookData, setPendingWebhookData] = useState<any[] | null>(null);
 
+  /* Billing confirmation dialog state */
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [recentLogs, setRecentLogs] = useState<{ created_at: string; status: string | null; payload: any }[]>([]);
+  const [pendingConfirmAction, setPendingConfirmAction] = useState<(() => void) | null>(null);
   const loadReceber = async () => {
     const { data } = await supabase
       .from("contas_receber")
@@ -341,15 +345,32 @@ const Financeiro = () => {
       return;
     }
 
+    // Fetch recent billing logs to warn the user
+    const { data: logs } = await supabase
+      .from("integracao_log")
+      .select("created_at, status, payload")
+      .eq("tipo", "webhook_cobranca")
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    if (logs && logs.length > 0) {
+      setRecentLogs(logs as any);
+      setPendingConfirmAction(() => () => proceedWithWebhook(autorizadas));
+      setConfirmDialogOpen(true);
+      return;
+    }
+
+    await proceedWithWebhook(autorizadas);
+  };
+
+  const proceedWithWebhook = async (autorizadas: ContaReceber[]) => {
     const { phoneMap, allPhones, prefMap } = await buildExportRows(autorizadas);
 
-    // Check if any client has multiple eligible phones (is_whatsapp + verified + lid not empty)
     const clientsWithMultiplePhones: { cliente_id: string; clienteNome: string; phones: PhoneOption[] }[] = [];
     for (const c of autorizadas) {
       if (!c.cliente_id || !allPhones[c.cliente_id]) continue;
       const eligible = allPhones[c.cliente_id].filter(p => p.lid);
       const prefId = prefMap[c.cliente_id];
-      // Skip if client already has a preferred phone set and it's in the eligible list
       if (prefId && eligible.find(p => p.cliente_telefone_id === prefId)) continue;
       if (eligible.length > 1 && !clientsWithMultiplePhones.find(x => x.cliente_id === c.cliente_id)) {
         clientsWithMultiplePhones.push({
@@ -361,7 +382,6 @@ const Financeiro = () => {
     }
 
     if (clientsWithMultiplePhones.length > 0) {
-      // Need user to pick phones
       setPhoneOptions(clientsWithMultiplePhones);
       const defaults: Record<string, string> = {};
       for (const cp of clientsWithMultiplePhones) {
@@ -703,6 +723,38 @@ const Financeiro = () => {
             <Button variant="outline" onClick={() => setPhoneDialogOpen(false)}>Cancelar</Button>
             <Button onClick={confirmPhoneAndSend} disabled={sendingWebhook}>
               {sendingWebhook ? "Enviando..." : "Confirmar e Enviar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ══════════ DIALOG CONFIRMAÇÃO DE COBRANÇA ══════════ */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-yellow-500" /> Confirmar Cobrança</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">Cobranças foram enviadas recentemente. Tem certeza que deseja enviar novamente?</p>
+            <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
+              {recentLogs.map((log, idx) => {
+                const count = Array.isArray(log.payload) ? log.payload.length : "?";
+                return (
+                  <div key={idx} className="px-3 py-2 text-sm flex justify-between items-center">
+                    <span>{format(new Date(log.created_at), "dd/MM/yyyy HH:mm")}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">{count} cobranças</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${log.status === "sucesso" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                        {log.status || "—"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => { setConfirmDialogOpen(false); pendingConfirmAction?.(); }}>
+              Enviar mesmo assim
             </Button>
           </DialogFooter>
         </DialogContent>
