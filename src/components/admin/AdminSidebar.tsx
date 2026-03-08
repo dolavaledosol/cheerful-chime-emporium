@@ -95,11 +95,6 @@ const AdminSidebar = () => {
                 menuLink({ title: "Financeiro", url: "/admin/financeiro", icon: DollarSign, resource: "financeiro" })}
               {can("estoque", "ver") &&
                 menuLink({ title: "Estoque", url: "/admin/estoque", icon: Boxes, resource: "estoque" })}
-              {can("receitas" as any, "ver") &&
-                menuLink({ title: "Receitas", url: "/admin/receitas", icon: FlaskConical, resource: "receitas" as any })}
-              {can("producao" as any, "ver") &&
-                menuLink({ title: "Produção", url: "/admin/producao", icon: ChefHat, resource: "producao" as any })}
-              {menuLink({ title: "Configurações", url: "/admin/configuracoes", icon: Settings, resource: "configuracoes" as any })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
