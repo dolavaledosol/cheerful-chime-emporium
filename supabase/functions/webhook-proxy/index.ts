@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
 
     // Log the integration
     await supabase.from("integracao_log").insert({
-      tipo: "webhook_cobranca",
+      tipo: log_tipo || "webhook_cobranca",
       status: externalRes.ok ? "sucesso" : "erro",
       payload,
       resposta: { status: externalRes.status, body: responseText },
