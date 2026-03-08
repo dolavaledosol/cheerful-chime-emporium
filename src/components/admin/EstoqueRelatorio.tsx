@@ -272,6 +272,7 @@ const EstoqueRelatorio = () => {
         body: {
           webhook_url: webhookUrl,
           webhook_apikey: webhookApikey,
+          log_tipo: "webhook_estoque",
           payload,
         },
       });
