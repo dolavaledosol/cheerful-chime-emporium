@@ -863,7 +863,7 @@ const Estoque = () => {
                           </TableCell>
                           <TableCell className="font-medium">{l.nome}</TableCell>
                           <TableCell className="text-muted-foreground">{l.fabricante}</TableCell>
-                          <TableCell className="text-muted-foreground">{l.familia}</TableCell>
+                          
                           <TableCell className="text-center text-muted-foreground">{l.peso_liquido != null ? l.peso_liquido : "—"}</TableCell>
                           <TableCell className="text-center text-muted-foreground">{l.unidade_medida}</TableCell>
                           <TableCell className="text-center font-semibold">{l.disponivel}</TableCell>
