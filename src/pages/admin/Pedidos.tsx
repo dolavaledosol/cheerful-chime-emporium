@@ -2061,7 +2061,7 @@ const Pedidos = () => {
             {/* CPF/CNPJ - show when existing client has no CPF or for "Consumidor Final" */}
             {!showNewClient && newOrderClienteId && newOrderClienteId !== "__none" && !clientes.find(c => c.cliente_id === newOrderClienteId)?.cpf_cnpj && (
               <div className="space-y-2">
-                <Label>CPF/CNPJ do cliente *</Label>
+                <Label>CPF/CNPJ do cliente</Label>
                 <Input
                   placeholder="000.000.000-00 ou 00.000.000/0000-00"
                   value={formatCpfCnpj(selectedClienteCpf)}
