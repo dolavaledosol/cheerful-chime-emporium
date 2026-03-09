@@ -314,7 +314,7 @@ const Pedidos = () => {
     setCompraEditLoading(true);
     const { error } = await supabase.from("contas_pagar").update({
       descricao: compraEdit.descricao, valor: Number(compraEdit.valor),
-      data_vencimento: compraEdit.data_vencimento, pago: compraEdit.pago,
+      data_vencimento: compraEdit.data_vencimento, data_nf: compraEdit.data_nf || null, pago: compraEdit.pago,
       observacao: compraEdit.observacao || null,
       fornecedor_id: compraEdit.fornecedor_id || null,
       data_pagamento: compraEdit.pago ? (new Date().toISOString().slice(0, 10)) : null,
