@@ -473,7 +473,7 @@ const Estoque = () => {
         return {
           produto_id: e.produto_id,
           nome: e.produto?.nome || "—",
-          familia: e.produto?.familia?.nome || "—",
+          fabricante: e.produto?.fabricante?.nome || "—",
           fabricante: e.produto?.fabricante?.nome || "—",
           peso_liquido: e.produto?.peso_liquido ?? null,
           unidade_medida: e.produto?.unidade_medida || "un",
