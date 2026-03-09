@@ -57,7 +57,7 @@ interface MovimentacaoRow {
   created_at: string;
   usuario_id: string | null;
   usuario_nome?: string;
-  produto: { produto_id: string; nome: string; familia: { nome: string } | null } | null;
+  produto: { produto_id: string; nome: string; peso_liquido: number | null; unidade_medida: string; fabricante: { nome: string } | null; familia: { nome: string } | null } | null;
   local_estoque: { nome: string } | null;
   local_estoque_destino: { nome: string } | null;
 }
