@@ -40,6 +40,7 @@ interface TransferLinha {
   produto_id: string;
   nome: string;
   familia: string;
+  fabricante: string;
   peso_liquido: number | null;
   unidade_medida: string;
   checked: boolean;
@@ -474,6 +475,7 @@ const Estoque = () => {
           produto_id: e.produto_id,
           nome: e.produto?.nome || "—",
           familia: e.produto?.familia?.nome || "—",
+          fabricante: e.produto?.fabricante?.nome || "—",
           peso_liquido: e.produto?.peso_liquido ?? null,
           unidade_medida: e.produto?.unidade_medida || "un",
           checked: false,
@@ -503,6 +505,7 @@ const Estoque = () => {
             produto_id: e.produto_id,
             nome: e.produto?.nome || "—",
             familia: e.produto?.familia?.nome || "—",
+            fabricante: e.produto?.fabricante?.nome || "—",
             peso_liquido: e.produto?.peso_liquido ?? null,
             unidade_medida: e.produto?.unidade_medida || "un",
             checked: existing?.checked || false,
@@ -530,6 +533,7 @@ const Estoque = () => {
     .filter((l) => {
       if (!transferSearchProd) return true;
       return l.nome.toLowerCase().includes(transferSearchProd.toLowerCase()) ||
+        l.fabricante.toLowerCase().includes(transferSearchProd.toLowerCase()) ||
         l.familia.toLowerCase().includes(transferSearchProd.toLowerCase());
     })
     .sort((a, b) => {
@@ -845,6 +849,7 @@ const Estoque = () => {
                           />
                         </TableHead>
                         <TableHead>Produto</TableHead>
+                        <TableHead>Fabricante</TableHead>
                         <TableHead>Família</TableHead>
                         <TableHead className="text-center">Peso</TableHead>
                         <TableHead className="text-center">Unid.</TableHead>
@@ -860,6 +865,7 @@ const Estoque = () => {
                             <Checkbox checked={l.checked} onCheckedChange={(v) => updateTransferLinha(l.produto_id, "checked", !!v)} />
                           </TableCell>
                           <TableCell className="font-medium">{l.nome}</TableCell>
+                          <TableCell className="text-muted-foreground">{l.fabricante}</TableCell>
                           <TableCell className="text-muted-foreground">{l.familia}</TableCell>
                           <TableCell className="text-center text-muted-foreground">{l.peso_liquido != null ? l.peso_liquido : "—"}</TableCell>
                           <TableCell className="text-center text-muted-foreground">{l.unidade_medida}</TableCell>
