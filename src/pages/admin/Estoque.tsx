@@ -734,7 +734,9 @@ const Estoque = () => {
                   <TableHead className="whitespace-nowrap">Documento</TableHead>
                   <TableHead className="whitespace-nowrap">Cód</TableHead>
                   <TableHead className="whitespace-nowrap">Nome</TableHead>
-                  <TableHead className="whitespace-nowrap">Família</TableHead>
+                  <TableHead className="whitespace-nowrap">Fabricante</TableHead>
+                  <TableHead className="whitespace-nowrap text-center">Peso</TableHead>
+                  <TableHead className="whitespace-nowrap text-center">Unid.</TableHead>
                   <TableHead className="whitespace-nowrap text-center">Qtd</TableHead>
                   <TableHead className="whitespace-nowrap">Local Estoque</TableHead>
                   <TableHead className="whitespace-nowrap">Usuário</TableHead>
@@ -742,7 +744,7 @@ const Estoque = () => {
               </TableHeader>
               <TableBody>
                 {filteredMov.length === 0 ? (
-                  <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhuma movimentação encontrada</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Nenhuma movimentação encontrada</TableCell></TableRow>
                 ) : filteredMov.map((m) => (
                   <TableRow key={m.movimentacao_estoque_id}>
                     <TableCell className="whitespace-nowrap">{format(new Date(m.created_at), "dd/MM/yyyy HH:mm")}</TableCell>
@@ -750,7 +752,9 @@ const Estoque = () => {
                     <TableCell className="text-muted-foreground">{m.documento || "—"}</TableCell>
                     <TableCell className="text-xs text-muted-foreground font-mono whitespace-nowrap">{m.produto?.produto_id?.substring(0, 8) || "—"}</TableCell>
                     <TableCell className="font-medium whitespace-nowrap">{m.produto?.nome || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground whitespace-nowrap">{m.produto?.familia?.nome || "—"}</TableCell>
+                    <TableCell className="text-muted-foreground whitespace-nowrap">{m.produto?.fabricante?.nome || "—"}</TableCell>
+                    <TableCell className="text-center text-muted-foreground">{m.produto?.peso_liquido != null ? m.produto.peso_liquido : "—"}</TableCell>
+                    <TableCell className="text-center text-muted-foreground">{m.produto?.unidade_medida || "—"}</TableCell>
                     <TableCell className="text-center font-semibold">{m.quantidade}</TableCell>
                     <TableCell className="whitespace-nowrap">
                       {m.local_estoque?.nome || "—"}
