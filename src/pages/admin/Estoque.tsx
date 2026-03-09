@@ -768,6 +768,28 @@ const Estoque = () => {
                 {movTiposUnicos.map(t => <SelectItem key={t} value={t}>{tipoLabel(t)}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("w-[130px] justify-start text-left font-normal text-xs", !movDateFrom && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-1 h-3 w-3" />
+                  {movDateFrom ? format(movDateFrom, "dd/MM/yyyy") : "De"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={movDateFrom} onSelect={(d) => d && setMovDateFrom(d)} locale={ptBR} initialFocus className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("w-[130px] justify-start text-left font-normal text-xs", !movDateTo && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-1 h-3 w-3" />
+                  {movDateTo ? format(movDateTo, "dd/MM/yyyy") : "Até"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={movDateTo} onSelect={(d) => d && setMovDateTo(d)} locale={ptBR} initialFocus className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="border rounded-lg overflow-auto">
