@@ -129,6 +129,7 @@ function getAllowedCompraStatuses(current: string): string[] {
 interface ContaPagarCompra {
   contas_pagar_id: string; descricao: string; valor: number;
   data_vencimento: string; data_pagamento: string | null;
+  data_nf: string | null;
   created_at: string;
   pago: boolean; fornecedor_id: string | null;
   fornecedor: { nome: string } | null;
@@ -284,14 +285,14 @@ const Pedidos = () => {
 
   /* ── Compra edit state ── */
   const [compraEditOpen, setCompraEditOpen] = useState(false);
-  const [compraEdit, setCompraEdit] = useState<{ contas_pagar_id: string; descricao: string; valor: string; data_vencimento: string; pago: boolean; observacao: string; fornecedor_id: string }>({ contas_pagar_id: "", descricao: "", valor: "", data_vencimento: "", pago: false, observacao: "", fornecedor_id: "" });
+  const [compraEdit, setCompraEdit] = useState<{ contas_pagar_id: string; descricao: string; valor: string; data_vencimento: string; data_nf: string; pago: boolean; observacao: string; fornecedor_id: string }>({ contas_pagar_id: "", descricao: "", valor: "", data_vencimento: "", data_nf: "", pago: false, observacao: "", fornecedor_id: "" });
   const [compraEditLoading, setCompraEditLoading] = useState(false);
   const [compraEditFornecedores, setCompraEditFornecedores] = useState<{ fornecedor_id: string; nome: string }[]>([]);
 
   const loadCompras = async () => {
     const { data } = await supabase
       .from("contas_pagar")
-      .select("contas_pagar_id, descricao, valor, data_vencimento, data_pagamento, pago, fornecedor_id, observacao, created_at, status_compra, local_estoque_id, compra_itens, fornecedor(nome)")
+      .select("contas_pagar_id, descricao, valor, data_vencimento, data_pagamento, data_nf, pago, fornecedor_id, observacao, created_at, status_compra, local_estoque_id, compra_itens, fornecedor(nome)")
       .order("created_at", { ascending: false });
     if (data) setCompras(data as any);
   };
@@ -303,7 +304,7 @@ const Pedidos = () => {
     if (forns) setCompraEditFornecedores(forns);
     setCompraEdit({
       contas_pagar_id: c.contas_pagar_id, descricao: c.descricao, valor: String(c.valor),
-      data_vencimento: c.data_vencimento, pago: c.pago, observacao: c.observacao || "",
+      data_vencimento: c.data_vencimento, data_nf: c.data_nf || "", pago: c.pago, observacao: c.observacao || "",
       fornecedor_id: c.fornecedor_id || "",
     });
     setCompraEditOpen(true);
@@ -313,7 +314,7 @@ const Pedidos = () => {
     setCompraEditLoading(true);
     const { error } = await supabase.from("contas_pagar").update({
       descricao: compraEdit.descricao, valor: Number(compraEdit.valor),
-      data_vencimento: compraEdit.data_vencimento, pago: compraEdit.pago,
+      data_vencimento: compraEdit.data_vencimento, data_nf: compraEdit.data_nf || null, pago: compraEdit.pago,
       observacao: compraEdit.observacao || null,
       fornecedor_id: compraEdit.fornecedor_id || null,
       data_pagamento: compraEdit.pago ? (new Date().toISOString().slice(0, 10)) : null,
@@ -2346,10 +2347,11 @@ const Pedidos = () => {
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground truncate mr-2">{c.fornecedor?.nome || "—"}</span>
-                      <span className="text-xs text-muted-foreground">NF {nfNum}</span>
+                      <span className="font-semibold shrink-0">{fmtMoney(c.valor)}</span>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {c.created_at ? format(new Date(c.created_at), "dd/MM/yyyy") : "—"}
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>NF {nfNum}{c.data_nf ? ` — ${fmtDate(c.data_nf)}` : ""}</span>
+                      <span>{c.created_at ? format(new Date(c.created_at), "dd/MM/yyyy") : "—"}</span>
                     </div>
                   </button>
                 );
@@ -2359,17 +2361,19 @@ const Pedidos = () => {
           <div className="border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
-                 <TableRow>
+               <TableRow>
                   <TableHead>Código</TableHead>
                   <TableHead>Data Entrada</TableHead>
                   <TableHead>NF</TableHead>
+                  <TableHead>Data NF</TableHead>
                   <TableHead className="hidden sm:table-cell">Fornecedor</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredCompras.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum pedido de compra encontrado</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum pedido de compra encontrado</TableCell></TableRow>
                 ) : filteredCompras.map((c) => {
                   const nfMatch = c.descricao.match(/NF\s+([^\s-]+)/i);
                   const nfNum = nfMatch ? nfMatch[1] : "—";
@@ -2383,7 +2387,9 @@ const Pedidos = () => {
                     </TableCell>
                     <TableCell>{c.created_at ? format(new Date(c.created_at), "dd/MM/yyyy") : "—"}</TableCell>
                     <TableCell>{nfNum}</TableCell>
+                    <TableCell>{c.data_nf ? fmtDate(c.data_nf) : "—"}</TableCell>
                     <TableCell className="hidden sm:table-cell text-muted-foreground">{c.fornecedor?.nome || "—"}</TableCell>
+                    <TableCell className="text-right">{fmtMoney(c.valor)}</TableCell>
                     <TableCell>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${statusCompraColors[st] || "bg-muted text-muted-foreground"}`}>
                         {statusCompraLabels[st] || st}
@@ -2440,10 +2446,14 @@ const Pedidos = () => {
                 <SelectContent>{compraEditFornecedores.map((f) => <SelectItem key={f.fornecedor_id} value={f.fornecedor_id}>{f.nome}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Valor (R$) *</Label>
                 <Input type="number" step="0.01" value={compraEdit.valor} onChange={(e) => setCompraEdit({ ...compraEdit, valor: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Data NF</Label>
+                <Input type="date" value={compraEdit.data_nf} onChange={(e) => setCompraEdit({ ...compraEdit, data_nf: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label>Vencimento *</Label>

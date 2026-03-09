@@ -353,6 +353,7 @@ export type Database = {
           compra_itens: Json | null
           contas_pagar_id: string
           created_at: string
+          data_nf: string | null
           data_pagamento: string | null
           data_vencimento: string
           descricao: string
@@ -369,6 +370,7 @@ export type Database = {
           compra_itens?: Json | null
           contas_pagar_id?: string
           created_at?: string
+          data_nf?: string | null
           data_pagamento?: string | null
           data_vencimento: string
           descricao: string
@@ -385,6 +387,7 @@ export type Database = {
           compra_itens?: Json | null
           contas_pagar_id?: string
           created_at?: string
+          data_nf?: string | null
           data_pagamento?: string | null
           data_vencimento?: string
           descricao?: string
