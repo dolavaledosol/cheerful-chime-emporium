@@ -129,6 +129,7 @@ function getAllowedCompraStatuses(current: string): string[] {
 interface ContaPagarCompra {
   contas_pagar_id: string; descricao: string; valor: number;
   data_vencimento: string; data_pagamento: string | null;
+  data_nf: string | null;
   created_at: string;
   pago: boolean; fornecedor_id: string | null;
   fornecedor: { nome: string } | null;
