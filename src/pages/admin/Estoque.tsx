@@ -24,7 +24,7 @@ interface EstoqueRow {
   preco_promocional: number | null;
   quantidade_disponivel: number;
   quantidade_pedida_nao_separada: number;
-  produto: { nome: string; preco: number; fabricante: { nome: string } | null; familia: { nome: string } | null } | null;
+  produto: { nome: string; preco: number; peso_liquido: number | null; unidade_medida: string; fabricante: { nome: string } | null; familia: { nome: string } | null } | null;
   local_estoque: { nome: string } | null;
 }
 interface LocalEstoque { local_estoque_id: string; nome: string; }
