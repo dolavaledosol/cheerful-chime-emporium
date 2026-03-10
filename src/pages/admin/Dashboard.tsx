@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   ShoppingCart, DollarSign, TrendingDown, TrendingUp,
   CalendarDays, BarChart3, ClipboardList, Globe, MessageCircle, Monitor,
-  ChevronRight,
+  ChevronRight, CalendarMinus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,7 +14,15 @@ import PullToRefresh from "@/components/shared/PullToRefresh";
 const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-type OrigemFat = { origem: string; total: number; qtd: number };
+type OrigemFat = {
+  origem: string;
+  totalHoje: number;
+  qtdHoje: number;
+  totalMes: number;
+  qtdMes: number;
+  totalAcumulado: number;
+  qtdAcumulado: number;
+};
 type StatusResumo = { status: string; qtd: number; total: number };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -47,6 +55,7 @@ const Dashboard = () => {
   const [stats, setStats] = useState({
     pedidosHoje: 0, faturamento: 0,
     pedidosMes: 0, faturamentoMes: 0,
+    pedidosMesAnt: 0, faturamentoMesAnt: 0,
     totalPagar: 0, qtdPagar: 0,
     totalReceber: 0, qtdReceber: 0,
   });
@@ -55,43 +64,57 @@ const Dashboard = () => {
 
   const loadData = useCallback(async () => {
     const today = new Date().toISOString().split("T")[0];
+
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
     const monthStartISO = monthStart.toISOString();
 
-    const [pedidosHoje, pedidosMes, pagar, receber] = await Promise.all([
-      supabase.from("pedido").select("total, status").gte("data", today),
+    const prevMonthEnd = new Date(monthStart);
+    prevMonthEnd.setMilliseconds(-1);
+    const prevMonthStart = new Date(prevMonthEnd);
+    prevMonthStart.setDate(1);
+    prevMonthStart.setHours(0, 0, 0, 0);
+    const prevMonthStartISO = prevMonthStart.toISOString();
+    const prevMonthEndISO = prevMonthEnd.toISOString();
+
+    const [pedidosHoje, pedidosMes, pedidosMesAnt, pedidosAcumulado, pagar, receber] = await Promise.all([
+      supabase.from("pedido").select("total, status, origem").gte("data", today),
       supabase.from("pedido").select("total, status, origem").gte("data", monthStartISO),
+      supabase.from("pedido").select("total, status").gte("data", prevMonthStartISO).lte("data", prevMonthEndISO),
+      supabase.from("pedido").select("total, status, origem"),
       supabase.from("contas_pagar").select("valor").eq("pago", false),
       supabase.from("contas_receber").select("valor").eq("recebido", false),
     ]);
 
-    const pedidosHojeData = (pedidosHoje.data || []).filter((p: any) => p.status !== "carrinho");
-    const pedidosMesData = (pedidosMes.data || []).filter((p: any) => p.status !== "carrinho");
+    const filterValid = (data: any[]) => (data || []).filter((p: any) => p.status !== "carrinho");
+    const filterActive = (data: any[]) => data.filter((p: any) => p.status !== "cancelado");
 
-    const faturamentoHoje = pedidosHojeData
-      .filter((p: any) => p.status !== "cancelado")
-      .reduce((s: number, p: any) => s + Number(p.total), 0);
+    const pedidosHojeData = filterValid(pedidosHoje.data);
+    const pedidosMesData = filterValid(pedidosMes.data);
+    const pedidosMesAntData = filterValid(pedidosMesAnt.data);
+    const pedidosAcumuladoData = filterValid(pedidosAcumulado.data);
 
-    const faturamentoMes = pedidosMesData
-      .filter((p: any) => p.status !== "cancelado")
-      .reduce((s: number, p: any) => s + Number(p.total), 0);
+    const sumTotal = (data: any[]) => filterActive(data).reduce((s: number, p: any) => s + Number(p.total), 0);
+    const countActive = (data: any[]) => filterActive(data).length;
 
-    const origemMap: Record<string, { total: number; qtd: number }> = {};
-    pedidosMesData
-      .filter((p: any) => p.status !== "cancelado")
-      .forEach((p: any) => {
+    // Origem breakdown: hoje, mês, acumulado
+    const origemMap: Record<string, OrigemFat> = {};
+    const addOrigem = (data: any[], key: "Hoje" | "Mes" | "Acumulado") => {
+      filterActive(data).forEach((p: any) => {
         const o = p.origem || "web";
-        if (!origemMap[o]) origemMap[o] = { total: 0, qtd: 0 };
-        origemMap[o].total += Number(p.total);
-        origemMap[o].qtd += 1;
+        if (!origemMap[o]) origemMap[o] = { origem: o, totalHoje: 0, qtdHoje: 0, totalMes: 0, qtdMes: 0, totalAcumulado: 0, qtdAcumulado: 0 };
+        if (key === "Hoje") { origemMap[o].totalHoje += Number(p.total); origemMap[o].qtdHoje += 1; }
+        if (key === "Mes") { origemMap[o].totalMes += Number(p.total); origemMap[o].qtdMes += 1; }
+        if (key === "Acumulado") { origemMap[o].totalAcumulado += Number(p.total); origemMap[o].qtdAcumulado += 1; }
       });
-    setOrigemFat(
-      Object.entries(origemMap).map(([origem, v]) => ({ origem, ...v }))
-        .sort((a, b) => b.total - a.total)
-    );
+    };
+    addOrigem(pedidosHojeData, "Hoje");
+    addOrigem(pedidosMesData, "Mes");
+    addOrigem(pedidosAcumuladoData, "Acumulado");
+    setOrigemFat(Object.values(origemMap).sort((a, b) => b.totalMes - a.totalMes));
 
+    // Status resumo
     const targetStatuses = ["separacao", "aguardando_pagamento", "pago"];
     const sMap: Record<string, { qtd: number; total: number }> = {};
     targetStatuses.forEach(s => { sMap[s] = { qtd: 0, total: 0 }; });
@@ -107,10 +130,12 @@ const Dashboard = () => {
     const receberData = receber.data || [];
 
     setStats({
-      pedidosHoje: pedidosHojeData.length,
-      faturamento: faturamentoHoje,
-      pedidosMes: pedidosMesData.filter((p: any) => p.status !== "cancelado").length,
-      faturamentoMes,
+      pedidosHoje: countActive(pedidosHojeData),
+      faturamento: sumTotal(pedidosHojeData),
+      pedidosMes: countActive(pedidosMesData),
+      faturamentoMes: sumTotal(pedidosMesData),
+      pedidosMesAnt: countActive(pedidosMesAntData),
+      faturamentoMesAnt: sumTotal(pedidosMesAntData),
       totalPagar: pagarData.reduce((s: number, r: any) => s + Number(r.valor), 0),
       qtdPagar: pagarData.length,
       totalReceber: receberData.reduce((s: number, r: any) => s + Number(r.valor), 0),
@@ -127,8 +152,6 @@ const Dashboard = () => {
   }, [loadData]);
 
   const totalAndamento = statusResumo.reduce((a, s) => a + s.qtd, 0);
-  const maxOrigemTotal = Math.max(...origemFat.map(x => x.total), 1);
-  const totalOrigemFat = origemFat.reduce((a, o) => a + o.total, 0);
 
   if (loading) {
     return (
@@ -138,7 +161,7 @@ const Dashboard = () => {
           <Skeleton className="h-3 w-48 mt-1.5" />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          {[...Array(4)].map((_, i) => (
+          {[...Array(6)].map((_, i) => (
             <Skeleton key={i} className="h-24 rounded-xl" />
           ))}
         </div>
@@ -153,11 +176,11 @@ const Dashboard = () => {
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">Resumo do mês atual</p>
+        <p className="text-xs text-muted-foreground mt-0.5">Resumo geral</p>
       </div>
 
-      {/* KPI grid – 2x2 mobile, 4-col desktop */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* KPI grid – 2x3 mobile, 3-col desktop */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         {/* Pedidos hoje */}
         <Link to="/admin/pedidos" className="rounded-xl bg-card border border-border p-3.5 space-y-1 hover:border-primary/40 transition-colors group active:scale-[0.98]">
           <div className="flex items-center justify-between text-muted-foreground">
@@ -168,7 +191,7 @@ const Dashboard = () => {
             <ChevronRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <p className="text-2xl font-bold text-foreground leading-none">{stats.pedidosHoje}</p>
-          <p className="text-[11px] sm:text-xs text-muted-foreground truncate">{fmt(stats.faturamento)}</p>
+          <p className="text-xs text-muted-foreground truncate">{fmt(stats.faturamento)}</p>
         </Link>
 
         {/* Pedidos mês */}
@@ -181,7 +204,20 @@ const Dashboard = () => {
             <ChevronRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <p className="text-2xl font-bold text-foreground leading-none">{stats.pedidosMes}</p>
-          <p className="text-[11px] sm:text-xs text-muted-foreground truncate">{fmt(stats.faturamentoMes)}</p>
+          <p className="text-xs text-muted-foreground truncate">{fmt(stats.faturamentoMes)}</p>
+        </Link>
+
+        {/* Pedidos mês anterior */}
+        <Link to="/admin/pedidos" className="rounded-xl bg-card border border-border p-3.5 space-y-1 hover:border-primary/40 transition-colors group active:scale-[0.98]">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <CalendarMinus className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-medium uppercase tracking-wide">Mês anterior</span>
+            </div>
+            <ChevronRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <p className="text-2xl font-bold text-foreground leading-none">{stats.pedidosMesAnt}</p>
+          <p className="text-xs text-muted-foreground truncate">{fmt(stats.faturamentoMesAnt)}</p>
         </Link>
 
         {/* Contas a receber */}
@@ -248,7 +284,7 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Faturamento por origem – visual bar chart on mobile */}
+      {/* Faturamento por origem – tabela hoje / mês / acumulado */}
       <div className="rounded-xl bg-card border border-border overflow-hidden">
         <Link to="/admin/pedidos" className="flex items-center justify-between px-4 py-3 border-b border-border hover:bg-muted/50 transition-colors group">
           <div className="flex items-center gap-2">
@@ -259,35 +295,60 @@ const Dashboard = () => {
         </Link>
         {origemFat.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-            Nenhum pedido no mês
+            Nenhum pedido registrado
           </div>
         ) : (
-          <div className="p-4 space-y-3">
-            {/* Horizontal bar chart */}
-            {origemFat.map((o) => {
-              const Icon = ORIGEM_ICONS[o.origem] || Globe;
-              const pct = maxOrigemTotal > 0 ? (o.total / maxOrigemTotal) * 100 : 0;
-              const share = totalOrigemFat > 0 ? ((o.total / totalOrigemFat) * 100).toFixed(0) : "0";
-
-              return (
-                <div key={o.origem} className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <span className="text-sm font-medium text-foreground">{ORIGEM_LABELS[o.origem] || o.origem}</span>
-                      <span className="text-[11px] text-muted-foreground">({o.qtd}) · {share}%</span>
-                    </div>
-                    <span className="text-sm font-semibold text-foreground tabular-nums shrink-0 ml-2">{fmt(o.total)}</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all duration-700 ease-out"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-muted-foreground">
+                  <th className="text-left px-4 py-2.5 font-medium text-[11px] uppercase tracking-wide">Origem</th>
+                  <th className="text-right px-3 py-2.5 font-medium text-[11px] uppercase tracking-wide">Hoje</th>
+                  <th className="text-right px-3 py-2.5 font-medium text-[11px] uppercase tracking-wide">Mês</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-[11px] uppercase tracking-wide">Acumulado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {origemFat.map((o) => {
+                  const Icon = ORIGEM_ICONS[o.origem] || Globe;
+                  return (
+                    <tr key={o.origem}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="font-medium text-foreground">{ORIGEM_LABELS[o.origem] || o.origem}</span>
+                        </div>
+                      </td>
+                      <td className="text-right px-3 py-3">
+                        <div className="tabular-nums text-foreground font-medium">{fmt(o.totalHoje)}</div>
+                        <div className="text-[11px] text-muted-foreground tabular-nums">{o.qtdHoje} ped.</div>
+                      </td>
+                      <td className="text-right px-3 py-3">
+                        <div className="tabular-nums text-foreground font-medium">{fmt(o.totalMes)}</div>
+                        <div className="text-[11px] text-muted-foreground tabular-nums">{o.qtdMes} ped.</div>
+                      </td>
+                      <td className="text-right px-4 py-3">
+                        <div className="tabular-nums text-foreground font-medium">{fmt(o.totalAcumulado)}</div>
+                        <div className="text-[11px] text-muted-foreground tabular-nums">{o.qtdAcumulado} ped.</div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {/* Totais */}
+                <tr className="bg-muted/30 font-semibold">
+                  <td className="px-4 py-3 text-foreground">Total</td>
+                  <td className="text-right px-3 py-3 tabular-nums text-foreground">
+                    {fmt(origemFat.reduce((a, o) => a + o.totalHoje, 0))}
+                  </td>
+                  <td className="text-right px-3 py-3 tabular-nums text-foreground">
+                    {fmt(origemFat.reduce((a, o) => a + o.totalMes, 0))}
+                  </td>
+                  <td className="text-right px-4 py-3 tabular-nums text-foreground">
+                    {fmt(origemFat.reduce((a, o) => a + o.totalAcumulado, 0))}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         )}
       </div>
