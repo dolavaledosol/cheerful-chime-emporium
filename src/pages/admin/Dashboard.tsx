@@ -287,50 +287,52 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Faturamento por origem – gráfico de barras */}
-      <div className="rounded-xl bg-card border border-border overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-          <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold text-foreground">Faturamento por origem</h2>
+      {/* Faturamento por origem – gráficos independentes */}
+      {origemFat.length === 0 ? (
+        <div className="rounded-xl bg-card border border-border p-6 text-center text-sm text-muted-foreground">
+          Nenhum pedido registrado
         </div>
-        {origemFat.length === 0 ? (
-          <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-            Nenhum pedido registrado
-          </div>
-        ) : (
-          <div className="p-4">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart
-                data={origemFat.map(o => ({
-                  name: ORIGEM_LABELS[o.origem] || o.origem,
-                  Hoje: o.totalHoje,
-                  Mês: o.totalMes,
-                  Acumulado: o.totalAcumulado,
-                }))}
-                margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="name" className="text-xs fill-muted-foreground" tick={{ fontSize: 12 }} />
-                <YAxis className="text-xs fill-muted-foreground" tick={{ fontSize: 11 }} tickFormatter={(v) => fmt(v).replace("R$\u00a0", "")} />
-                <Tooltip
-                  formatter={(value: number) => fmt(value)}
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    borderColor: "hsl(var(--border))",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                  }}
-                  labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
-                />
-                <Legend wrapperStyle={{ fontSize: "12px" }} />
-                <Bar dataKey="Hoje" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Mês" fill="hsl(var(--accent-foreground) / 0.6)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Acumulado" fill="hsl(var(--muted-foreground) / 0.4)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          {([
+            { key: "Hoje" as const, dataKey: "totalHoje", color: "hsl(var(--primary))" },
+            { key: "Mês" as const, dataKey: "totalMes", color: "hsl(var(--accent-foreground))" },
+            { key: "Acumulado" as const, dataKey: "totalAcumulado", color: "hsl(var(--muted-foreground))" },
+          ]).map(({ key, dataKey, color }) => (
+            <div key={key} className="rounded-xl bg-card border border-border overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+                <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+                <h2 className="text-xs font-semibold text-foreground">{key}</h2>
+              </div>
+              <div className="p-3">
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart
+                    data={origemFat.map(o => ({
+                      name: ORIGEM_LABELS[o.origem] || o.origem,
+                      valor: o[dataKey as keyof OrigemFat] as number,
+                    }))}
+                    margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+                    <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" tickFormatter={(v) => fmt(v).replace("R$\u00a0", "")} width={60} />
+                    <Tooltip
+                      formatter={(value: number) => fmt(value)}
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        borderColor: "hsl(var(--border))",
+                        borderRadius: "8px",
+                        fontSize: "12px",
+                      }}
+                    />
+                    <Bar dataKey="valor" name={key} fill={color} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 
