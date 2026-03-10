@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import PullToRefresh from "@/components/shared/PullToRefresh";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -220,8 +221,11 @@ const Dashboard = () => {
           <p className="text-xs text-muted-foreground truncate">{fmt(stats.faturamentoMesAnt)}</p>
         </Link>
 
-        {/* Contas a receber */}
-        <Link to="/admin/financeiro" className="rounded-xl bg-[hsl(var(--success))]/5 border border-[hsl(var(--success))]/20 p-3.5 space-y-1 hover:border-[hsl(var(--success))]/40 transition-colors group active:scale-[0.98]">
+      </div>
+
+      {/* Contas a receber / a pagar – centralizados */}
+      <div className="flex justify-center gap-3">
+        <Link to="/admin/financeiro" className="flex-1 max-w-xs rounded-xl bg-[hsl(var(--success))]/5 border border-[hsl(var(--success))]/20 p-3.5 space-y-1 hover:border-[hsl(var(--success))]/40 transition-colors group active:scale-[0.98]">
           <div className="flex items-center justify-between text-[hsl(var(--success))]">
             <div className="flex items-center gap-1.5">
               <TrendingUp className="h-3.5 w-3.5" />
@@ -233,8 +237,7 @@ const Dashboard = () => {
           <p className="text-[11px] text-muted-foreground">{stats.qtdReceber} pendente(s)</p>
         </Link>
 
-        {/* Contas a pagar */}
-        <Link to="/admin/financeiro" className="rounded-xl bg-destructive/5 border border-destructive/20 p-3.5 space-y-1 hover:border-destructive/40 transition-colors group active:scale-[0.98]">
+        <Link to="/admin/financeiro" className="flex-1 max-w-xs rounded-xl bg-destructive/5 border border-destructive/20 p-3.5 space-y-1 hover:border-destructive/40 transition-colors group active:scale-[0.98]">
           <div className="flex items-center justify-between text-destructive">
             <div className="flex items-center gap-1.5">
               <TrendingDown className="h-3.5 w-3.5" />
@@ -284,71 +287,47 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Faturamento por origem – tabela hoje / mês / acumulado */}
+      {/* Faturamento por origem – gráfico de barras */}
       <div className="rounded-xl bg-card border border-border overflow-hidden">
-        <Link to="/admin/pedidos" className="flex items-center justify-between px-4 py-3 border-b border-border hover:bg-muted/50 transition-colors group">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold text-foreground">Faturamento por origem</h2>
-          </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-        </Link>
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+          <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-foreground">Faturamento por origem</h2>
+        </div>
         {origemFat.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-muted-foreground">
             Nenhum pedido registrado
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-muted-foreground">
-                  <th className="text-left px-4 py-2.5 font-medium text-[11px] uppercase tracking-wide">Origem</th>
-                  <th className="text-right px-3 py-2.5 font-medium text-[11px] uppercase tracking-wide">Hoje</th>
-                  <th className="text-right px-3 py-2.5 font-medium text-[11px] uppercase tracking-wide">Mês</th>
-                  <th className="text-right px-4 py-2.5 font-medium text-[11px] uppercase tracking-wide">Acumulado</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {origemFat.map((o) => {
-                  const Icon = ORIGEM_ICONS[o.origem] || Globe;
-                  return (
-                    <tr key={o.origem}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          <span className="font-medium text-foreground">{ORIGEM_LABELS[o.origem] || o.origem}</span>
-                        </div>
-                      </td>
-                      <td className="text-right px-3 py-3">
-                        <div className="tabular-nums text-foreground font-medium">{fmt(o.totalHoje)}</div>
-                        <div className="text-[11px] text-muted-foreground tabular-nums">{o.qtdHoje} ped.</div>
-                      </td>
-                      <td className="text-right px-3 py-3">
-                        <div className="tabular-nums text-foreground font-medium">{fmt(o.totalMes)}</div>
-                        <div className="text-[11px] text-muted-foreground tabular-nums">{o.qtdMes} ped.</div>
-                      </td>
-                      <td className="text-right px-4 py-3">
-                        <div className="tabular-nums text-foreground font-medium">{fmt(o.totalAcumulado)}</div>
-                        <div className="text-[11px] text-muted-foreground tabular-nums">{o.qtdAcumulado} ped.</div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {/* Totais */}
-                <tr className="bg-muted/30 font-semibold">
-                  <td className="px-4 py-3 text-foreground">Total</td>
-                  <td className="text-right px-3 py-3 tabular-nums text-foreground">
-                    {fmt(origemFat.reduce((a, o) => a + o.totalHoje, 0))}
-                  </td>
-                  <td className="text-right px-3 py-3 tabular-nums text-foreground">
-                    {fmt(origemFat.reduce((a, o) => a + o.totalMes, 0))}
-                  </td>
-                  <td className="text-right px-4 py-3 tabular-nums text-foreground">
-                    {fmt(origemFat.reduce((a, o) => a + o.totalAcumulado, 0))}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="p-4">
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart
+                data={origemFat.map(o => ({
+                  name: ORIGEM_LABELS[o.origem] || o.origem,
+                  Hoje: o.totalHoje,
+                  Mês: o.totalMes,
+                  Acumulado: o.totalAcumulado,
+                }))}
+                margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis dataKey="name" className="text-xs fill-muted-foreground" tick={{ fontSize: 12 }} />
+                <YAxis className="text-xs fill-muted-foreground" tick={{ fontSize: 11 }} tickFormatter={(v) => fmt(v).replace("R$\u00a0", "")} />
+                <Tooltip
+                  formatter={(value: number) => fmt(value)}
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    borderColor: "hsl(var(--border))",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                  }}
+                  labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
+                />
+                <Legend wrapperStyle={{ fontSize: "12px" }} />
+                <Bar dataKey="Hoje" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Mês" fill="hsl(var(--accent-foreground) / 0.6)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Acumulado" fill="hsl(var(--muted-foreground) / 0.4)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         )}
       </div>
