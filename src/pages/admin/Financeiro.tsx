@@ -161,6 +161,7 @@ const Financeiro = () => {
   /* Billing confirmation dialog state */
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [recentLogs, setRecentLogs] = useState<{ created_at: string; status: string | null; payload: any }[]>([]);
+  const [expandedLogIdx, setExpandedLogIdx] = useState<number | null>(null);
   const [pendingConfirmAction, setPendingConfirmAction] = useState<(() => void) | null>(null);
   const loadReceber = async () => {
     const { data } = await supabase
