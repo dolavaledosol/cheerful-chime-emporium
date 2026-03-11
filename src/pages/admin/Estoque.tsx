@@ -913,14 +913,14 @@ const Estoque = () => {
 
       {/* ═══════════════════  DIALOG CONCILIAÇÃO  ═══════════════════ */}
       <Dialog open={conciliacaoOpen} onOpenChange={setConciliacaoOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Conciliação de Estoque</DialogTitle></DialogHeader>
           {conciliacaoLinhas.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">Nenhum dado importado.</p>
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                {conciliacaoLinhas.filter((l) => l.diferenca !== 0).length} produto(s) com diferença de {conciliacaoLinhas.length} importado(s).
+                {conciliacaoLinhas.filter((l) => l.diferenca_estoque !== 0 || l.diferenca_pedidos !== 0).length} item(ns) com diferença de {conciliacaoLinhas.length} importado(s).
               </p>
               <div className="border rounded-lg overflow-auto max-h-[400px]">
                 <Table>
@@ -928,23 +928,50 @@ const Estoque = () => {
                     <TableRow>
                       <TableHead>Produto</TableHead>
                       <TableHead>Local</TableHead>
-                      <TableHead className="text-center">Sistema</TableHead>
-                      <TableHead className="text-center">Físico</TableHead>
-                      <TableHead className="text-center">Diferença</TableHead>
+                      {conciliacaoLinhas.some((l) => l.hasEstoque) && (
+                        <>
+                          <TableHead className="text-center">Est. Sistema</TableHead>
+                          <TableHead className="text-center">Est. Físico</TableHead>
+                          <TableHead className="text-center">Dif. Est.</TableHead>
+                        </>
+                      )}
+                      {conciliacaoLinhas.some((l) => l.hasPedidos) && (
+                        <>
+                          <TableHead className="text-center">Ped. Sistema</TableHead>
+                          <TableHead className="text-center">Ped. Planilha</TableHead>
+                          <TableHead className="text-center">Dif. Ped.</TableHead>
+                        </>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {conciliacaoLinhas.map((l) => (
-                      <TableRow key={`${l.produto_id}-${l.local_estoque_id}`} className={l.diferenca !== 0 ? "bg-muted/30" : ""}>
-                        <TableCell className="font-medium">{l.nome}</TableCell>
-                        <TableCell className="text-muted-foreground">{l.local}</TableCell>
-                        <TableCell className="text-center">{l.estoque_sistema}</TableCell>
-                        <TableCell className="text-center">{l.estoque_fisico}</TableCell>
-                        <TableCell className={`text-center font-semibold ${l.diferenca > 0 ? "text-green-600" : l.diferenca < 0 ? "text-red-600" : ""}`}>
-                          {l.diferenca > 0 ? `+${l.diferenca}` : l.diferenca}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {conciliacaoLinhas.map((l) => {
+                      const hasDif = l.diferenca_estoque !== 0 || l.diferenca_pedidos !== 0;
+                      return (
+                        <TableRow key={`${l.produto_id}-${l.local_estoque_id}`} className={hasDif ? "bg-muted/30" : ""}>
+                          <TableCell className="font-medium">{l.nome}</TableCell>
+                          <TableCell className="text-muted-foreground">{l.local}</TableCell>
+                          {conciliacaoLinhas.some((ll) => ll.hasEstoque) && (
+                            <>
+                              <TableCell className="text-center">{l.hasEstoque ? l.estoque_sistema : "—"}</TableCell>
+                              <TableCell className="text-center">{l.hasEstoque ? l.estoque_fisico : "—"}</TableCell>
+                              <TableCell className={`text-center font-semibold ${l.diferenca_estoque > 0 ? "text-green-600" : l.diferenca_estoque < 0 ? "text-red-600" : ""}`}>
+                                {l.hasEstoque ? (l.diferenca_estoque > 0 ? `+${l.diferenca_estoque}` : l.diferenca_estoque) : "—"}
+                              </TableCell>
+                            </>
+                          )}
+                          {conciliacaoLinhas.some((ll) => ll.hasPedidos) && (
+                            <>
+                              <TableCell className="text-center">{l.hasPedidos ? l.pedidos_sistema : "—"}</TableCell>
+                              <TableCell className="text-center">{l.hasPedidos ? l.pedidos_fisico : "—"}</TableCell>
+                              <TableCell className={`text-center font-semibold ${l.diferenca_pedidos > 0 ? "text-green-600" : l.diferenca_pedidos < 0 ? "text-red-600" : ""}`}>
+                                {l.hasPedidos ? (l.diferenca_pedidos > 0 ? `+${l.diferenca_pedidos}` : l.diferenca_pedidos) : "—"}
+                              </TableCell>
+                            </>
+                          )}
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -952,56 +979,8 @@ const Estoque = () => {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setConciliacaoOpen(false)}>Cancelar</Button>
-            <Button onClick={saveConciliacao} disabled={conciliacaoLoading || conciliacaoLinhas.filter((l) => l.diferenca !== 0).length === 0}>
+            <Button onClick={saveConciliacao} disabled={conciliacaoLoading || conciliacaoLinhas.filter((l) => l.diferenca_estoque !== 0 || l.diferenca_pedidos !== 0).length === 0}>
               {conciliacaoLoading ? "Aplicando..." : "Aplicar Conciliação"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ═══════════════════  DIALOG CONCILIAÇÃO PEDIDOS  ═══════════════════ */}
-      <Dialog open={concPedOpen} onOpenChange={setConcPedOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Conciliação de Estoque de Pedidos</DialogTitle></DialogHeader>
-          {concPedLinhas.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">Nenhum dado importado.</p>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                {concPedLinhas.filter((l) => l.diferenca !== 0).length} item(ns) com diferença de {concPedLinhas.length} importado(s).
-              </p>
-              <div className="border rounded-lg overflow-auto max-h-[400px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Produto</TableHead>
-                      <TableHead>Local</TableHead>
-                      <TableHead className="text-center">Sistema</TableHead>
-                      <TableHead className="text-center">Planilha</TableHead>
-                      <TableHead className="text-center">Diferença</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {concPedLinhas.map((l) => (
-                      <TableRow key={`${l.produto_id}-${l.local_estoque_id}`} className={l.diferenca !== 0 ? "bg-muted/30" : ""}>
-                        <TableCell className="font-medium">{l.nome}</TableCell>
-                        <TableCell className="text-muted-foreground">{l.local}</TableCell>
-                        <TableCell className="text-center">{l.pedidos_sistema}</TableCell>
-                        <TableCell className="text-center">{l.pedidos_fisico}</TableCell>
-                        <TableCell className={`text-center font-semibold ${l.diferenca > 0 ? "text-green-600" : l.diferenca < 0 ? "text-red-600" : ""}`}>
-                          {l.diferenca > 0 ? `+${l.diferenca}` : l.diferenca}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConcPedOpen(false)}>Cancelar</Button>
-            <Button onClick={saveConciliacaoPedidos} disabled={concPedLoading || concPedLinhas.filter((l) => l.diferenca !== 0).length === 0}>
-              {concPedLoading ? "Aplicando..." : "Aplicar Conciliação de Pedidos"}
             </Button>
           </DialogFooter>
         </DialogContent>
