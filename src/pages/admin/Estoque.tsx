@@ -605,12 +605,9 @@ const Estoque = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Estoque</h1>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={exportExcel} className="gap-2"><Download className="h-4 w-4" /> Exportar Estoque</Button>
-          <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Importar Estoque</Button>
+          <Button variant="outline" onClick={exportExcel} className="gap-2"><Download className="h-4 w-4" /> Exportar</Button>
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Importar</Button>
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
-          <Button variant="outline" onClick={exportPedidosExcel} className="gap-2"><Download className="h-4 w-4" /> Exportar Pedidos</Button>
-          <Button variant="outline" onClick={() => fileInputPedRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Importar Pedidos</Button>
-          <input ref={fileInputPedRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportPedidosFile} />
           <Button onClick={openTransfer} className="gap-2"><ArrowRightLeft className="h-4 w-4" /> Transferir</Button>
         </div>
       </div>
