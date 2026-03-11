@@ -266,8 +266,10 @@ export type Database = {
           created_at: string
           dados_completos: boolean | null
           from: string | null
+          lid: string | null
           nome: string | null
           notifyName: string | null
+          pn: string | null
         }
         Insert: {
           cliente_id?: string | null
@@ -276,8 +278,10 @@ export type Database = {
           created_at?: string
           dados_completos?: boolean | null
           from?: string | null
+          lid?: string | null
           nome?: string | null
           notifyName?: string | null
+          pn?: string | null
         }
         Update: {
           cliente_id?: string | null
@@ -286,8 +290,10 @@ export type Database = {
           created_at?: string
           dados_completos?: boolean | null
           from?: string | null
+          lid?: string | null
           nome?: string | null
           notifyName?: string | null
+          pn?: string | null
         }
         Relationships: [
           {
