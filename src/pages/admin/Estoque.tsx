@@ -99,21 +99,10 @@ const Estoque = () => {
   const [movDateFrom, setMovDateFrom] = useState<Date>(startOfMonth(new Date()));
   const [movDateTo, setMovDateTo] = useState<Date>(endOfMonth(new Date()));
 
-  /* ── Conciliação state ── */
+  /* ── Conciliação unificada state ── */
   const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
   const [conciliacaoLoading, setConciliacaoLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const fileInputPedRef = useRef<HTMLInputElement>(null);
-
-  /* ── Conciliação Pedidos state ── */
-  const [concPedOpen, setConcPedOpen] = useState(false);
-  const [concPedLoading, setConcPedLoading] = useState(false);
-  interface ConcPedLinha {
-    produto_id: string; nome: string; local: string; local_estoque_id: string;
-    estoque_local_id: string | null;
-    pedidos_sistema: number; pedidos_fisico: number; diferenca: number;
-  }
-  const [concPedLinhas, setConcPedLinhas] = useState<ConcPedLinha[]>([]);
   interface ConciliacaoLinha {
     produto_id: string; nome: string; local: string; local_estoque_id: string;
     estoque_sistema: number; estoque_fisico: number; diferenca: number;
