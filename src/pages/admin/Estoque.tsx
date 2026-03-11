@@ -112,7 +112,7 @@ const Estoque = () => {
     hasPedidos: boolean;
     pedidos_sistema: number; pedidos_fisico: number; diferenca_pedidos: number;
   }
-  const [conciliacaoLinhas, setConciliacaoLinhas] = useState<ConciliacaoLinha[]>([]);
+  const [conciliacaoLinhas, setConciliacaoLinhas] = useState<ConciliacaoUnificadaLinha[]>([]);
 
   const load = async () => {
     const [{ data: est }, { data: prod }, { data: loc }] = await Promise.all([
