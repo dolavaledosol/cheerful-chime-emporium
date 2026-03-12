@@ -72,7 +72,7 @@ async function fetchLids(clienteIds: string[]): Promise<Map<string, string>> {
   return lidMap;
 }
 
-type SortKey = "nome" | "familia" | "fabricante" | "preco" | "total_estoque";
+type SortKey = "nome" | "familia" | "fabricante" | "preco" | "total_estoque" | "valor_total";
 type SortDir = "asc" | "desc";
 
 const EstoqueRelatorio = () => {
