@@ -146,7 +146,9 @@ const EstoqueRelatorio = () => {
     });
     result.sort((a, b) => {
       let cmp = 0;
-      if (sortKey === "preco" || sortKey === "total_estoque") {
+      if (sortKey === "valor_total") {
+        cmp = (a.preco * a.total_estoque) - (b.preco * b.total_estoque);
+      } else if (sortKey === "preco" || sortKey === "total_estoque") {
         cmp = a[sortKey] - b[sortKey];
       } else {
         cmp = a[sortKey].localeCompare(b[sortKey], "pt-BR");
