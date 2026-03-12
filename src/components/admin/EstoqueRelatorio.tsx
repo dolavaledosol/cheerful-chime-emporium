@@ -72,7 +72,7 @@ async function fetchLids(clienteIds: string[]): Promise<Map<string, string>> {
   return lidMap;
 }
 
-type SortKey = "nome" | "familia" | "fabricante" | "preco" | "total_estoque";
+type SortKey = "nome" | "familia" | "fabricante" | "preco" | "total_estoque" | "valor_total";
 type SortDir = "asc" | "desc";
 
 const EstoqueRelatorio = () => {
@@ -146,7 +146,9 @@ const EstoqueRelatorio = () => {
     });
     result.sort((a, b) => {
       let cmp = 0;
-      if (sortKey === "preco" || sortKey === "total_estoque") {
+      if (sortKey === "valor_total") {
+        cmp = (a.preco * a.total_estoque) - (b.preco * b.total_estoque);
+      } else if (sortKey === "preco" || sortKey === "total_estoque") {
         cmp = a[sortKey] - b[sortKey];
       } else {
         cmp = a[sortKey].localeCompare(b[sortKey], "pt-BR");
@@ -392,7 +394,9 @@ const EstoqueRelatorio = () => {
               <TableHead className="text-center whitespace-nowrap cursor-pointer select-none" onClick={() => handleSort("total_estoque")}>
                 <span className="flex items-center justify-center">Estoque <SortIcon col="total_estoque" /></span>
               </TableHead>
-              <TableHead className="text-right whitespace-nowrap">Valor Total</TableHead>
+              <TableHead className="text-right whitespace-nowrap cursor-pointer select-none" onClick={() => handleSort("valor_total")}>
+                <span className="flex items-center justify-end">Valor Total <SortIcon col="valor_total" /></span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
