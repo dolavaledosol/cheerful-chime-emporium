@@ -394,7 +394,9 @@ const EstoqueRelatorio = () => {
               <TableHead className="text-center whitespace-nowrap cursor-pointer select-none" onClick={() => handleSort("total_estoque")}>
                 <span className="flex items-center justify-center">Estoque <SortIcon col="total_estoque" /></span>
               </TableHead>
-              <TableHead className="text-right whitespace-nowrap">Valor Total</TableHead>
+              <TableHead className="text-right whitespace-nowrap cursor-pointer select-none" onClick={() => handleSort("valor_total")}>
+                <span className="flex items-center justify-end">Valor Total <SortIcon col="valor_total" /></span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
