@@ -527,12 +527,13 @@ const EstoqueRelatorio = () => {
       </Dialog>
 
       {/* Histórico de Envios */}
-      {webhookLogs.length > 0 && (
+      {(webhookLogs.length > 0 || logPage > 0) && (
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-base">Histórico de Envios</CardTitle>
+            <span className="text-xs text-muted-foreground">{totalLogs} registro(s)</span>
           </CardHeader>
-          <CardContent className="space-y-1 max-h-64 overflow-y-auto">
+          <CardContent className="space-y-1">
             {webhookLogs.map((log, idx) => {
               const isExpanded = expandedLogIdx === idx;
               const produtos = log.payload?.produtos || [];
@@ -589,6 +590,30 @@ const EstoqueRelatorio = () => {
                 </div>
               );
             })}
+            {/* Pagination */}
+            {totalLogs > LOGS_PER_PAGE && (
+              <div className="flex items-center justify-between pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={logPage === 0}
+                  onClick={() => { const p = logPage - 1; setLogPage(p); loadWebhookLogs(p); }}
+                >
+                  Anterior
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Página {logPage + 1} de {Math.ceil(totalLogs / LOGS_PER_PAGE)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={(logPage + 1) * LOGS_PER_PAGE >= totalLogs}
+                  onClick={() => { const p = logPage + 1; setLogPage(p); loadWebhookLogs(p); }}
+                >
+                  Próxima
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
