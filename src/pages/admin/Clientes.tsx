@@ -29,6 +29,7 @@ interface TelefoneItem {
   telefone: string; // E.164 format
   is_whatsapp?: boolean;
   verificado?: boolean;
+  originalTelefone?: string; // to detect changes
 }
 
 const emptyForm = { nome: "", cpf_cnpj: "", email: "", tipo_cliente: "cliente", ativo: true };
