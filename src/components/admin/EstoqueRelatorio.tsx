@@ -102,6 +102,9 @@ const EstoqueRelatorio = () => {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([]);
   const [expandedLogIdx, setExpandedLogIdx] = useState<number | null>(null);
+  const [logPage, setLogPage] = useState(0);
+  const LOGS_PER_PAGE = 5;
+  const [totalLogs, setTotalLogs] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -109,14 +112,26 @@ const EstoqueRelatorio = () => {
     loadWebhookLogs();
   }, []);
 
-  const loadWebhookLogs = async () => {
-    const { data } = await supabase
-      .from("integracao_log")
-      .select("integracao_log_id, created_at, status, payload")
-      .eq("tipo", "webhook_estoque")
-      .order("created_at", { ascending: false })
-      .limit(20);
+  const loadWebhookLogs = async (page = logPage) => {
+    const from = page * LOGS_PER_PAGE;
+    const to = from + LOGS_PER_PAGE - 1;
+
+    const [{ count }, { data }] = await Promise.all([
+      supabase
+        .from("integracao_log")
+        .select("integracao_log_id", { count: "exact", head: true })
+        .eq("tipo", "webhook_estoque"),
+      supabase
+        .from("integracao_log")
+        .select("integracao_log_id, created_at, status, payload")
+        .eq("tipo", "webhook_estoque")
+        .order("created_at", { ascending: false })
+        .range(from, to),
+    ]);
+
     if (data) setWebhookLogs(data as WebhookLog[]);
+    setTotalLogs(count ?? 0);
+    setExpandedLogIdx(null);
   };
 
   const loadData = async () => {
@@ -328,7 +343,8 @@ const EstoqueRelatorio = () => {
 
       toast({ title: "Relatório enviado com sucesso!" });
       setPreviewOpen(false);
-      loadWebhookLogs();
+      setLogPage(0);
+      loadWebhookLogs(0);
     } catch (err: any) {
       toast({ title: "Erro ao enviar", description: err.message, variant: "destructive" });
     } finally {
@@ -511,12 +527,13 @@ const EstoqueRelatorio = () => {
       </Dialog>
 
       {/* Histórico de Envios */}
-      {webhookLogs.length > 0 && (
+      {(webhookLogs.length > 0 || logPage > 0) && (
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-base">Histórico de Envios</CardTitle>
+            <span className="text-xs text-muted-foreground">{totalLogs} registro(s)</span>
           </CardHeader>
-          <CardContent className="space-y-1 max-h-64 overflow-y-auto">
+          <CardContent className="space-y-1">
             {webhookLogs.map((log, idx) => {
               const isExpanded = expandedLogIdx === idx;
               const produtos = log.payload?.produtos || [];
@@ -573,6 +590,30 @@ const EstoqueRelatorio = () => {
                 </div>
               );
             })}
+            {/* Pagination */}
+            {totalLogs > LOGS_PER_PAGE && (
+              <div className="flex items-center justify-between pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={logPage === 0}
+                  onClick={() => { const p = logPage - 1; setLogPage(p); loadWebhookLogs(p); }}
+                >
+                  Anterior
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Página {logPage + 1} de {Math.ceil(totalLogs / LOGS_PER_PAGE)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={(logPage + 1) * LOGS_PER_PAGE >= totalLogs}
+                  onClick={() => { const p = logPage + 1; setLogPage(p); loadWebhookLogs(p); }}
+                >
+                  Próxima
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
