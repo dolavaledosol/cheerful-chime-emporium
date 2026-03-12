@@ -328,11 +328,7 @@ const EstoqueRelatorio = () => {
 
       toast({ title: "Relatório enviado com sucesso!" });
       setPreviewOpen(false);
-    } catch (err: any) {
-      toast({ title: "Erro ao enviar", description: err.message, variant: "destructive" });
-    } finally {
-      setSending(false);
-    }
+      loadWebhookLogs();
   };
 
   return (
