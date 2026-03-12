@@ -102,6 +102,9 @@ const EstoqueRelatorio = () => {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([]);
   const [expandedLogIdx, setExpandedLogIdx] = useState<number | null>(null);
+  const [logPage, setLogPage] = useState(0);
+  const LOGS_PER_PAGE = 5;
+  const [totalLogs, setTotalLogs] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
