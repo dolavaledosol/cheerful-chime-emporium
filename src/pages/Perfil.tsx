@@ -217,8 +217,8 @@ const Perfil = () => {
     if (!telForm || !isValidPhoneNumber(telForm)) { toast({ title: "Telefone inválido", description: "Informe um número válido", variant: "destructive" }); return; }
     const digits = phoneToDigits(telForm);
     setSaving(true);
-    if (editTelId) { await supabase.from("cliente_telefone").update({ telefone: digits, is_whatsapp: false }).eq("cliente_telefone_id", editTelId); }
-    else { await supabase.from("cliente_telefone").insert({ cliente_id: cliente.cliente_id, telefone: digits, is_whatsapp: false }); }
+    if (editTelId) { await supabase.from("cliente_telefone").update({ telefone: digits, is_whatsapp: false, verificado: false }).eq("cliente_telefone_id", editTelId); }
+    else { await supabase.from("cliente_telefone").insert({ cliente_id: cliente.cliente_id, telefone: digits, is_whatsapp: false, verificado: false }); }
     setSaving(false); setTelDialogOpen(false);
     toast({ title: editTelId ? "Telefone atualizado" : "Telefone adicionado" }); loadAll();
   };

@@ -29,6 +29,7 @@ interface TelefoneItem {
   telefone: string; // E.164 format
   is_whatsapp?: boolean;
   verificado?: boolean;
+  originalTelefone?: string; // to detect changes
 }
 
 const emptyForm = { nome: "", cpf_cnpj: "", email: "", tipo_cliente: "cliente", ativo: true };
@@ -77,7 +78,7 @@ const Clientes = () => {
     setTelefonePreferencialId((c as any).telefone_preferencial_id || null);
     supabase.from("cliente_telefone").select("cliente_telefone_id, telefone, is_whatsapp, verificado").eq("cliente_id", c.cliente_id).then(({ data }) => {
       if (data && data.length > 0) {
-        setTelefones(data.map(t => ({ id: t.cliente_telefone_id, telefone: digitsToPhone(t.telefone), is_whatsapp: t.is_whatsapp, verificado: t.verificado })));
+        setTelefones(data.map(t => ({ id: t.cliente_telefone_id, telefone: digitsToPhone(t.telefone), is_whatsapp: t.is_whatsapp, verificado: t.verificado, originalTelefone: digitsToPhone(t.telefone) })));
       } else {
         setTelefones([{ telefone: "" }]);
       }
@@ -160,9 +161,10 @@ const Clientes = () => {
           const tel = validPhonesForSave[i];
           const digits = phoneToDigits(tel.telefone);
           if (tel.id) {
-            await supabase.from("cliente_telefone").update({ telefone: digits }).eq("cliente_telefone_id", tel.id);
+            const changed = tel.originalTelefone !== tel.telefone;
+            await supabase.from("cliente_telefone").update({ telefone: digits, ...(changed ? { verificado: false, is_whatsapp: false } : {}) }).eq("cliente_telefone_id", tel.id);
           } else {
-            const { data: inserted } = await supabase.from("cliente_telefone").insert({ cliente_id: targetId, telefone: digits }).select("cliente_telefone_id").single();
+            const { data: inserted } = await supabase.from("cliente_telefone").insert({ cliente_id: targetId, telefone: digits, verificado: false }).select("cliente_telefone_id").single();
             if (inserted) {
               tel.id = inserted.cliente_telefone_id;
             }
