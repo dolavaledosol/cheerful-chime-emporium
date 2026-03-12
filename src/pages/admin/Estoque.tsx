@@ -737,7 +737,7 @@ const Estoque = () => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={movDateTo} onSelect={(d) => d && setMovDateTo(d)} locale={ptBR} initialFocus className="p-3 pointer-events-auto" />
+                <Calendar mode="single" selected={movDateTo} onSelect={(d) => { if (d) { setMovDateTo(d); loadMovimentacoes(movDateFrom, d); } }} locale={ptBR} initialFocus className="p-3 pointer-events-auto" />
               </PopoverContent>
             </Popover>
           </div>
