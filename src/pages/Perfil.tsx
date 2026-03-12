@@ -41,6 +41,7 @@ interface Telefone {
   cliente_telefone_id: string;
   telefone: string;
   is_whatsapp: boolean;
+  verificado: boolean;
 }
 
 interface Pedido {
