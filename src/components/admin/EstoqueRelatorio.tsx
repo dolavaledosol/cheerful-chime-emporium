@@ -112,14 +112,26 @@ const EstoqueRelatorio = () => {
     loadWebhookLogs();
   }, []);
 
-  const loadWebhookLogs = async () => {
-    const { data } = await supabase
-      .from("integracao_log")
-      .select("integracao_log_id, created_at, status, payload")
-      .eq("tipo", "webhook_estoque")
-      .order("created_at", { ascending: false })
-      .limit(20);
+  const loadWebhookLogs = async (page = logPage) => {
+    const from = page * LOGS_PER_PAGE;
+    const to = from + LOGS_PER_PAGE - 1;
+
+    const [{ count }, { data }] = await Promise.all([
+      supabase
+        .from("integracao_log")
+        .select("integracao_log_id", { count: "exact", head: true })
+        .eq("tipo", "webhook_estoque"),
+      supabase
+        .from("integracao_log")
+        .select("integracao_log_id, created_at, status, payload")
+        .eq("tipo", "webhook_estoque")
+        .order("created_at", { ascending: false })
+        .range(from, to),
+    ]);
+
     if (data) setWebhookLogs(data as WebhookLog[]);
+    setTotalLogs(count ?? 0);
+    setExpandedLogIdx(null);
   };
 
   const loadData = async () => {
