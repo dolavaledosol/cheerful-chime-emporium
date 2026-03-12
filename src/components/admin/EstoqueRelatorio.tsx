@@ -138,15 +138,43 @@ const EstoqueRelatorio = () => {
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
-    return produtos.filter((p) => {
+    let result = produtos.filter((p) => {
       const matchSearch = !term || p.nome.toLowerCase().includes(term) || p.produto_id.toLowerCase().includes(term);
       const matchFamilia = filterFamilia === "all" || p.familia === filterFamilia;
       const matchFabricante = filterFabricante === "all" || p.fabricante === filterFabricante;
       return matchSearch && matchFamilia && matchFabricante;
     });
-  }, [produtos, search, filterFamilia, filterFabricante]);
+    result.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "preco" || sortKey === "total_estoque") {
+        cmp = a[sortKey] - b[sortKey];
+      } else {
+        cmp = a[sortKey].localeCompare(b[sortKey], "pt-BR");
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return result;
+  }, [produtos, search, filterFamilia, filterFabricante, sortKey, sortDir]);
 
   const checkedProducts = useMemo(() => produtos.filter((p) => p.checked), [produtos]);
+
+  const totalValue = useMemo(() => filtered.reduce((sum, p) => sum + p.preco * p.total_estoque, 0), [filtered]);
+
+  const handleSort = useCallback((key: SortKey) => {
+    setSortKey((prev) => {
+      if (prev === key) {
+        setSortDir((d) => d === "asc" ? "desc" : "asc");
+        return key;
+      }
+      setSortDir("asc");
+      return key;
+    });
+  }, []);
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortKey !== col) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="h-3 w-3 ml-1" /> : <ArrowDown className="h-3 w-3 ml-1" />;
+  };
 
   const allFilteredChecked = useMemo(
     () => filtered.length > 0 && filtered.every((p) => p.checked),
