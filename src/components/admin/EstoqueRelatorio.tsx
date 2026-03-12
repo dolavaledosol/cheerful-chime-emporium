@@ -75,6 +75,13 @@ async function fetchLids(clienteIds: string[]): Promise<Map<string, string>> {
 type SortKey = "nome" | "familia" | "fabricante" | "preco" | "total_estoque" | "valor_total";
 type SortDir = "asc" | "desc";
 
+interface WebhookLog {
+  integracao_log_id: string;
+  created_at: string;
+  status: string | null;
+  payload: any;
+}
+
 const EstoqueRelatorio = () => {
   const [produtos, setProdutos] = useState<ProdutoEstoque[]>([]);
   const [familias, setFamilias] = useState<FamiliaOption[]>([]);
@@ -93,6 +100,8 @@ const EstoqueRelatorio = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("nome");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([]);
+  const [expandedLogIdx, setExpandedLogIdx] = useState<number | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
