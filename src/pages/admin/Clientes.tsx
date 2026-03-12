@@ -27,6 +27,8 @@ interface Cliente {
 interface TelefoneItem {
   id?: string;
   telefone: string; // E.164 format
+  is_whatsapp?: boolean;
+  verificado?: boolean;
 }
 
 const emptyForm = { nome: "", cpf_cnpj: "", email: "", tipo_cliente: "cliente", ativo: true };
