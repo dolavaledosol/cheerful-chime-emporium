@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, MapPin, Phone, User, Package, Loader2, MessageCircle, Eye, Shield, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Phone, User, Package, Loader2, MessageCircle, Eye, Shield, ChevronRight, Star } from "lucide-react";
 import { PhoneInput, phoneToDigits, digitsToPhone, displayPhone } from "@/components/ui/phone-input";
 import { isValidPhoneNumber } from "react-phone-number-input";
 import { formatCpfCnpj } from "@/lib/cpfCnpj";
