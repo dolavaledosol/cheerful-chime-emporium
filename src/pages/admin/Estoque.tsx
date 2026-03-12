@@ -125,14 +125,22 @@ const Estoque = () => {
     if (loc) setLocais(loc as LocalEstoque[]);
   };
 
-  const loadMovimentacoes = async () => {
-    const { data } = await supabase
+  const loadMovimentacoes = async (dateFrom?: Date, dateTo?: Date) => {
+    const from = dateFrom || movDateFrom;
+    const to = dateTo || movDateTo;
+    let query = supabase
       .from("movimentacao_estoque")
-      .select("movimentacao_estoque_id, tipo, documento, quantidade, created_at, usuario_id, produto(produto_id, nome, peso_liquido, unidade_medida, fabricante(nome)), local_estoque:local_estoque_id(nome), local_estoque_destino:local_estoque_destino_id(nome)")
+      .select("movimentacao_estoque_id, tipo, documento, quantidade, created_at, usuario_id, produto(produto_id, nome, peso_liquido, unidade_medida, fabricante(nome), familia(nome)), local_estoque:local_estoque_id(nome), local_estoque_destino:local_estoque_destino_id(nome)")
       .order("created_at", { ascending: false })
       .limit(500);
+    if (from) query = query.gte("created_at", from.toISOString());
+    if (to) {
+      const endOfDay = new Date(to);
+      endOfDay.setHours(23, 59, 59, 999);
+      query = query.lte("created_at", endOfDay.toISOString());
+    }
+    const { data } = await query;
     if (data) {
-      // Fetch user names for usuario_ids
       const userIds = [...new Set((data as any[]).map((m: any) => m.usuario_id).filter(Boolean))];
       let profileMap: Record<string, string> = {};
       if (userIds.length > 0) {
@@ -567,18 +575,11 @@ const Estoque = () => {
     }
   };
 
-  /* ── Movimentação filtered ── */
+  /* ── Movimentação filtered (client-side text/type/local only, dates already filtered at DB level) ── */
   const filteredMov = movimentacoes.filter((m) => {
     if (movFilterLocal !== "all" && m.local_estoque?.nome !== movFilterLocal) return false;
     if (movFilterFabricante !== "all" && m.produto?.fabricante?.nome !== movFilterFabricante) return false;
     if (movFilterTipo !== "all" && m.tipo !== movFilterTipo) return false;
-    const movDate = new Date(m.created_at);
-    if (movDateFrom && movDate < movDateFrom) return false;
-    if (movDateTo) {
-      const endOfDay = new Date(movDateTo);
-      endOfDay.setHours(23, 59, 59, 999);
-      if (movDate > endOfDay) return false;
-    }
     if (!movSearch) return true;
     const term = movSearch.toLowerCase();
     return (m.produto?.nome || "").toLowerCase().includes(term) ||
@@ -694,7 +695,7 @@ const Estoque = () => {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar por produto, documento..." value={movSearch} onChange={(e) => setMovSearch(e.target.value)} className="pl-10" />
+              <Input placeholder="Buscar por produto, documento..." value={movSearch} onChange={(e) => setMovSearch(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") loadMovimentacoes(); }} className="pl-10" />
             </div>
             <Select value={movFilterLocal} onValueChange={setMovFilterLocal}>
               <SelectTrigger className="w-40"><SelectValue placeholder="Local" /></SelectTrigger>
@@ -725,7 +726,7 @@ const Estoque = () => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={movDateFrom} onSelect={(d) => d && setMovDateFrom(d)} locale={ptBR} initialFocus className="p-3 pointer-events-auto" />
+                <Calendar mode="single" selected={movDateFrom} onSelect={(d) => { if (d) { setMovDateFrom(d); loadMovimentacoes(d, movDateTo); } }} locale={ptBR} initialFocus className="p-3 pointer-events-auto" />
               </PopoverContent>
             </Popover>
             <Popover>
@@ -736,7 +737,7 @@ const Estoque = () => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={movDateTo} onSelect={(d) => d && setMovDateTo(d)} locale={ptBR} initialFocus className="p-3 pointer-events-auto" />
+                <Calendar mode="single" selected={movDateTo} onSelect={(d) => { if (d) { setMovDateTo(d); loadMovimentacoes(movDateFrom, d); } }} locale={ptBR} initialFocus className="p-3 pointer-events-auto" />
               </PopoverContent>
             </Popover>
           </div>

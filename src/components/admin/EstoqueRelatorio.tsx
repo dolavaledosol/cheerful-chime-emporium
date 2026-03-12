@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Send, Loader2 } from "lucide-react";
+import { Search, Send, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
@@ -72,6 +72,9 @@ async function fetchLids(clienteIds: string[]): Promise<Map<string, string>> {
   return lidMap;
 }
 
+type SortKey = "nome" | "familia" | "fabricante" | "preco" | "total_estoque";
+type SortDir = "asc" | "desc";
+
 const EstoqueRelatorio = () => {
   const [produtos, setProdutos] = useState<ProdutoEstoque[]>([]);
   const [familias, setFamilias] = useState<FamiliaOption[]>([]);
@@ -88,6 +91,8 @@ const EstoqueRelatorio = () => {
   const [loadingClientes, setLoadingClientes] = useState(false);
   const [sending, setSending] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("nome");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -133,15 +138,43 @@ const EstoqueRelatorio = () => {
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
-    return produtos.filter((p) => {
+    let result = produtos.filter((p) => {
       const matchSearch = !term || p.nome.toLowerCase().includes(term) || p.produto_id.toLowerCase().includes(term);
       const matchFamilia = filterFamilia === "all" || p.familia === filterFamilia;
       const matchFabricante = filterFabricante === "all" || p.fabricante === filterFabricante;
       return matchSearch && matchFamilia && matchFabricante;
     });
-  }, [produtos, search, filterFamilia, filterFabricante]);
+    result.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "preco" || sortKey === "total_estoque") {
+        cmp = a[sortKey] - b[sortKey];
+      } else {
+        cmp = a[sortKey].localeCompare(b[sortKey], "pt-BR");
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return result;
+  }, [produtos, search, filterFamilia, filterFabricante, sortKey, sortDir]);
 
   const checkedProducts = useMemo(() => produtos.filter((p) => p.checked), [produtos]);
+
+  const totalValue = useMemo(() => filtered.reduce((sum, p) => sum + p.preco * p.total_estoque, 0), [filtered]);
+
+  const handleSort = useCallback((key: SortKey) => {
+    setSortKey((prev) => {
+      if (prev === key) {
+        setSortDir((d) => d === "asc" ? "desc" : "asc");
+        return key;
+      }
+      setSortDir("asc");
+      return key;
+    });
+  }, []);
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortKey !== col) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="h-3 w-3 ml-1" /> : <ArrowDown className="h-3 w-3 ml-1" />;
+  };
 
   const allFilteredChecked = useMemo(
     () => filtered.length > 0 && filtered.every((p) => p.checked),
@@ -283,44 +316,54 @@ const EstoqueRelatorio = () => {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-        <div className="relative lg:col-span-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar produto..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar produto..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+          </div>
+          <Select value={filterFamilia} onValueChange={setFilterFamilia}>
+            <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Família" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as Famílias</SelectItem>
+              {familias.map((f) => <SelectItem key={f.familia_id} value={f.nome}>{f.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterFabricante} onValueChange={setFilterFabricante}>
+            <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Fabricante" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Fabricantes</SelectItem>
+              {fabricantes.map((f) => <SelectItem key={f.fabricante_id} value={f.nome}>{f.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={filterFamilia} onValueChange={setFilterFamilia}>
-          <SelectTrigger><SelectValue placeholder="Família" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as Famílias</SelectItem>
-            {familias.map((f) => <SelectItem key={f.familia_id} value={f.nome}>{f.nome}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={filterFabricante} onValueChange={setFilterFabricante}>
-          <SelectTrigger><SelectValue placeholder="Fabricante" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os Fabricantes</SelectItem>
-            {fabricantes.map((f) => <SelectItem key={f.fabricante_id} value={f.nome}>{f.nome}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <div className="space-y-1">
-          <Label className="text-xs">Data Início</Label>
-          <Input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Data Fim</Label>
-          <Input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+        <div className="flex flex-col sm:flex-row items-end gap-3">
+          <div className="flex gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Data Início</Label>
+              <Input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="w-[150px]" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Data Fim</Label>
+              <Input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="w-[150px]" />
+            </div>
+          </div>
+          <div className="flex-1" />
+          <Button onClick={loadClientes} disabled={checkedProducts.length === 0 || loadingClientes} className="gap-2">
+            {loadingClientes ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {loadingClientes ? "Carregando..." : "Preparar Envio"}
+          </Button>
         </div>
       </div>
 
       {/* Summary */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <span className="text-sm text-muted-foreground">
-          {checkedProducts.length} produto(s) selecionado(s) de {filtered.length} exibido(s)
+          {checkedProducts.length} selecionado(s) · {filtered.length} exibido(s)
         </span>
-        <Button onClick={loadClientes} disabled={checkedProducts.length === 0 || loadingClientes} className="gap-2">
-          {loadingClientes ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          {loadingClientes ? "Carregando..." : "Preparar Envio"}
-        </Button>
+        <span className="text-sm font-semibold">
+          Valor Total: R$ {totalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </span>
       </div>
 
       {/* Products table */}
@@ -334,18 +377,39 @@ const EstoqueRelatorio = () => {
                   onCheckedChange={(v) => toggleAll(!!v)}
                 />
               </TableHead>
-              <TableHead className="whitespace-nowrap">Produto</TableHead>
-              <TableHead className="whitespace-nowrap">Família</TableHead>
-              <TableHead className="whitespace-nowrap">Fabricante</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Preço</TableHead>
-              <TableHead className="text-center whitespace-nowrap">Estoque Total</TableHead>
+              <TableHead className="whitespace-nowrap cursor-pointer select-none" onClick={() => handleSort("nome")}>
+                <span className="flex items-center">Produto <SortIcon col="nome" /></span>
+              </TableHead>
+              <TableHead className="whitespace-nowrap cursor-pointer select-none" onClick={() => handleSort("familia")}>
+                <span className="flex items-center">Família <SortIcon col="familia" /></span>
+              </TableHead>
+              <TableHead className="whitespace-nowrap cursor-pointer select-none" onClick={() => handleSort("fabricante")}>
+                <span className="flex items-center">Fabricante <SortIcon col="fabricante" /></span>
+              </TableHead>
+              <TableHead className="text-right whitespace-nowrap cursor-pointer select-none" onClick={() => handleSort("preco")}>
+                <span className="flex items-center justify-end">Preço <SortIcon col="preco" /></span>
+              </TableHead>
+              <TableHead className="text-center whitespace-nowrap cursor-pointer select-none" onClick={() => handleSort("total_estoque")}>
+                <span className="flex items-center justify-center">Estoque <SortIcon col="total_estoque" /></span>
+              </TableHead>
+              <TableHead className="text-right whitespace-nowrap">Valor Total</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
             ) : filtered.map((p) => (
-              <ProductRow key={p.produto_id} p={p} onToggle={toggleProduct} />
+              <TableRow key={p.produto_id} className={p.checked ? "bg-muted/30" : ""}>
+                <TableCell>
+                  <Checkbox checked={p.checked} onCheckedChange={(v) => toggleProduct(p.produto_id, !!v)} />
+                </TableCell>
+                <TableCell className="font-medium">{p.nome}</TableCell>
+                <TableCell className="text-muted-foreground">{p.familia}</TableCell>
+                <TableCell className="text-muted-foreground">{p.fabricante}</TableCell>
+                <TableCell className="text-right">R$ {p.preco.toFixed(2)}</TableCell>
+                <TableCell className="text-center font-semibold">{p.total_estoque}</TableCell>
+                <TableCell className="text-right font-medium">R$ {(p.preco * p.total_estoque).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+              </TableRow>
             ))}
           </TableBody>
         </Table>
