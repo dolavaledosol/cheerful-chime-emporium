@@ -509,6 +509,73 @@ const EstoqueRelatorio = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Histórico de Envios */}
+      {webhookLogs.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Histórico de Envios</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1 max-h-64 overflow-y-auto">
+            {webhookLogs.map((log, idx) => {
+              const isExpanded = expandedLogIdx === idx;
+              const produtos = log.payload?.produtos || [];
+              const clientesLog = log.payload?.clientes || [];
+              return (
+                <div key={log.integracao_log_id} className="border rounded">
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
+                    onClick={() => setExpandedLogIdx(isExpanded ? null : idx)}
+                  >
+                    <span className="font-medium">
+                      {format(new Date(log.created_at), "dd/MM/yyyy HH:mm")}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground text-xs">
+                        {produtos.length} produto(s) · {clientesLog.length} cliente(s)
+                      </span>
+                      <Badge variant={log.status === "sucesso" ? "default" : "destructive"} className="text-[10px] px-1.5 py-0">
+                        {log.status || "—"}
+                      </Badge>
+                    </div>
+                  </button>
+                  {isExpanded && (
+                    <div className="px-3 pb-2 space-y-2">
+                      {produtos.map((prod: any, pi: number) => {
+                        const clientesDoProduto = clientesLog.filter((c: any) => c.produto_id === prod.produto_id);
+                        return (
+                          <div key={pi} className="border rounded bg-muted/30">
+                            <div className="px-2 py-1.5 text-xs font-semibold border-b bg-muted/50">
+                              {prod.nome}
+                            </div>
+                            {clientesDoProduto.length === 0 ? (
+                              <div className="px-2 py-1.5 text-xs text-muted-foreground">Nenhum cliente</div>
+                            ) : (
+                              <div className="divide-y text-xs max-h-40 overflow-y-auto">
+                                {clientesDoProduto.map((c: any, ci: number) => (
+                                  <div key={ci} className="px-2 py-1.5 flex justify-between items-center gap-2">
+                                    <span className="font-medium truncate">{c.nome || "—"}</span>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <span className="text-muted-foreground">Qtd: {c.quantidade}</span>
+                                      {c.lid && <span className="text-muted-foreground font-mono">LID: {c.lid}</span>}
+                                      <span className="text-muted-foreground">{c.data_compra ? format(new Date(c.data_compra), "dd/MM/yy") : ""}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
