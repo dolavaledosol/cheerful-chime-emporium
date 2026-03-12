@@ -125,14 +125,22 @@ const Estoque = () => {
     if (loc) setLocais(loc as LocalEstoque[]);
   };
 
-  const loadMovimentacoes = async () => {
-    const { data } = await supabase
+  const loadMovimentacoes = async (dateFrom?: Date, dateTo?: Date) => {
+    const from = dateFrom || movDateFrom;
+    const to = dateTo || movDateTo;
+    let query = supabase
       .from("movimentacao_estoque")
-      .select("movimentacao_estoque_id, tipo, documento, quantidade, created_at, usuario_id, produto(produto_id, nome, peso_liquido, unidade_medida, fabricante(nome)), local_estoque:local_estoque_id(nome), local_estoque_destino:local_estoque_destino_id(nome)")
+      .select("movimentacao_estoque_id, tipo, documento, quantidade, created_at, usuario_id, produto(produto_id, nome, peso_liquido, unidade_medida, fabricante(nome), familia(nome)), local_estoque:local_estoque_id(nome), local_estoque_destino:local_estoque_destino_id(nome)")
       .order("created_at", { ascending: false })
       .limit(500);
+    if (from) query = query.gte("created_at", from.toISOString());
+    if (to) {
+      const endOfDay = new Date(to);
+      endOfDay.setHours(23, 59, 59, 999);
+      query = query.lte("created_at", endOfDay.toISOString());
+    }
+    const { data } = await query;
     if (data) {
-      // Fetch user names for usuario_ids
       const userIds = [...new Set((data as any[]).map((m: any) => m.usuario_id).filter(Boolean))];
       let profileMap: Record<string, string> = {};
       if (userIds.length > 0) {
