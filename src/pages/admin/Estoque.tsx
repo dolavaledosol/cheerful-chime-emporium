@@ -695,7 +695,7 @@ const Estoque = () => {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar por produto, documento..." value={movSearch} onChange={(e) => setMovSearch(e.target.value)} className="pl-10" />
+              <Input placeholder="Buscar por produto, documento..." value={movSearch} onChange={(e) => setMovSearch(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") loadMovimentacoes(); }} className="pl-10" />
             </div>
             <Select value={movFilterLocal} onValueChange={setMovFilterLocal}>
               <SelectTrigger className="w-40"><SelectValue placeholder="Local" /></SelectTrigger>
