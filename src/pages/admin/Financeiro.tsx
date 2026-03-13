@@ -522,24 +522,36 @@ const Financeiro = () => {
           ) : (
           <div className="border rounded-lg overflow-hidden">
             <Table>
-              <TableHeader>
+               <TableHeader>
                  <TableRow>
+                   <TableHead>Código</TableHead>
                    <TableHead>Descrição</TableHead>
                    <TableHead className="hidden sm:table-cell">Fornecedor</TableHead>
+                   <TableHead>Criação</TableHead>
                    <TableHead>Vencimento</TableHead>
                    <TableHead className="hidden md:table-cell">Forma</TableHead>
                    <TableHead>Valor</TableHead>
                    <TableHead>Status</TableHead>
-                   <TableHead className="w-28">Ações</TableHead>
                  </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPagar.length === 0 ? (
-                   <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
-                 ) : filteredPagar.map((c) => (
+                   <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
+                 ) : filteredPagar.map((c) => {
+                  const isFreteDesc = c.descricao.toLowerCase().includes("frete");
+                  const fornecedorDisplay = c.fornecedor?.nome
+                    ? (isFreteDesc ? `Frete - ${c.fornecedor.nome}` : c.fornecedor.nome)
+                    : "—";
+                  return (
                   <TableRow key={c.contas_pagar_id}>
+                    <TableCell>
+                      <button onClick={() => openEditPagar(c)} className="text-xs font-mono text-primary hover:underline">
+                        {c.contas_pagar_id.slice(0, 8).toUpperCase()}
+                      </button>
+                    </TableCell>
                     <TableCell className="font-medium">{c.descricao}</TableCell>
-                    <TableCell className="hidden sm:table-cell text-muted-foreground">{c.fornecedor?.nome || "—"}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-muted-foreground">{fornecedorDisplay}</TableCell>
+                    <TableCell className="text-muted-foreground">{c.created_at ? format(new Date(c.created_at), "dd/MM/yy") : "—"}</TableCell>
                      <TableCell>{fmtDate(c.data_vencimento)}</TableCell>
                      <TableCell className="hidden md:table-cell text-muted-foreground">{c.forma_pagamento?.nome || "—"}</TableCell>
                      <TableCell>{fmtMoney(c.valor)}</TableCell>
@@ -548,15 +560,9 @@ const Financeiro = () => {
                         {c.pago ? "Pago" : "Pendente"}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {!c.pago && <Button variant="ghost" size="icon" onClick={() => marcarPago(c.contas_pagar_id)} title="Marcar pago"><Check className="h-4 w-4 text-green-600" /></Button>}
-                        <Button variant="ghost" size="icon" onClick={() => openEditPagar(c)}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => deletePagar(c.contas_pagar_id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      </div>
-                    </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
