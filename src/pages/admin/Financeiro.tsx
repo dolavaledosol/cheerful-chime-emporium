@@ -77,7 +77,7 @@ const Financeiro = () => {
 
   /* ═══════════════════════  CONTAS A PAGAR  ═══════════════════════ */
   const [pagar, setPagar] = useState<ContaPagar[]>([]);
-  const [searchPagar, setSearchPagar] = "";
+  const [searchPagar, setSearchPagar] = useState("");
   const [statusFilterPagar, setStatusFilterPagar] = useState<"pendente" | "pago" | "todos">("pendente");
   const [dialogPagar, setDialogPagar] = useState(false);
   const [editPagarId, setEditPagarId] = useState<string | null>(null);
