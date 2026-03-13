@@ -533,7 +533,7 @@ const Financeiro = () => {
               </TableHeader>
               <TableBody>
                 {filteredPagar.length === 0 ? (
-                   <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
+                   <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
                  ) : filteredPagar.map((c) => {
                   const isFreteDesc = c.descricao.toLowerCase().includes("frete");
                   const fornecedorDisplay = c.fornecedor?.nome
