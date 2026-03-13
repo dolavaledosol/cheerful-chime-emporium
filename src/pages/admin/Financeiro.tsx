@@ -27,6 +27,7 @@ interface ContaPagar {
   contas_pagar_id: string; descricao: string; valor: number;
   data_vencimento: string; data_pagamento: string | null;
   pago: boolean; observacao: string | null; created_at: string;
+  compra_itens: any | null;
   fornecedor_id: string | null; banco_id: string | null; forma_pagamento_id: string | null;
   fornecedor: { nome: string } | null; banco: { nome: string } | null; forma_pagamento: { nome: string } | null;
 }
@@ -535,7 +536,7 @@ const Financeiro = () => {
                <TableHeader>
                  <TableRow>
                    <TableHead>Código</TableHead>
-                   
+                   <TableHead>Cód Compra</TableHead>
                    <TableHead className="hidden sm:table-cell">Fornecedor</TableHead>
                    <TableHead>Criação</TableHead>
                    <TableHead>Vencimento</TableHead>
@@ -546,7 +547,7 @@ const Financeiro = () => {
               </TableHeader>
               <TableBody>
                 {filteredPagar.length === 0 ? (
-                   <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
+                   <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
                  ) : filteredPagar.map((c) => {
                   const isFreteDesc = c.descricao.toLowerCase().includes("frete");
                   const fornecedorDisplay = c.fornecedor?.nome
@@ -556,8 +557,11 @@ const Financeiro = () => {
                   <TableRow key={c.contas_pagar_id}>
                     <TableCell>
                       <button onClick={() => openEditPagar(c)} className="text-xs font-mono text-primary hover:underline">
-                        {c.contas_pagar_id.slice(0, 8).toUpperCase()}
+                       {c.contas_pagar_id.slice(0, 8).toUpperCase()}
                       </button>
+                    </TableCell>
+                    <TableCell className="text-xs font-mono text-muted-foreground">
+                      {c.compra_itens ? c.contas_pagar_id.slice(0, 8).toUpperCase() : "—"}
                     </TableCell>
                     
                     <TableCell className="hidden sm:table-cell text-muted-foreground">{fornecedorDisplay}</TableCell>
