@@ -270,6 +270,7 @@ export type Database = {
           nome: string | null
           notifyName: string | null
           pn: string | null
+          verificado: boolean | null
         }
         Insert: {
           cliente_id?: string | null
@@ -282,6 +283,7 @@ export type Database = {
           nome?: string | null
           notifyName?: string | null
           pn?: string | null
+          verificado?: boolean | null
         }
         Update: {
           cliente_id?: string | null
@@ -294,6 +296,7 @@ export type Database = {
           nome?: string | null
           notifyName?: string | null
           pn?: string | null
+          verificado?: boolean | null
         }
         Relationships: [
           {

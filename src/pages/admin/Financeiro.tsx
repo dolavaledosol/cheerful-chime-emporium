@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Pencil, Trash2, Check, Download, Send, Loader2, AlertTriangle } from "lucide-react";
+import { Plus, Search, Download, Send, Loader2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
@@ -26,7 +26,7 @@ interface PhoneOption { cliente_telefone_id: string; telefone: string; pn: strin
 interface ContaPagar {
   contas_pagar_id: string; descricao: string; valor: number;
   data_vencimento: string; data_pagamento: string | null;
-  pago: boolean; observacao: string | null;
+  pago: boolean; observacao: string | null; created_at: string;
   fornecedor_id: string | null; banco_id: string | null; forma_pagamento_id: string | null;
   fornecedor: { nome: string } | null; banco: { nome: string } | null; forma_pagamento: { nome: string } | null;
 }
@@ -133,12 +133,6 @@ const Financeiro = () => {
   const deletePagar = async (id: string) => {
     await supabase.from("contas_pagar").delete().eq("contas_pagar_id", id);
     toast({ title: "Conta removida" });
-    loadPagar();
-  };
-
-  const marcarPago = async (id: string) => {
-    await supabase.from("contas_pagar").update({ pago: true, data_pagamento: new Date().toISOString().slice(0, 10) }).eq("contas_pagar_id", id);
-    toast({ title: "Marcado como pago" });
     loadPagar();
   };
 
@@ -499,22 +493,25 @@ const Financeiro = () => {
               ) : filteredPagar.map((c) => (
                 <div key={c.contas_pagar_id} className="border rounded-xl p-3 space-y-2 bg-card">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm truncate mr-2">{c.descricao}</span>
+                    <button onClick={() => openEditPagar(c)} className="text-xs font-mono text-primary hover:underline">
+                      {c.contas_pagar_id.slice(0, 8).toUpperCase()}
+                    </button>
                     <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${c.pago ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
                       {c.pago ? "Pago" : "Pendente"}
                     </span>
                   </div>
+                  <span className="font-medium text-sm truncate block">{c.descricao}</span>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{c.fornecedor?.nome || "—"}</span>
+                    <span className="text-muted-foreground">
+                      {c.fornecedor?.nome
+                        ? (c.descricao.toLowerCase().includes("frete") ? `Frete - ${c.fornecedor.nome}` : c.fornecedor.nome)
+                        : "—"}
+                    </span>
                     <span className="font-semibold">{fmtMoney(c.valor)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Venc: {fmtDate(c.data_vencimento)}</span>
-                    <div className="flex gap-1">
-                      {!c.pago && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => marcarPago(c.contas_pagar_id)} title="Marcar pago"><Check className="h-3.5 w-3.5 text-green-600" /></Button>}
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditPagar(c)}><Pencil className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deletePagar(c.contas_pagar_id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
-                    </div>
+                    <span className="text-xs text-muted-foreground">Criação: {c.created_at ? format(new Date(c.created_at), "dd/MM/yy") : "—"}</span>
                   </div>
                 </div>
               ))}
@@ -522,24 +519,36 @@ const Financeiro = () => {
           ) : (
           <div className="border rounded-lg overflow-hidden">
             <Table>
-              <TableHeader>
+               <TableHeader>
                  <TableRow>
+                   <TableHead>Código</TableHead>
                    <TableHead>Descrição</TableHead>
                    <TableHead className="hidden sm:table-cell">Fornecedor</TableHead>
+                   <TableHead>Criação</TableHead>
                    <TableHead>Vencimento</TableHead>
                    <TableHead className="hidden md:table-cell">Forma</TableHead>
                    <TableHead>Valor</TableHead>
                    <TableHead>Status</TableHead>
-                   <TableHead className="w-28">Ações</TableHead>
                  </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPagar.length === 0 ? (
-                   <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
-                 ) : filteredPagar.map((c) => (
+                   <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
+                 ) : filteredPagar.map((c) => {
+                  const isFreteDesc = c.descricao.toLowerCase().includes("frete");
+                  const fornecedorDisplay = c.fornecedor?.nome
+                    ? (isFreteDesc ? `Frete - ${c.fornecedor.nome}` : c.fornecedor.nome)
+                    : "—";
+                  return (
                   <TableRow key={c.contas_pagar_id}>
+                    <TableCell>
+                      <button onClick={() => openEditPagar(c)} className="text-xs font-mono text-primary hover:underline">
+                        {c.contas_pagar_id.slice(0, 8).toUpperCase()}
+                      </button>
+                    </TableCell>
                     <TableCell className="font-medium">{c.descricao}</TableCell>
-                    <TableCell className="hidden sm:table-cell text-muted-foreground">{c.fornecedor?.nome || "—"}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-muted-foreground">{fornecedorDisplay}</TableCell>
+                    <TableCell className="text-muted-foreground">{c.created_at ? format(new Date(c.created_at), "dd/MM/yy") : "—"}</TableCell>
                      <TableCell>{fmtDate(c.data_vencimento)}</TableCell>
                      <TableCell className="hidden md:table-cell text-muted-foreground">{c.forma_pagamento?.nome || "—"}</TableCell>
                      <TableCell>{fmtMoney(c.valor)}</TableCell>
@@ -548,15 +557,9 @@ const Financeiro = () => {
                         {c.pago ? "Pago" : "Pendente"}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {!c.pago && <Button variant="ghost" size="icon" onClick={() => marcarPago(c.contas_pagar_id)} title="Marcar pago"><Check className="h-4 w-4 text-green-600" /></Button>}
-                        <Button variant="ghost" size="icon" onClick={() => openEditPagar(c)}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => deletePagar(c.contas_pagar_id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      </div>
-                    </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
