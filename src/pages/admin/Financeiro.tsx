@@ -556,8 +556,11 @@ const Financeiro = () => {
                   <TableRow key={c.contas_pagar_id}>
                     <TableCell>
                       <button onClick={() => openEditPagar(c)} className="text-xs font-mono text-primary hover:underline">
-                        {c.contas_pagar_id.slice(0, 8).toUpperCase()}
+                       {c.contas_pagar_id.slice(0, 8).toUpperCase()}
                       </button>
+                    </TableCell>
+                    <TableCell className="text-xs font-mono text-muted-foreground">
+                      {c.compra_itens ? c.contas_pagar_id.slice(0, 8).toUpperCase() : "—"}
                     </TableCell>
                     
                     <TableCell className="hidden sm:table-cell text-muted-foreground">{fornecedorDisplay}</TableCell>
