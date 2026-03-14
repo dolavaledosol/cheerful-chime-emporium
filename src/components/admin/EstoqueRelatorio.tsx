@@ -318,15 +318,17 @@ const EstoqueRelatorio = () => {
         fabricante: p.fabricante,
         imagem_url: p.imagem_url,
       })),
-      clientes: clientes.map((c) => ({
-        cliente_id: c.cliente_id,
-        nome: c.nome,
-        lid: c.lid,
-        data_compra: c.data_compra,
-        quantidade: c.quantidade,
-        produto_id: c.produto_id,
-        produto_nome: c.produto_nome,
-      })),
+      clientes: clientes
+        .filter((c) => c.nome.toLowerCase() !== "consumidor final")
+        .map((c) => ({
+          cliente_id: c.cliente_id,
+          nome: c.nome,
+          lid: c.lid,
+          data_compra: c.data_compra,
+          quantidade: c.quantidade,
+          produto_id: c.produto_id,
+          produto_nome: c.produto_nome,
+        })),
     };
 
     try {
