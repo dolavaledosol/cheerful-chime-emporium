@@ -278,6 +278,9 @@ const Pedidos = () => {
   const [compras, setCompras] = useState<ContaPagarCompra[]>([]);
   const [searchCompras, setSearchCompras] = useState("");
   const [statusCompraFilter, setStatusCompraFilter] = useState("pendente");
+  const [compraDateFrom, setCompraDateFrom] = useState<Date>(() => { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d; });
+  const [compraDateTo, setCompraDateTo] = useState<Date>(() => { const d = new Date(); d.setMonth(d.getMonth() + 1, 0); d.setHours(23,59,59,999); return d; });
+  const [compraFornecedorFilter, setCompraFornecedorFilter] = useState("todos");
   const [entradaOpen, setEntradaOpen] = useState(false);
   const [entradaFornecedores, setEntradaFornecedores] = useState<{ fornecedor_id: string; nome: string }[]>([]);
   const [entradaFornecedor, setEntradaFornecedor] = useState("");
