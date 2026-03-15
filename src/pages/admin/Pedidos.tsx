@@ -185,6 +185,12 @@ const Pedidos = () => {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ativos");
+  // Date range filter – default to current month
+  const [dateFrom, setDateFrom] = useState<Date>(() => { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d; });
+  const [dateTo, setDateTo] = useState<Date>(() => { const d = new Date(); d.setMonth(d.getMonth() + 1, 0); d.setHours(23,59,59,999); return d; });
+  const [localFilter, setLocalFilter] = useState("todos");
+  const [tipoFilter, setTipoFilter] = useState("todos");
+  const [origemFilter, setOrigemFilter] = useState("todos");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
   const [items, setItems] = useState<PedidoItem[]>([]);
