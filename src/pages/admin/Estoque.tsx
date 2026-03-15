@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +76,8 @@ const Estoque = () => {
   const [produtos, setProdutos] = useState<SelectOption[]>([]);
   const [locais, setLocais] = useState<LocalEstoque[]>([]);
   const [search, setSearch] = useState("");
+  const [estoqueLocalFilter, setEstoqueLocalFilter] = useState("todos");
+  const [estoqueTipoFilter, setEstoqueTipoFilter] = useState<"ambos" | "estoque" | "pedidos">("ambos");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -619,78 +621,111 @@ const Estoque = () => {
 
         {/* ── Tab Estoque ── */}
         <TabsContent value="estoque" className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar produto, fabricante, família..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={exportExcel} className="gap-2"><Download className="h-4 w-4" /> Exportar</Button>
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Importar</Button>
-              <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
-            </div>
-          </div>
+           <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap">
+             <div className="relative flex-1 max-w-md">
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+               <Input placeholder="Buscar produto, fabricante, família..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+             </div>
+             <Select value={estoqueLocalFilter} onValueChange={setEstoqueLocalFilter}>
+               <SelectTrigger className="w-[180px]"><SelectValue placeholder="Local" /></SelectTrigger>
+               <SelectContent>
+                 <SelectItem value="todos">Todos locais</SelectItem>
+                 {locais.map((l) => (
+                   <SelectItem key={l.local_estoque_id} value={l.local_estoque_id}>{l.nome}</SelectItem>
+                 ))}
+               </SelectContent>
+             </Select>
+             <Select value={estoqueTipoFilter} onValueChange={(v) => setEstoqueTipoFilter(v as any)}>
+               <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+               <SelectContent>
+                 <SelectItem value="ambos">Est. e Ped.</SelectItem>
+                 <SelectItem value="estoque">Só Estoque</SelectItem>
+                 <SelectItem value="pedidos">Só Pedidos</SelectItem>
+               </SelectContent>
+             </Select>
+             <div className="flex gap-2">
+               <Button variant="outline" onClick={exportExcel} className="gap-2"><Download className="h-4 w-4" /> Exportar</Button>
+               <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Importar</Button>
+               <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
+             </div>
+           </div>
 
           <div className="border rounded-lg overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="whitespace-nowrap">Cód</TableHead>
-                  <TableHead className="whitespace-nowrap">Produto</TableHead>
-                  <TableHead className="whitespace-nowrap">Fabricante</TableHead>
-                  <TableHead className="whitespace-nowrap">Família</TableHead>
-                  {locais.map((l) => (
-                    <TableHead key={l.local_estoque_id} className="text-center text-xs leading-tight max-w-[80px]" colSpan={2}>
-                      {l.nome.split(" ").map((word, i) => (
-                        <span key={i}>{word}{i < l.nome.split(" ").length - 1 ? <br /> : ""}</span>
-                      ))}
-                    </TableHead>
-                  ))}
-                  <TableHead className="text-center whitespace-nowrap" colSpan={2}>Total</TableHead>
-                </TableRow>
-                <TableRow>
-                  <TableHead /><TableHead /><TableHead /><TableHead />
-                  {locais.map((l) => (
-                    <>{/* Fragment */}
-                      <TableHead key={`${l.local_estoque_id}-est`} className="text-center text-xs whitespace-nowrap">Est.</TableHead>
-                      <TableHead key={`${l.local_estoque_id}-ped`} className="text-center text-xs whitespace-nowrap">Ped.</TableHead>
-                    </>
-                  ))}
-                  <TableHead className="text-center text-xs whitespace-nowrap">Est.</TableHead>
-                  <TableHead className="text-center text-xs whitespace-nowrap">Ped.</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={4 + locais.length * 2 + 2} className="text-center py-8 text-muted-foreground">Nenhum registro encontrado</TableCell></TableRow>
-                ) : filtered.map((g) => (
-                  <TableRow key={g.produto_id}>
-                    <TableCell className="text-xs text-muted-foreground font-mono whitespace-nowrap">{g.produto_id.substring(0, 8)}</TableCell>
-                    <TableCell className="font-medium whitespace-nowrap">{g.nome}</TableCell>
-                    <TableCell className="text-muted-foreground whitespace-nowrap">{g.fabricante}</TableCell>
-                    <TableCell className="text-muted-foreground whitespace-nowrap">{g.familia}</TableCell>
-                    {locais.map((l) => {
-                      const data = g.locais[l.local_estoque_id];
-                      return (
-                        <>{/* Fragment */}
-                          <TableCell key={`${g.produto_id}-${l.local_estoque_id}-est`}
-                            className={`text-center cursor-pointer hover:bg-muted/50 ${data ? "" : "text-muted-foreground"}`}
-                            onClick={() => data && openEditById(data.estoque_local_id)}>
-                            {data ? data.estoque : "—"}
-                          </TableCell>
-                          <TableCell key={`${g.produto_id}-${l.local_estoque_id}-ped`}
-                            className={`text-center ${data ? "" : "text-muted-foreground"}`}>
-                            {data ? data.pedidos : "—"}
-                          </TableCell>
-                        </>
-                      );
-                    })}
-                    <TableCell className="text-center font-semibold">{g.totalEstoque}</TableCell>
-                    <TableCell className="text-center font-semibold">{g.totalPedidos}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+             <Table>
+               <TableHeader>
+                 <TableRow>
+                   <TableHead className="whitespace-nowrap">Cód</TableHead>
+                   <TableHead className="whitespace-nowrap">Produto</TableHead>
+                   <TableHead className="whitespace-nowrap">Fabricante</TableHead>
+                   <TableHead className="whitespace-nowrap">Família</TableHead>
+                   {(estoqueLocalFilter === "todos" ? locais : locais.filter(l => l.local_estoque_id === estoqueLocalFilter)).map((l) => (
+                     <TableHead key={l.local_estoque_id} className="text-center whitespace-nowrap"
+                       colSpan={estoqueTipoFilter === "ambos" ? 2 : 1}>
+                       {l.nome}
+                     </TableHead>
+                   ))}
+                   <TableHead className="text-center whitespace-nowrap"
+                     colSpan={estoqueTipoFilter === "ambos" ? 2 : 1}>
+                     Total
+                   </TableHead>
+                 </TableRow>
+                 {estoqueTipoFilter === "ambos" && (
+                   <TableRow>
+                     <TableHead /><TableHead /><TableHead /><TableHead />
+                     {(estoqueLocalFilter === "todos" ? locais : locais.filter(l => l.local_estoque_id === estoqueLocalFilter)).map((l) => (
+                       <React.Fragment key={l.local_estoque_id}>
+                         <TableHead className="text-center text-xs whitespace-nowrap">Est.</TableHead>
+                         <TableHead className="text-center text-xs whitespace-nowrap">Ped.</TableHead>
+                       </React.Fragment>
+                     ))}
+                     <TableHead className="text-center text-xs whitespace-nowrap">Est.</TableHead>
+                     <TableHead className="text-center text-xs whitespace-nowrap">Ped.</TableHead>
+                   </TableRow>
+                 )}
+               </TableHeader>
+               <TableBody>
+                 {filtered.length === 0 ? (
+                   <TableRow><TableCell colSpan={4 + (estoqueLocalFilter === "todos" ? locais.length : 1) * (estoqueTipoFilter === "ambos" ? 2 : 1) + (estoqueTipoFilter === "ambos" ? 2 : 1)} className="text-center py-8 text-muted-foreground">Nenhum registro encontrado</TableCell></TableRow>
+                 ) : filtered.map((g) => {
+                   const visibleLocais = estoqueLocalFilter === "todos" ? locais : locais.filter(l => l.local_estoque_id === estoqueLocalFilter);
+                   const totalEst = estoqueLocalFilter === "todos" ? g.totalEstoque : (g.locais[estoqueLocalFilter]?.estoque ?? 0);
+                   const totalPed = estoqueLocalFilter === "todos" ? g.totalPedidos : (g.locais[estoqueLocalFilter]?.pedidos ?? 0);
+                   return (
+                   <TableRow key={g.produto_id}>
+                     <TableCell className="text-xs text-muted-foreground font-mono whitespace-nowrap">{g.produto_id.substring(0, 8)}</TableCell>
+                     <TableCell className="font-medium whitespace-nowrap">{g.nome}</TableCell>
+                     <TableCell className="text-muted-foreground whitespace-nowrap">{g.fabricante}</TableCell>
+                     <TableCell className="text-muted-foreground whitespace-nowrap">{g.familia}</TableCell>
+                     {visibleLocais.map((l) => {
+                       const data = g.locais[l.local_estoque_id];
+                       return (
+                         <React.Fragment key={l.local_estoque_id}>
+                           {(estoqueTipoFilter === "ambos" || estoqueTipoFilter === "estoque") && (
+                             <TableCell
+                               className={`text-center cursor-pointer hover:bg-muted/50 ${data ? "" : "text-muted-foreground"}`}
+                               onClick={() => data && openEditById(data.estoque_local_id)}>
+                               {data ? data.estoque : "—"}
+                             </TableCell>
+                           )}
+                           {(estoqueTipoFilter === "ambos" || estoqueTipoFilter === "pedidos") && (
+                             <TableCell className={`text-center ${data ? "" : "text-muted-foreground"}`}>
+                               {data ? data.pedidos : "—"}
+                             </TableCell>
+                           )}
+                         </React.Fragment>
+                       );
+                     })}
+                     {(estoqueTipoFilter === "ambos" || estoqueTipoFilter === "estoque") && (
+                       <TableCell className="text-center font-semibold">{totalEst}</TableCell>
+                     )}
+                     {(estoqueTipoFilter === "ambos" || estoqueTipoFilter === "pedidos") && (
+                       <TableCell className="text-center font-semibold">{totalPed}</TableCell>
+                     )}
+                   </TableRow>
+                   );
+                 })}
+               </TableBody>
+             </Table>
           </div>
         </TabsContent>
 
