@@ -106,7 +106,10 @@ const Financeiro = () => {
     const t = searchPagar.toLowerCase();
     const matchSearch = !t || c.descricao.toLowerCase().includes(t) || c.fornecedor?.nome?.toLowerCase().includes(t);
     const matchStatus = statusFilterPagar === "todos" || (statusFilterPagar === "pago" ? c.pago : !c.pago);
-    return matchSearch && matchStatus;
+    const cDate = new Date(c.data_vencimento + "T00:00:00");
+    const matchDate = cDate >= pagarDateFrom && cDate <= pagarDateTo;
+    const matchFornecedor = pagarFornecedorFilter === "todos" || c.fornecedor_id === pagarFornecedorFilter;
+    return matchSearch && matchStatus && matchDate && matchFornecedor;
   });
 
   const openNewPagar = () => { setEditPagarId(null); setFormPagar(emptyPagar); setDialogPagar(true); };
