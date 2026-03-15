@@ -107,7 +107,7 @@ const Financeiro = () => {
     const matchSearch = !t || c.descricao.toLowerCase().includes(t) || c.fornecedor?.nome?.toLowerCase().includes(t);
     const matchStatus = statusFilterPagar === "todos" || (statusFilterPagar === "pago" ? c.pago : !c.pago);
     const cDate = new Date(c.data_vencimento + "T00:00:00");
-    const matchDate = cDate >= pagarDateFrom && cDate <= pagarDateTo;
+    const matchDate = (!pagarDateFrom || cDate >= pagarDateFrom) && (!pagarDateTo || cDate <= pagarDateTo);
     const matchFornecedor = pagarFornecedorFilter === "todos" || c.fornecedor_id === pagarFornecedorFilter;
     return matchSearch && matchStatus && matchDate && matchFornecedor;
   });
