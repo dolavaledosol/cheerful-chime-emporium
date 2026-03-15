@@ -154,6 +154,9 @@ const Financeiro = () => {
   const [receber, setReceber] = useState<ContaReceber[]>([]);
   const [searchReceber, setSearchReceber] = useState("");
   const [statusFilterReceber, setStatusFilterReceber] = useState<"pendente" | "recebido" | "todos">("pendente");
+  const [receberDateFrom, setReceberDateFrom] = useState<Date>(startOfMonth(new Date()));
+  const [receberDateTo, setReceberDateTo] = useState<Date>(endOfMonth(new Date()));
+  const [receberClienteFilter, setReceberClienteFilter] = useState("todos");
   const [dialogReceber, setDialogReceber] = useState(false);
   const [editReceberId, setEditReceberId] = useState<string | null>(null);
   const [formReceber, setFormReceber] = useState(emptyReceber);
@@ -211,7 +214,10 @@ const Financeiro = () => {
     const t = searchReceber.toLowerCase();
     const matchSearch = !t || c.descricao.toLowerCase().includes(t) || c.cliente?.nome?.toLowerCase().includes(t);
     const matchStatus = statusFilterReceber === "todos" || (statusFilterReceber === "recebido" ? c.recebido : !c.recebido);
-    return matchSearch && matchStatus;
+    const cDate = new Date(c.data_vencimento + "T00:00:00");
+    const matchDate = cDate >= receberDateFrom && cDate <= receberDateTo;
+    const matchCliente = receberClienteFilter === "todos" || c.cliente_id === receberClienteFilter;
+    return matchSearch && matchStatus && matchDate && matchCliente;
   });
 
   const openNewReceber = () => { setEditReceberId(null); setFormReceber(emptyReceber); setDialogReceber(true); };
@@ -485,7 +491,7 @@ const Financeiro = () => {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Financeiro</h1>
 
-      <Tabs defaultValue="pagar">
+      <Tabs defaultValue="receber">
         <TabsList>
           <TabsTrigger value="pagar">Contas a Pagar</TabsTrigger>
           <TabsTrigger value="receber">Contas a Receber</TabsTrigger>
@@ -626,28 +632,64 @@ const Financeiro = () => {
 
         {/* ══════════ TAB RECEBER ══════════ */}
         <TabsContent value="receber" className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="flex flex-1 gap-2 items-center max-w-lg">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Buscar..." value={searchReceber} onChange={(e) => setSearchReceber(e.target.value)} className="pl-10" />
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex flex-1 gap-2 items-center max-w-lg">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Buscar..." value={searchReceber} onChange={(e) => setSearchReceber(e.target.value)} className="pl-10" />
+                </div>
+                <Select value={statusFilterReceber} onValueChange={(v) => setStatusFilterReceber(v as any)}>
+                  <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pendente">Pendente</SelectItem>
+                    <SelectItem value="recebido">Recebido</SelectItem>
+                    <SelectItem value="todos">Todos</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <Select value={statusFilterReceber} onValueChange={(v) => setStatusFilterReceber(v as any)}>
-                <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={exportReceber} className="gap-2"><Download className="h-4 w-4" /> Exportar</Button>
+                <Button variant="outline" onClick={webhookExport} disabled={sendingWebhook} className="gap-2">
+                  {sendingWebhook ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Cobrar
+                </Button>
+                <Button onClick={openNewReceber} className="gap-2"><Plus className="h-4 w-4" /> Nova Conta</Button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 items-center">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-[150px] justify-start text-left font-normal")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(receberDateFrom, "dd/MM/yyyy")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={receberDateFrom} onSelect={(d) => d && setReceberDateFrom(d)} locale={ptBR} className="p-3 pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+              <span className="text-muted-foreground text-sm">até</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-[150px] justify-start text-left font-normal")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(receberDateTo, "dd/MM/yyyy")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={receberDateTo} onSelect={(d) => d && setReceberDateTo(d)} locale={ptBR} className="p-3 pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+              <Select value={receberClienteFilter} onValueChange={setReceberClienteFilter}>
+                <SelectTrigger className="w-[200px]"><SelectValue placeholder="Cliente" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pendente">Pendente</SelectItem>
-                  <SelectItem value="recebido">Recebido</SelectItem>
-                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="todos">Todos clientes</SelectItem>
+                  {clientes.map((c) => (
+                    <SelectItem key={c.cliente_id} value={c.cliente_id}>{c.nome}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={exportReceber} className="gap-2"><Download className="h-4 w-4" /> Exportar</Button>
-              <Button variant="outline" onClick={webhookExport} disabled={sendingWebhook} className="gap-2">
-                {sendingWebhook ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                Cobrar
-              </Button>
-              <Button onClick={openNewReceber} className="gap-2"><Plus className="h-4 w-4" /> Nova Conta</Button>
             </div>
           </div>
           {isMobile ? (
