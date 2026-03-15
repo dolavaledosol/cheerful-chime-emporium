@@ -534,7 +534,7 @@ const Financeiro = () => {
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-[150px] justify-start text-left font-normal", !pagarDateTo && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(pagarDateTo, "dd/MM/yyyy")}
+                    {pagarDateTo ? format(pagarDateTo, "dd/MM/yyyy") : "Até"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
