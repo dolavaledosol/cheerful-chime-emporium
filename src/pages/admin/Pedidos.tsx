@@ -185,6 +185,12 @@ const Pedidos = () => {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ativos");
+  // Date range filter – default to current month
+  const [dateFrom, setDateFrom] = useState<Date>(() => { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d; });
+  const [dateTo, setDateTo] = useState<Date>(() => { const d = new Date(); d.setMonth(d.getMonth() + 1, 0); d.setHours(23,59,59,999); return d; });
+  const [localFilter, setLocalFilter] = useState("todos");
+  const [tipoFilter, setTipoFilter] = useState("todos");
+  const [origemFilter, setOrigemFilter] = useState("todos");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
   const [items, setItems] = useState<PedidoItem[]>([]);
@@ -569,7 +575,16 @@ const Pedidos = () => {
     } else if (statusFilter !== "todos") {
       matchStatus = p.status === statusFilter;
     }
-    return matchSearch && matchStatus;
+    // Date filter
+    const pedidoDate = new Date(p.data);
+    const matchDate = pedidoDate >= dateFrom && pedidoDate <= dateTo;
+    // Local filter
+    const matchLocal = localFilter === "todos" || (localFilter === "sem_local" ? !p.local_estoque_id : p.local_estoque_id === localFilter);
+    // Tipo filter (entrega = sem local_estoque_id, retirada = com local_estoque_id)
+    const matchTipo = tipoFilter === "todos" || (tipoFilter === "entrega" ? !p.local_estoque_id : !!p.local_estoque_id);
+    // Origem filter
+    const matchOrigem = origemFilter === "todos" || p.origem === origemFilter;
+    return matchSearch && matchStatus && matchDate && matchLocal && matchTipo && matchOrigem;
   });
 
   const openDetails = async (p: Pedido) => {
@@ -1495,19 +1510,78 @@ const Pedidos = () => {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por cliente ou ID..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar por cliente ou ID..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ativos">Ativos</SelectItem>
+              <SelectItem value="todos">Todos os status</SelectItem>
+              {statusOptions.map((s) => <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ativos">Ativos</SelectItem>
-            <SelectItem value="todos">Todos os status</SelectItem>
-            {statusOptions.map((s) => <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap gap-2">
+          {/* Date From */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-[140px] justify-start text-left text-xs font-normal", !dateFrom && "text-muted-foreground")}>
+                <CalendarIcon className="mr-1 h-3 w-3" />
+                {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "De"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dateFrom} onSelect={(d) => { if (d) { d.setHours(0,0,0,0); setDateFrom(d); }}} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+          {/* Date To */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-[140px] justify-start text-left text-xs font-normal", !dateTo && "text-muted-foreground")}>
+                <CalendarIcon className="mr-1 h-3 w-3" />
+                {dateTo ? format(dateTo, "dd/MM/yyyy") : "Até"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dateTo} onSelect={(d) => { if (d) { d.setHours(23,59,59,999); setDateTo(d); }}} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+          {/* Local filter */}
+          <Select value={localFilter} onValueChange={setLocalFilter}>
+            <SelectTrigger className="w-[150px] text-xs"><SelectValue placeholder="Local" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos locais</SelectItem>
+              {(() => {
+                const locaisMap = new Map<string, string>();
+                pedidos.forEach(p => { if (p.local_estoque_id && p.local_estoque?.nome) locaisMap.set(p.local_estoque_id, p.local_estoque.nome); });
+                return Array.from(locaisMap.entries()).map(([id, nome]) => <SelectItem key={id} value={id}>{nome}</SelectItem>);
+              })()}
+            </SelectContent>
+          </Select>
+          {/* Tipo filter */}
+          <Select value={tipoFilter} onValueChange={setTipoFilter}>
+            <SelectTrigger className="w-[130px] text-xs"><SelectValue placeholder="Tipo" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos tipos</SelectItem>
+              <SelectItem value="entrega">Entrega</SelectItem>
+              <SelectItem value="retirada">Retirada</SelectItem>
+            </SelectContent>
+          </Select>
+          {/* Origem filter */}
+          <Select value={origemFilter} onValueChange={setOrigemFilter}>
+            <SelectTrigger className="w-[130px] text-xs"><SelectValue placeholder="Origem" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todas origens</SelectItem>
+              <SelectItem value="web">Web</SelectItem>
+              <SelectItem value="whatsapp">WhatsApp</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {isMobile ? (
