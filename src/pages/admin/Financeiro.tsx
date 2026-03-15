@@ -582,7 +582,6 @@ const Financeiro = () => {
                <TableHeader>
                  <TableRow>
                    <TableHead>Código</TableHead>
-                   <TableHead>Cód Compra</TableHead>
                    <TableHead className="hidden sm:table-cell">Fornecedor</TableHead>
                    <TableHead>Criação</TableHead>
                    <TableHead>Vencimento</TableHead>
@@ -593,7 +592,7 @@ const Financeiro = () => {
               </TableHeader>
               <TableBody>
                 {filteredPagar.length === 0 ? (
-                   <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
+                   <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma conta encontrada</TableCell></TableRow>
                  ) : filteredPagar.map((c) => {
                   const isFreteDesc = c.descricao.toLowerCase().includes("frete");
                   const fornecedorDisplay = c.fornecedor?.nome
@@ -606,10 +605,6 @@ const Financeiro = () => {
                        {c.contas_pagar_id.slice(0, 8).toUpperCase()}
                       </button>
                     </TableCell>
-                    <TableCell className="text-xs font-mono text-muted-foreground">
-                      {c.compra_itens ? c.contas_pagar_id.slice(0, 8).toUpperCase() : "—"}
-                    </TableCell>
-                    
                     <TableCell className="hidden sm:table-cell text-muted-foreground">{fornecedorDisplay}</TableCell>
                     <TableCell className="text-muted-foreground">{c.created_at ? format(new Date(c.created_at), "dd/MM/yy") : "—"}</TableCell>
                      <TableCell>{fmtDate(c.data_vencimento)}</TableCell>
