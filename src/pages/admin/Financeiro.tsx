@@ -485,7 +485,7 @@ const Financeiro = () => {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Financeiro</h1>
 
-      <Tabs defaultValue="pagar">
+      <Tabs defaultValue="receber">
         <TabsList>
           <TabsTrigger value="pagar">Contas a Pagar</TabsTrigger>
           <TabsTrigger value="receber">Contas a Receber</TabsTrigger>
