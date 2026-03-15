@@ -621,17 +621,34 @@ const Estoque = () => {
 
         {/* ── Tab Estoque ── */}
         <TabsContent value="estoque" className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar produto, fabricante, família..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={exportExcel} className="gap-2"><Download className="h-4 w-4" /> Exportar</Button>
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Importar</Button>
-              <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
-            </div>
-          </div>
+           <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap">
+             <div className="relative flex-1 max-w-md">
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+               <Input placeholder="Buscar produto, fabricante, família..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+             </div>
+             <Select value={estoqueLocalFilter} onValueChange={setEstoqueLocalFilter}>
+               <SelectTrigger className="w-[180px]"><SelectValue placeholder="Local" /></SelectTrigger>
+               <SelectContent>
+                 <SelectItem value="todos">Todos locais</SelectItem>
+                 {locais.map((l) => (
+                   <SelectItem key={l.local_estoque_id} value={l.local_estoque_id}>{l.nome}</SelectItem>
+                 ))}
+               </SelectContent>
+             </Select>
+             <Select value={estoqueTipoFilter} onValueChange={(v) => setEstoqueTipoFilter(v as any)}>
+               <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+               <SelectContent>
+                 <SelectItem value="ambos">Est. e Ped.</SelectItem>
+                 <SelectItem value="estoque">Só Estoque</SelectItem>
+                 <SelectItem value="pedidos">Só Pedidos</SelectItem>
+               </SelectContent>
+             </Select>
+             <div className="flex gap-2">
+               <Button variant="outline" onClick={exportExcel} className="gap-2"><Download className="h-4 w-4" /> Exportar</Button>
+               <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="gap-2"><Upload className="h-4 w-4" /> Importar</Button>
+               <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
+             </div>
+           </div>
 
           <div className="border rounded-lg overflow-auto">
             <Table>
