@@ -640,7 +640,11 @@ const Estoque = () => {
                   <TableHead className="whitespace-nowrap">Fabricante</TableHead>
                   <TableHead className="whitespace-nowrap">Família</TableHead>
                   {locais.map((l) => (
-                    <TableHead key={l.local_estoque_id} className="text-center whitespace-nowrap" colSpan={2}>{l.nome}</TableHead>
+                    <TableHead key={l.local_estoque_id} className="text-center text-xs leading-tight max-w-[80px]" colSpan={2}>
+                      {l.nome.split(" ").map((word, i) => (
+                        <span key={i}>{word}{i < l.nome.split(" ").length - 1 ? <br /> : ""}</span>
+                      ))}
+                    </TableHead>
                   ))}
                   <TableHead className="text-center whitespace-nowrap" colSpan={2}>Total</TableHead>
                 </TableRow>
