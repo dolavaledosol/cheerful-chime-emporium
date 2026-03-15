@@ -575,7 +575,16 @@ const Pedidos = () => {
     } else if (statusFilter !== "todos") {
       matchStatus = p.status === statusFilter;
     }
-    return matchSearch && matchStatus;
+    // Date filter
+    const pedidoDate = new Date(p.data);
+    const matchDate = pedidoDate >= dateFrom && pedidoDate <= dateTo;
+    // Local filter
+    const matchLocal = localFilter === "todos" || (localFilter === "sem_local" ? !p.local_estoque_id : p.local_estoque_id === localFilter);
+    // Tipo filter (entrega = sem local_estoque_id, retirada = com local_estoque_id)
+    const matchTipo = tipoFilter === "todos" || (tipoFilter === "entrega" ? !p.local_estoque_id : !!p.local_estoque_id);
+    // Origem filter
+    const matchOrigem = origemFilter === "todos" || p.origem === origemFilter;
+    return matchSearch && matchStatus && matchDate && matchLocal && matchTipo && matchOrigem;
   });
 
   const openDetails = async (p: Pedido) => {
