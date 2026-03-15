@@ -84,6 +84,9 @@ const Financeiro = () => {
   const [pagar, setPagar] = useState<ContaPagar[]>([]);
   const [searchPagar, setSearchPagar] = useState("");
   const [statusFilterPagar, setStatusFilterPagar] = useState<"pendente" | "pago" | "todos">("pendente");
+  const [pagarDateFrom, setPagarDateFrom] = useState<Date>(startOfMonth(new Date()));
+  const [pagarDateTo, setPagarDateTo] = useState<Date>(endOfMonth(new Date()));
+  const [pagarFornecedorFilter, setPagarFornecedorFilter] = useState("todos");
   const [dialogPagar, setDialogPagar] = useState(false);
   const [editPagarId, setEditPagarId] = useState<string | null>(null);
   const [formPagar, setFormPagar] = useState(emptyPagar);
