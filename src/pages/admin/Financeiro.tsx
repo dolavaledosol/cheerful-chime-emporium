@@ -678,7 +678,7 @@ const Financeiro = () => {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={receberDateTo} onSelect={(d) => d && setReceberDateTo(d)} locale={ptBR} className="p-3 pointer-events-auto" />
+                  <Calendar mode="single" selected={receberDateTo ?? undefined} onSelect={(d) => d && setReceberDateTo(d)} locale={ptBR} className="p-3 pointer-events-auto" />
                 </PopoverContent>
               </Popover>
               <Select value={receberClienteFilter} onValueChange={setReceberClienteFilter}>
