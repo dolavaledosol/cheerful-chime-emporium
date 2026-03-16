@@ -608,7 +608,6 @@ const EstoqueRelatorio = () => {
                                 <TableCell className="text-xs text-center">{pr.unidade_medida}</TableCell>
                                 <TableCell className="text-xs text-right">R$ {pr.valor.toFixed(2)}</TableCell>
                                 <TableCell className="text-xs text-center">{pr.quantidade}</TableCell>
-                                <TableCell className="text-xs">{format(new Date(pr.data_compra), "dd/MM/yyyy")}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
