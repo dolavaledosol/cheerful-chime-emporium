@@ -297,13 +297,18 @@ const EstoqueRelatorio = () => {
     setLoadingClientes(true);
 
     const prodIds = checkedProducts.map((p) => p.produto_id);
-    // Pre-build lookup map to avoid .find() inside loop
-    const prodNomeMap = new Map(checkedProducts.map((p) => [p.produto_id, p.nome]));
+    const prodInfoMap = new Map(checkedProducts.map((p) => [p.produto_id, p]));
 
-    const { data: pedidoItems } = await supabase
-      .from("pedido_item")
-      .select("produto_id, quantidade, pedido:pedido_id(pedido_id, data, cliente_id, status, cliente:cliente_id(cliente_id, nome, clientewhats_id))")
-      .in("produto_id", prodIds);
+    const [{ data: pedidoItems }, { data: produtosDb }] = await Promise.all([
+      supabase
+        .from("pedido_item")
+        .select("produto_id, quantidade, preco_unitario, pedido:pedido_id(pedido_id, data, cliente_id, status, cliente:cliente_id(cliente_id, nome, clientewhats_id))")
+        .in("produto_id", prodIds),
+      supabase
+        .from("produto")
+        .select("produto_id, peso_liquido, unidade_medida")
+        .in("produto_id", prodIds),
+    ]);
 
     if (!pedidoItems) {
       setClientes([]);
@@ -312,11 +317,19 @@ const EstoqueRelatorio = () => {
       return;
     }
 
+    const pesoMap = new Map<string, { peso: number | null; unidade: string }>();
+    if (produtosDb) {
+      for (const pr of produtosDb as any[]) {
+        pesoMap.set(pr.produto_id, { peso: pr.peso_liquido, unidade: pr.unidade_medida || "un" });
+      }
+    }
+
     const inicio = new Date(dataInicio + "T00:00:00");
     const fim = new Date(dataFim + "T23:59:59");
     const validStatuses = new Set(["separacao", "aguardando_pagamento", "pago", "enviado", "entregue"]);
 
-    const results: ClienteCompra[] = [];
+    // Group by cliente
+    const clienteMap = new Map<string, ClienteCompra>();
 
     for (const item of pedidoItems as any[]) {
       const pedido = item.pedido;
@@ -325,19 +338,34 @@ const EstoqueRelatorio = () => {
       if (pedidoDate < inicio || pedidoDate > fim) continue;
       if (!validStatuses.has(pedido.status)) continue;
 
-      results.push({
-        cliente_id: pedido.cliente.cliente_id,
-        nome: pedido.cliente.nome,
-        lid: null,
-        data_compra: pedido.data,
-        quantidade: Number(item.quantidade),
+      const cid = pedido.cliente.cliente_id;
+      if (!clienteMap.has(cid)) {
+        clienteMap.set(cid, {
+          cliente_id: cid,
+          nome: pedido.cliente.nome,
+          lid: null,
+          produtos: [],
+        });
+      }
+
+      const prodInfo = prodInfoMap.get(item.produto_id);
+      const pesoInfo = pesoMap.get(item.produto_id);
+
+      clienteMap.get(cid)!.produtos.push({
         produto_id: item.produto_id,
-        produto_nome: prodNomeMap.get(item.produto_id) || "—",
+        produto_nome: prodInfo?.nome || "—",
+        peso: pesoInfo?.peso ?? null,
+        unidade_medida: pesoInfo?.unidade ?? "un",
+        valor: Number(item.preco_unitario),
+        quantidade: Number(item.quantidade),
+        data_compra: pedido.data,
       });
     }
 
-    // Fetch LIDs (deduplicated logic)
-    const uniqueClienteIds = [...new Set(results.map((r) => r.cliente_id))];
+    const results = Array.from(clienteMap.values());
+
+    // Fetch LIDs
+    const uniqueClienteIds = results.map((r) => r.cliente_id);
     const lidMap = await fetchLids(uniqueClienteIds);
     for (const r of results) {
       r.lid = lidMap.get(r.cliente_id) || null;
