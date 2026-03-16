@@ -25,14 +25,21 @@ interface ProdutoEstoque {
   checked: boolean;
 }
 
+interface ClienteProdutoCompra {
+  produto_id: string;
+  produto_nome: string;
+  peso: number | null;
+  unidade_medida: string;
+  valor: number;
+  quantidade: number;
+  data_compra: string;
+}
+
 interface ClienteCompra {
   cliente_id: string;
   nome: string;
   lid: string | null;
-  data_compra: string;
-  quantidade: number;
-  produto_id: string;
-  produto_nome: string;
+  produtos: ClienteProdutoCompra[];
 }
 
 interface FamiliaOption { familia_id: string; nome: string; }
@@ -290,13 +297,18 @@ const EstoqueRelatorio = () => {
     setLoadingClientes(true);
 
     const prodIds = checkedProducts.map((p) => p.produto_id);
-    // Pre-build lookup map to avoid .find() inside loop
-    const prodNomeMap = new Map(checkedProducts.map((p) => [p.produto_id, p.nome]));
+    const prodInfoMap = new Map(checkedProducts.map((p) => [p.produto_id, p]));
 
-    const { data: pedidoItems } = await supabase
-      .from("pedido_item")
-      .select("produto_id, quantidade, pedido:pedido_id(pedido_id, data, cliente_id, status, cliente:cliente_id(cliente_id, nome, clientewhats_id))")
-      .in("produto_id", prodIds);
+    const [{ data: pedidoItems }, { data: produtosDb }] = await Promise.all([
+      supabase
+        .from("pedido_item")
+        .select("produto_id, quantidade, preco_unitario, pedido:pedido_id(pedido_id, data, cliente_id, status, cliente:cliente_id(cliente_id, nome, clientewhats_id))")
+        .in("produto_id", prodIds),
+      supabase
+        .from("produto")
+        .select("produto_id, peso_liquido, unidade_medida")
+        .in("produto_id", prodIds),
+    ]);
 
     if (!pedidoItems) {
       setClientes([]);
@@ -305,11 +317,19 @@ const EstoqueRelatorio = () => {
       return;
     }
 
+    const pesoMap = new Map<string, { peso: number | null; unidade: string }>();
+    if (produtosDb) {
+      for (const pr of produtosDb as any[]) {
+        pesoMap.set(pr.produto_id, { peso: pr.peso_liquido, unidade: pr.unidade_medida || "un" });
+      }
+    }
+
     const inicio = new Date(dataInicio + "T00:00:00");
     const fim = new Date(dataFim + "T23:59:59");
     const validStatuses = new Set(["separacao", "aguardando_pagamento", "pago", "enviado", "entregue"]);
 
-    const results: ClienteCompra[] = [];
+    // Group by cliente
+    const clienteMap = new Map<string, ClienteCompra>();
 
     for (const item of pedidoItems as any[]) {
       const pedido = item.pedido;
@@ -318,19 +338,34 @@ const EstoqueRelatorio = () => {
       if (pedidoDate < inicio || pedidoDate > fim) continue;
       if (!validStatuses.has(pedido.status)) continue;
 
-      results.push({
-        cliente_id: pedido.cliente.cliente_id,
-        nome: pedido.cliente.nome,
-        lid: null,
-        data_compra: pedido.data,
-        quantidade: Number(item.quantidade),
+      const cid = pedido.cliente.cliente_id;
+      if (!clienteMap.has(cid)) {
+        clienteMap.set(cid, {
+          cliente_id: cid,
+          nome: pedido.cliente.nome,
+          lid: null,
+          produtos: [],
+        });
+      }
+
+      const prodInfo = prodInfoMap.get(item.produto_id);
+      const pesoInfo = pesoMap.get(item.produto_id);
+
+      clienteMap.get(cid)!.produtos.push({
         produto_id: item.produto_id,
-        produto_nome: prodNomeMap.get(item.produto_id) || "—",
+        produto_nome: prodInfo?.nome || "—",
+        peso: pesoInfo?.peso ?? null,
+        unidade_medida: pesoInfo?.unidade ?? "un",
+        valor: Number(item.preco_unitario),
+        quantidade: Number(item.quantidade),
+        data_compra: pedido.data,
       });
     }
 
-    // Fetch LIDs (deduplicated logic)
-    const uniqueClienteIds = [...new Set(results.map((r) => r.cliente_id))];
+    const results = Array.from(clienteMap.values());
+
+    // Fetch LIDs
+    const uniqueClienteIds = results.map((r) => r.cliente_id);
     const lidMap = await fetchLids(uniqueClienteIds);
     for (const r of results) {
       r.lid = lidMap.get(r.cliente_id) || null;
@@ -378,11 +413,16 @@ const EstoqueRelatorio = () => {
         .map((c) => ({
           cliente_id: c.cliente_id,
           nome: c.nome,
-          lid: c.lid,
-          data_compra: c.data_compra,
-          quantidade: c.quantidade,
-          produto_id: c.produto_id,
-          produto_nome: c.produto_nome,
+          ...(c.lid ? { lid: c.lid } : {}),
+          produtos: c.produtos.map((pr) => ({
+            produto_id: pr.produto_id,
+            produto_nome: pr.produto_nome,
+            peso: pr.peso,
+            unidade_medida: pr.unidade_medida,
+            valor: pr.valor,
+            quantidade: pr.quantidade,
+            data_compra: pr.data_compra,
+          })),
         })),
     };
 
@@ -538,36 +578,47 @@ const EstoqueRelatorio = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">
-                  Clientes que compraram no período ({clientes.length} registros)
+                  Clientes que compraram no período ({clientes.length} cliente(s))
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {clientes.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhum cliente encontrado no período {dataInicio} a {dataFim}.</p>
                 ) : (
-                  <div className="border rounded-lg overflow-auto max-h-[300px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Cliente</TableHead>
-                          <TableHead>LID</TableHead>
-                          <TableHead>Produto</TableHead>
-                          <TableHead className="text-center">Qtd</TableHead>
-                          <TableHead>Data Compra</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {clientes.map((c, i) => (
-                          <TableRow key={i}>
-                            <TableCell className="font-medium">{c.nome}</TableCell>
-                            <TableCell className="text-muted-foreground font-mono text-xs">{c.lid || "—"}</TableCell>
-                            <TableCell>{c.produto_nome}</TableCell>
-                            <TableCell className="text-center">{c.quantidade}</TableCell>
-                            <TableCell>{format(new Date(c.data_compra), "dd/MM/yyyy")}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                    {clientes.map((c) => (
+                      <div key={c.cliente_id} className="border rounded-lg">
+                        <div className="px-3 py-2 bg-muted/50 border-b flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm">{c.nome}</span>
+                          {c.lid && <Badge variant="outline" className="font-mono text-[10px]">LID: {c.lid}</Badge>}
+                          <span className="text-[10px] text-muted-foreground ml-auto">{c.cliente_id}</span>
+                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-xs">Produto</TableHead>
+                              <TableHead className="text-xs text-center">Peso</TableHead>
+                              <TableHead className="text-xs text-center">Unid.</TableHead>
+                              <TableHead className="text-xs text-right">Valor</TableHead>
+                              <TableHead className="text-xs text-center">Qtd</TableHead>
+                              <TableHead className="text-xs">Data</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {c.produtos.map((pr, pi) => (
+                              <TableRow key={pi}>
+                                <TableCell className="text-xs font-medium">{pr.produto_nome}</TableCell>
+                                <TableCell className="text-xs text-center">{pr.peso != null ? pr.peso : "—"}</TableCell>
+                                <TableCell className="text-xs text-center">{pr.unidade_medida}</TableCell>
+                                <TableCell className="text-xs text-right">R$ {pr.valor.toFixed(2)}</TableCell>
+                                <TableCell className="text-xs text-center">{pr.quantidade}</TableCell>
+                                <TableCell className="text-xs">{format(new Date(pr.data_compra), "dd/MM/yyyy")}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
