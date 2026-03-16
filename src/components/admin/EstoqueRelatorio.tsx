@@ -413,11 +413,16 @@ const EstoqueRelatorio = () => {
         .map((c) => ({
           cliente_id: c.cliente_id,
           nome: c.nome,
-          lid: c.lid,
-          data_compra: c.data_compra,
-          quantidade: c.quantidade,
-          produto_id: c.produto_id,
-          produto_nome: c.produto_nome,
+          ...(c.lid ? { lid: c.lid } : {}),
+          produtos: c.produtos.map((pr) => ({
+            produto_id: pr.produto_id,
+            produto_nome: pr.produto_nome,
+            peso: pr.peso,
+            unidade_medida: pr.unidade_medida,
+            valor: pr.valor,
+            quantidade: pr.quantidade,
+            data_compra: pr.data_compra,
+          })),
         })),
     };
 
