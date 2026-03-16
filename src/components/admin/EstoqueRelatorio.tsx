@@ -350,16 +350,23 @@ const EstoqueRelatorio = () => {
 
       const prodInfo = prodInfoMap.get(item.produto_id);
       const pesoInfo = pesoMap.get(item.produto_id);
+      const cliente = clienteMap.get(cid)!;
 
-      clienteMap.get(cid)!.produtos.push({
-        produto_id: item.produto_id,
-        produto_nome: prodInfo?.nome || "—",
-        peso: pesoInfo?.peso ?? null,
-        unidade_medida: pesoInfo?.unidade ?? "un",
-        valor: Number(item.preco_unitario),
-        quantidade: Number(item.quantidade),
-        data_compra: pedido.data,
-      });
+      // Deduplicate: if product already exists for this client, sum quantity
+      const existing = cliente.produtos.find((p) => p.produto_id === item.produto_id);
+      if (existing) {
+        existing.quantidade += Number(item.quantidade);
+      } else {
+        cliente.produtos.push({
+          produto_id: item.produto_id,
+          produto_nome: prodInfo?.nome || "—",
+          peso: pesoInfo?.peso ?? null,
+          unidade_medida: pesoInfo?.unidade ?? "un",
+          valor: Number(item.preco_unitario),
+          quantidade: Number(item.quantidade),
+          data_compra: pedido.data,
+        });
+      }
     }
 
     const results = Array.from(clienteMap.values());
@@ -399,15 +406,6 @@ const EstoqueRelatorio = () => {
     const payload = {
       tipo: "relatorio_estoque",
       periodo: { inicio: dataInicio, fim: dataFim },
-      produtos: checkedProducts.map((p) => ({
-        produto_id: p.produto_id,
-        nome: p.nome,
-        valor: p.preco,
-        descricao: p.descricao,
-        familia: p.familia,
-        fabricante: p.fabricante,
-        imagem_url: p.imagem_url,
-      })),
       clientes: clientes
         .filter((c) => c.nome.toLowerCase() !== "consumidor final")
         .map((c) => ({
@@ -416,12 +414,11 @@ const EstoqueRelatorio = () => {
           ...(c.lid ? { lid: c.lid } : {}),
           produtos: c.produtos.map((pr) => ({
             produto_id: pr.produto_id,
-            produto_nome: pr.produto_nome,
+            nome: pr.produto_nome,
             peso: pr.peso,
             unidade_medida: pr.unidade_medida,
             valor: pr.valor,
             quantidade: pr.quantidade,
-            data_compra: pr.data_compra,
           })),
         })),
     };
@@ -596,12 +593,11 @@ const EstoqueRelatorio = () => {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="text-xs">Produto</TableHead>
+              <TableHead className="text-xs">Produto</TableHead>
                               <TableHead className="text-xs text-center">Peso</TableHead>
                               <TableHead className="text-xs text-center">Unid.</TableHead>
                               <TableHead className="text-xs text-right">Valor</TableHead>
                               <TableHead className="text-xs text-center">Qtd</TableHead>
-                              <TableHead className="text-xs">Data</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -612,7 +608,6 @@ const EstoqueRelatorio = () => {
                                 <TableCell className="text-xs text-center">{pr.unidade_medida}</TableCell>
                                 <TableCell className="text-xs text-right">R$ {pr.valor.toFixed(2)}</TableCell>
                                 <TableCell className="text-xs text-center">{pr.quantidade}</TableCell>
-                                <TableCell className="text-xs">{format(new Date(pr.data_compra), "dd/MM/yyyy")}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -645,7 +640,6 @@ const EstoqueRelatorio = () => {
           <CardContent className="space-y-1">
             {webhookLogs.map((log, idx) => {
               const isExpanded = expandedLogIdx === idx;
-              const produtos = log.payload?.produtos || [];
               const clientesLog = log.payload?.clientes || [];
               return (
                 <div key={log.integracao_log_id} className="border rounded">
@@ -659,7 +653,7 @@ const EstoqueRelatorio = () => {
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground text-xs">
-                        {produtos.length} produto(s) · {clientesLog.length} cliente(s)
+                        {clientesLog.length} cliente(s)
                       </span>
                       <Badge variant={log.status === "sucesso" ? "default" : "destructive"} className="text-[10px] px-1.5 py-0">
                         {log.status || "—"}
@@ -668,32 +662,25 @@ const EstoqueRelatorio = () => {
                   </button>
                   {isExpanded && (
                     <div className="px-3 pb-2 space-y-2">
-                      {produtos.map((prod: any, pi: number) => {
-                        const clientesDoProduto = clientesLog.filter((c: any) => c.produto_id === prod.produto_id);
-                        return (
-                          <div key={pi} className="border rounded bg-muted/30">
-                            <div className="px-2 py-1.5 text-xs font-semibold border-b bg-muted/50">
-                              {prod.nome}
-                            </div>
-                            {clientesDoProduto.length === 0 ? (
-                              <div className="px-2 py-1.5 text-xs text-muted-foreground">Nenhum cliente</div>
-                            ) : (
-                              <div className="divide-y text-xs max-h-40 overflow-y-auto">
-                                {clientesDoProduto.map((c: any, ci: number) => (
-                                  <div key={ci} className="px-2 py-1.5 flex justify-between items-center gap-2">
-                                    <span className="font-medium truncate">{c.nome || "—"}</span>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <span className="text-muted-foreground">Qtd: {c.quantidade}</span>
-                                      {c.lid && <span className="text-muted-foreground font-mono">LID: {c.lid}</span>}
-                                      <span className="text-muted-foreground">{c.data_compra ? format(new Date(c.data_compra), "dd/MM/yy") : ""}</span>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                      {clientesLog.map((c: any, ci: number) => (
+                        <div key={ci} className="border rounded bg-muted/30">
+                          <div className="px-2 py-1.5 text-xs font-semibold border-b bg-muted/50 flex items-center gap-2">
+                            <span>{c.nome}</span>
+                            {c.lid && <span className="font-mono text-muted-foreground">LID: {c.lid}</span>}
                           </div>
-                        );
-                      })}
+                          <div className="divide-y text-xs max-h-40 overflow-y-auto">
+                            {(c.produtos || []).map((pr: any, pi: number) => (
+                              <div key={pi} className="px-2 py-1.5 flex justify-between items-center gap-2">
+                                <span className="font-medium truncate">{pr.nome || pr.produto_nome || "—"}</span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="text-muted-foreground">Qtd: {pr.quantidade}</span>
+                                  <span className="text-muted-foreground">R$ {Number(pr.valor).toFixed(2)}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
