@@ -82,6 +82,61 @@ interface WebhookLog {
   payload: any;
 }
 
+interface WebhookProxyRequest {
+  webhook_url: string;
+  webhook_apikey?: string;
+  log_tipo?: string;
+  payload: unknown;
+}
+
+const safeJsonParse = (value: string) => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
+const invokeWebhookProxy = async (body: WebhookProxyRequest) => {
+  try {
+    const { data, error } = await supabase.functions.invoke("webhook-proxy", { body });
+    if (error) throw error;
+    return data;
+  } catch (error: any) {
+    const isFetchError =
+      error?.name === "FunctionsFetchError" ||
+      error?.message?.includes("Failed to send a request to the Edge Function");
+
+    if (!isFetchError) throw error;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) throw error;
+
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-proxy`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const responseText = await response.text();
+    const responseJson = responseText ? safeJsonParse(responseText) : null;
+
+    if (!response.ok) {
+      const errorMessage =
+        responseJson && typeof responseJson === "object" && "error" in responseJson
+          ? String((responseJson as { error: unknown }).error)
+          : responseText || `HTTP ${response.status}`;
+      throw new Error(errorMessage);
+    }
+
+    return responseJson ?? responseText;
+  }
+};
+
 const EstoqueRelatorio = () => {
   const [produtos, setProdutos] = useState<ProdutoEstoque[]>([]);
   const [familias, setFamilias] = useState<FamiliaOption[]>([]);
