@@ -350,16 +350,23 @@ const EstoqueRelatorio = () => {
 
       const prodInfo = prodInfoMap.get(item.produto_id);
       const pesoInfo = pesoMap.get(item.produto_id);
+      const cliente = clienteMap.get(cid)!;
 
-      clienteMap.get(cid)!.produtos.push({
-        produto_id: item.produto_id,
-        produto_nome: prodInfo?.nome || "—",
-        peso: pesoInfo?.peso ?? null,
-        unidade_medida: pesoInfo?.unidade ?? "un",
-        valor: Number(item.preco_unitario),
-        quantidade: Number(item.quantidade),
-        data_compra: pedido.data,
-      });
+      // Deduplicate: if product already exists for this client, sum quantity
+      const existing = cliente.produtos.find((p) => p.produto_id === item.produto_id);
+      if (existing) {
+        existing.quantidade += Number(item.quantidade);
+      } else {
+        cliente.produtos.push({
+          produto_id: item.produto_id,
+          produto_nome: prodInfo?.nome || "—",
+          peso: pesoInfo?.peso ?? null,
+          unidade_medida: pesoInfo?.unidade ?? "un",
+          valor: Number(item.preco_unitario),
+          quantidade: Number(item.quantidade),
+          data_compra: pedido.data,
+        });
+      }
     }
 
     const results = Array.from(clienteMap.values());
