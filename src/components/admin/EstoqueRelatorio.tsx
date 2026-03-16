@@ -387,22 +387,23 @@ const EstoqueRelatorio = () => {
     };
 
     try {
-      const { error } = await supabase.functions.invoke("webhook-proxy", {
-        body: {
-          webhook_url: webhookUrl,
-          webhook_apikey: webhookApikey,
-          log_tipo: "webhook_estoque",
-          payload,
-        },
+      const response = await invokeWebhookProxy({
+        webhook_url: webhookUrl,
+        webhook_apikey: webhookApikey,
+        log_tipo: "webhook_estoque",
+        payload,
       });
 
-      if (error) throw error;
+      if (response && typeof response === "object" && "error" in response && response.error) {
+        throw new Error(String(response.error));
+      }
 
       toast({ title: "Relatório enviado com sucesso!" });
       setPreviewOpen(false);
       setLogPage(0);
       loadWebhookLogs(0);
     } catch (err: any) {
+      console.error("Erro ao enviar relatório de estoque", err);
       toast({ title: "Erro ao enviar", description: err.message, variant: "destructive" });
     } finally {
       setSending(false);
