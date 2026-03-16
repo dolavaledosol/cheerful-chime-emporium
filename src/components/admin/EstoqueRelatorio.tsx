@@ -593,12 +593,11 @@ const EstoqueRelatorio = () => {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="text-xs">Produto</TableHead>
+              <TableHead className="text-xs">Produto</TableHead>
                               <TableHead className="text-xs text-center">Peso</TableHead>
                               <TableHead className="text-xs text-center">Unid.</TableHead>
                               <TableHead className="text-xs text-right">Valor</TableHead>
                               <TableHead className="text-xs text-center">Qtd</TableHead>
-                              <TableHead className="text-xs">Data</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
