@@ -406,15 +406,6 @@ const EstoqueRelatorio = () => {
     const payload = {
       tipo: "relatorio_estoque",
       periodo: { inicio: dataInicio, fim: dataFim },
-      produtos: checkedProducts.map((p) => ({
-        produto_id: p.produto_id,
-        nome: p.nome,
-        valor: p.preco,
-        descricao: p.descricao,
-        familia: p.familia,
-        fabricante: p.fabricante,
-        imagem_url: p.imagem_url,
-      })),
       clientes: clientes
         .filter((c) => c.nome.toLowerCase() !== "consumidor final")
         .map((c) => ({
@@ -423,12 +414,11 @@ const EstoqueRelatorio = () => {
           ...(c.lid ? { lid: c.lid } : {}),
           produtos: c.produtos.map((pr) => ({
             produto_id: pr.produto_id,
-            produto_nome: pr.produto_nome,
+            nome: pr.produto_nome,
             peso: pr.peso,
             unidade_medida: pr.unidade_medida,
             valor: pr.valor,
             quantidade: pr.quantidade,
-            data_compra: pr.data_compra,
           })),
         })),
     };
