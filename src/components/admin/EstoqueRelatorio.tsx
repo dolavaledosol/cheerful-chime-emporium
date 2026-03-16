@@ -578,36 +578,47 @@ const EstoqueRelatorio = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">
-                  Clientes que compraram no período ({clientes.length} registros)
+                  Clientes que compraram no período ({clientes.length} cliente(s))
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {clientes.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhum cliente encontrado no período {dataInicio} a {dataFim}.</p>
                 ) : (
-                  <div className="border rounded-lg overflow-auto max-h-[300px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Cliente</TableHead>
-                          <TableHead>LID</TableHead>
-                          <TableHead>Produto</TableHead>
-                          <TableHead className="text-center">Qtd</TableHead>
-                          <TableHead>Data Compra</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {clientes.map((c, i) => (
-                          <TableRow key={i}>
-                            <TableCell className="font-medium">{c.nome}</TableCell>
-                            <TableCell className="text-muted-foreground font-mono text-xs">{c.lid || "—"}</TableCell>
-                            <TableCell>{c.produto_nome}</TableCell>
-                            <TableCell className="text-center">{c.quantidade}</TableCell>
-                            <TableCell>{format(new Date(c.data_compra), "dd/MM/yyyy")}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                    {clientes.map((c) => (
+                      <div key={c.cliente_id} className="border rounded-lg">
+                        <div className="px-3 py-2 bg-muted/50 border-b flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm">{c.nome}</span>
+                          {c.lid && <Badge variant="outline" className="font-mono text-[10px]">LID: {c.lid}</Badge>}
+                          <span className="text-[10px] text-muted-foreground ml-auto">{c.cliente_id}</span>
+                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-xs">Produto</TableHead>
+                              <TableHead className="text-xs text-center">Peso</TableHead>
+                              <TableHead className="text-xs text-center">Unid.</TableHead>
+                              <TableHead className="text-xs text-right">Valor</TableHead>
+                              <TableHead className="text-xs text-center">Qtd</TableHead>
+                              <TableHead className="text-xs">Data</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {c.produtos.map((pr, pi) => (
+                              <TableRow key={pi}>
+                                <TableCell className="text-xs font-medium">{pr.produto_nome}</TableCell>
+                                <TableCell className="text-xs text-center">{pr.peso != null ? pr.peso : "—"}</TableCell>
+                                <TableCell className="text-xs text-center">{pr.unidade_medida}</TableCell>
+                                <TableCell className="text-xs text-right">R$ {pr.valor.toFixed(2)}</TableCell>
+                                <TableCell className="text-xs text-center">{pr.quantidade}</TableCell>
+                                <TableCell className="text-xs">{format(new Date(pr.data_compra), "dd/MM/yyyy")}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
