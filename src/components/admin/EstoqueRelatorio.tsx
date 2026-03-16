@@ -25,14 +25,21 @@ interface ProdutoEstoque {
   checked: boolean;
 }
 
+interface ClienteProdutoCompra {
+  produto_id: string;
+  produto_nome: string;
+  peso: number | null;
+  unidade_medida: string;
+  valor: number;
+  quantidade: number;
+  data_compra: string;
+}
+
 interface ClienteCompra {
   cliente_id: string;
   nome: string;
   lid: string | null;
-  data_compra: string;
-  quantidade: number;
-  produto_id: string;
-  produto_nome: string;
+  produtos: ClienteProdutoCompra[];
 }
 
 interface FamiliaOption { familia_id: string; nome: string; }
