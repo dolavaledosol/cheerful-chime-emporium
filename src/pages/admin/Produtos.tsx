@@ -110,6 +110,7 @@ const Produtos = () => {
       preco: form.preco ? Number(form.preco) : 0,
       aceita_fracionado: form.aceita_fracionado,
       quantidade_default: form.quantidade_default ? Number(form.quantidade_default) : 1,
+      destacar: form.destacar,
     };
 
     let savedId = editId;
