@@ -307,7 +307,7 @@ const EstoqueRelatorio = () => {
         .in("produto_id", prodIds),
       supabase
         .from("produto")
-        .select("produto_id, peso_liquido, unidade_medida")
+        .select("produto_id, peso_liquido, unidade_medida, destacar")
         .in("produto_id", prodIds),
     ]);
 
