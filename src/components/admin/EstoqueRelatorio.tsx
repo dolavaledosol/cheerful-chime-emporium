@@ -33,6 +33,7 @@ interface ClienteProdutoCompra {
   valor: number;
   quantidade: number;
   data_compra: string;
+  destacar: boolean;
 }
 
 interface ClienteCompra {
