@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search } from "lucide-react";
@@ -192,11 +193,12 @@ const Produtos = () => {
                <TableHead className="hidden md:table-cell">Fabricante</TableHead>
                <TableHead className="hidden sm:table-cell">Preço</TableHead>
                <TableHead className="hidden sm:table-cell">Status</TableHead>
+               <TableHead className="hidden sm:table-cell text-center">Dest.</TableHead>
              </TableRow>
            </TableHeader>
            <TableBody>
              {filtered.length === 0 ? (
-               <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
+               <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
              ) : filtered.map((p) => (
                <TableRow key={p.produto_id}>
                  <TableCell>
@@ -215,6 +217,15 @@ const Produtos = () => {
                    <span className={`text-xs px-2 py-0.5 rounded-full ${p.ativo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                      {p.ativo ? "Ativo" : "Inativo"}
                    </span>
+                 </TableCell>
+                 <TableCell className="hidden sm:table-cell text-center">
+                   <Checkbox
+                     checked={p.destacar}
+                     onCheckedChange={async (v) => {
+                       await supabase.from("produto").update({ destacar: !!v }).eq("produto_id", p.produto_id);
+                       load();
+                     }}
+                   />
                  </TableCell>
                </TableRow>
             ))}
