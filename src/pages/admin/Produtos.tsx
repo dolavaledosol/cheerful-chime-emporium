@@ -91,6 +91,7 @@ const Produtos = () => {
       preco: p.preco?.toString() || "0",
       aceita_fracionado: p.aceita_fracionado,
       quantidade_default: (p as any).quantidade_default?.toString() || "1",
+      destacar: p.destacar ?? false,
     });
     setDialogOpen(true);
   };
