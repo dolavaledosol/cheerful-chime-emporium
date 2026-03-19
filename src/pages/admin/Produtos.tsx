@@ -300,6 +300,10 @@ const Produtos = () => {
                 <Switch checked={form.aceita_fracionado} onCheckedChange={(v) => setForm({ ...form, aceita_fracionado: v })} />
                 <Label>Aceita fracionado</Label>
               </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={form.destacar} onCheckedChange={(v) => setForm({ ...form, destacar: v })} />
+                <Label>Destacar</Label>
+              </div>
             </div>
 
             {/* Image upload - only after product is saved */}
