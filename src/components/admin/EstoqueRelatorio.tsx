@@ -33,6 +33,7 @@ interface ClienteProdutoCompra {
   valor: number;
   quantidade: number;
   data_compra: string;
+  destacar: boolean;
 }
 
 interface ClienteCompra {
@@ -306,7 +307,7 @@ const EstoqueRelatorio = () => {
         .in("produto_id", prodIds),
       supabase
         .from("produto")
-        .select("produto_id, peso_liquido, unidade_medida")
+        .select("produto_id, peso_liquido, unidade_medida, destacar")
         .in("produto_id", prodIds),
     ]);
 
@@ -317,10 +318,10 @@ const EstoqueRelatorio = () => {
       return;
     }
 
-    const pesoMap = new Map<string, { peso: number | null; unidade: string }>();
+    const pesoMap = new Map<string, { peso: number | null; unidade: string; destacar: boolean }>();
     if (produtosDb) {
       for (const pr of produtosDb as any[]) {
-        pesoMap.set(pr.produto_id, { peso: pr.peso_liquido, unidade: pr.unidade_medida || "un" });
+        pesoMap.set(pr.produto_id, { peso: pr.peso_liquido, unidade: pr.unidade_medida || "un", destacar: pr.destacar ?? false });
       }
     }
 
@@ -365,6 +366,7 @@ const EstoqueRelatorio = () => {
           valor: Number(item.preco_unitario),
           quantidade: Number(item.quantidade),
           data_compra: pedido.data,
+          destacar: pesoInfo?.destacar ?? false,
         });
       }
     }
@@ -419,6 +421,7 @@ const EstoqueRelatorio = () => {
             unidade_medida: pr.unidade_medida,
             valor: pr.valor,
             quantidade: pr.quantidade,
+            destacar: pr.destacar,
           })),
         })),
     };

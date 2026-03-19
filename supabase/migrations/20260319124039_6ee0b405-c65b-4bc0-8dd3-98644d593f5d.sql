@@ -1,0 +1,1 @@
+ALTER TABLE public.produto ADD COLUMN destacar boolean NOT NULL DEFAULT false;

@@ -1305,6 +1305,7 @@ export type Database = {
           ativo: boolean
           created_at: string
           descricao: string | null
+          destacar: boolean
           fabricante_id: string | null
           familia_id: string | null
           largura: number | null
@@ -1325,6 +1326,7 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           descricao?: string | null
+          destacar?: boolean
           fabricante_id?: string | null
           familia_id?: string | null
           largura?: number | null
@@ -1345,6 +1347,7 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           descricao?: string | null
+          destacar?: boolean
           fabricante_id?: string | null
           familia_id?: string | null
           largura?: number | null
