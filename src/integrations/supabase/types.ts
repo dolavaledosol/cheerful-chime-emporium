@@ -1622,7 +1622,7 @@ export type Database = {
         | "enviado"
         | "entregue"
         | "cancelado"
-      tipo_cliente: "cliente" | "vendedor" | "admin"
+      tipo_cliente: "cliente" | "vendedor" | "admin" | "cliente_whats"
       unidade_medida:
         | "un"
         | "kg"
@@ -1773,7 +1773,7 @@ export const Constants = {
         "entregue",
         "cancelado",
       ],
-      tipo_cliente: ["cliente", "vendedor", "admin"],
+      tipo_cliente: ["cliente", "vendedor", "admin", "cliente_whats"],
       unidade_medida: [
         "un",
         "kg",
