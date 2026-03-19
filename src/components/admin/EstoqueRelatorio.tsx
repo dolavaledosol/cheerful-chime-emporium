@@ -421,6 +421,7 @@ const EstoqueRelatorio = () => {
             unidade_medida: pr.unidade_medida,
             valor: pr.valor,
             quantidade: pr.quantidade,
+            destacar: pr.destacar,
           })),
         })),
     };
