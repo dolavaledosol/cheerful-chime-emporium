@@ -699,6 +699,15 @@ const Estoque = () => {
                      <TableCell className="font-medium whitespace-nowrap">{g.nome}</TableCell>
                      <TableCell className="text-muted-foreground whitespace-nowrap">{g.fabricante}</TableCell>
                      <TableCell className="text-muted-foreground whitespace-nowrap">{g.familia}</TableCell>
+                     <TableCell className="text-center">
+                       <Checkbox
+                         checked={g.destacar}
+                         onCheckedChange={async (v) => {
+                           await supabase.from("produto").update({ destacar: !!v }).eq("produto_id", g.produto_id);
+                           load();
+                         }}
+                       />
+                     </TableCell>
                      {visibleLocais.map((l) => {
                        const data = g.locais[l.local_estoque_id];
                        return (
