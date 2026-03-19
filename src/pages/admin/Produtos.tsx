@@ -24,6 +24,7 @@ interface Produto {
   peso_liquido: number | null;
   preco: number;
   aceita_fracionado: boolean;
+  destacar: boolean;
   familia?: { nome: string } | null;
   fabricante?: { nome: string } | null;
 }
