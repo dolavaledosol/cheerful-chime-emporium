@@ -674,7 +674,7 @@ const Estoque = () => {
                  </TableRow>
                  {estoqueTipoFilter === "ambos" && (
                    <TableRow>
-                     <TableHead /><TableHead /><TableHead /><TableHead />
+                     <TableHead /><TableHead /><TableHead /><TableHead /><TableHead />
                      {(estoqueLocalFilter === "todos" ? locais : locais.filter(l => l.local_estoque_id === estoqueLocalFilter)).map((l) => (
                        <React.Fragment key={l.local_estoque_id}>
                          <TableHead className="text-center text-xs whitespace-nowrap">Est.</TableHead>
