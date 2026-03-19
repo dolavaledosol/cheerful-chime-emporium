@@ -46,7 +46,7 @@ const Produtos = () => {
   const [familias, setFamilias] = useState<{ familia_id: string; nome: string }[]>([]);
   const [fabricantes, setFabricantes] = useState<{ fabricante_id: string; nome: string }[]>([]);
   const [search, setSearch] = useState("");
-  const [filterAtivo, setFilterAtivo] = useState<string>("all");
+  const [filterAtivo, setFilterAtivo] = useState<string>("true");
   const [filterFamilia, setFilterFamilia] = useState<string>("all");
   const [filterFabricante, setFilterFabricante] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
