@@ -37,7 +37,7 @@ const unidadeLabels: Record<string, string> = {
 const emptyForm = {
   nome: "", descricao: "", ativo: true, familia_id: "", fabricante_id: "",
   unidade_medida: "un", peso_bruto: "", peso_liquido: "", preco: "",
-  aceita_fracionado: false, quantidade_default: "1",
+  aceita_fracionado: false, quantidade_default: "1", destacar: false,
 };
 
 const Produtos = () => {
