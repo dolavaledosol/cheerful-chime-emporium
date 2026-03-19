@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import ProdutoImageUpload from "@/components/admin/ProdutoImageUpload";
 
 interface Produto {
@@ -185,36 +185,38 @@ const Produtos = () => {
       <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead className="hidden md:table-cell">Família</TableHead>
-              <TableHead className="hidden md:table-cell">Fabricante</TableHead>
-              <TableHead className="hidden sm:table-cell">Preço</TableHead>
-              <TableHead className="hidden sm:table-cell">Status</TableHead>
-              <TableHead className="w-24">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
-            ) : filtered.map((p) => (
-              <TableRow key={p.produto_id}>
-                <TableCell className="font-medium">{p.nome}</TableCell>
-                <TableCell className="hidden md:table-cell text-muted-foreground">{p.familia?.nome || "—"}</TableCell>
-                <TableCell className="hidden md:table-cell text-muted-foreground">{p.fabricante?.nome || "—"}</TableCell>
-                <TableCell className="hidden sm:table-cell font-medium">R$ {p.preco?.toFixed(2) || "0.00"}</TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${p.ativo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                    {p.ativo ? "Ativo" : "Inativo"}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => softDelete(p.produto_id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                  </div>
-                </TableCell>
-              </TableRow>
+             <TableRow>
+               <TableHead>Cód</TableHead>
+               <TableHead>Nome</TableHead>
+               <TableHead className="hidden md:table-cell">Família</TableHead>
+               <TableHead className="hidden md:table-cell">Fabricante</TableHead>
+               <TableHead className="hidden sm:table-cell">Preço</TableHead>
+               <TableHead className="hidden sm:table-cell">Status</TableHead>
+             </TableRow>
+           </TableHeader>
+           <TableBody>
+             {filtered.length === 0 ? (
+               <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
+             ) : filtered.map((p) => (
+               <TableRow key={p.produto_id}>
+                 <TableCell>
+                   <button
+                     className="text-xs font-mono text-primary hover:underline cursor-pointer"
+                     onClick={() => openEdit(p)}
+                   >
+                     {p.produto_id.substring(0, 8)}
+                   </button>
+                 </TableCell>
+                 <TableCell className="font-medium">{p.nome}</TableCell>
+                 <TableCell className="hidden md:table-cell text-muted-foreground">{p.familia?.nome || "—"}</TableCell>
+                 <TableCell className="hidden md:table-cell text-muted-foreground">{p.fabricante?.nome || "—"}</TableCell>
+                 <TableCell className="hidden sm:table-cell font-medium">R$ {p.preco?.toFixed(2) || "0.00"}</TableCell>
+                 <TableCell className="hidden sm:table-cell">
+                   <span className={`text-xs px-2 py-0.5 rounded-full ${p.ativo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                     {p.ativo ? "Ativo" : "Inativo"}
+                   </span>
+                 </TableCell>
+               </TableRow>
             ))}
           </TableBody>
         </Table>
