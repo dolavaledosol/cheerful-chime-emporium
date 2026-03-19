@@ -24,6 +24,7 @@ interface Produto {
   peso_liquido: number | null;
   preco: number;
   aceita_fracionado: boolean;
+  destacar: boolean;
   familia?: { nome: string } | null;
   fabricante?: { nome: string } | null;
 }
@@ -36,7 +37,7 @@ const unidadeLabels: Record<string, string> = {
 const emptyForm = {
   nome: "", descricao: "", ativo: true, familia_id: "", fabricante_id: "",
   unidade_medida: "un", peso_bruto: "", peso_liquido: "", preco: "",
-  aceita_fracionado: false, quantidade_default: "1",
+  aceita_fracionado: false, quantidade_default: "1", destacar: false,
 };
 
 const Produtos = () => {
@@ -90,6 +91,7 @@ const Produtos = () => {
       preco: p.preco?.toString() || "0",
       aceita_fracionado: p.aceita_fracionado,
       quantidade_default: (p as any).quantidade_default?.toString() || "1",
+      destacar: p.destacar ?? false,
     });
     setDialogOpen(true);
   };
@@ -108,6 +110,7 @@ const Produtos = () => {
       preco: form.preco ? Number(form.preco) : 0,
       aceita_fracionado: form.aceita_fracionado,
       quantidade_default: form.quantidade_default ? Number(form.quantidade_default) : 1,
+      destacar: form.destacar,
     };
 
     let savedId = editId;
@@ -296,6 +299,10 @@ const Produtos = () => {
               <div className="flex items-center gap-2">
                 <Switch checked={form.aceita_fracionado} onCheckedChange={(v) => setForm({ ...form, aceita_fracionado: v })} />
                 <Label>Aceita fracionado</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={form.destacar} onCheckedChange={(v) => setForm({ ...form, destacar: v })} />
+                <Label>Destacar</Label>
               </div>
             </div>
 

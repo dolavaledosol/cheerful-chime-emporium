@@ -28,13 +28,14 @@ interface EstoqueRow {
   preco_promocional: number | null;
   quantidade_disponivel: number;
   quantidade_pedida_nao_separada: number;
-  produto: { nome: string; preco: number; peso_liquido: number | null; unidade_medida: string; fabricante: { nome: string } | null; familia: { nome: string } | null } | null;
+  produto: { nome: string; preco: number; peso_liquido: number | null; unidade_medida: string; destacar: boolean; fabricante: { nome: string } | null; familia: { nome: string } | null } | null;
   local_estoque: { nome: string } | null;
 }
 interface LocalEstoque { local_estoque_id: string; nome: string; }
 interface SelectOption { id: string; nome: string; }
 interface ProdutoAgrupado {
   produto_id: string; nome: string; fabricante: string; familia: string;
+  destacar: boolean;
   locais: Record<string, { estoque: number; pedidos: number; estoque_local_id: string }>;
   totalEstoque: number; totalPedidos: number;
 }
@@ -118,7 +119,7 @@ const Estoque = () => {
 
   const load = async () => {
     const [{ data: est }, { data: prod }, { data: loc }] = await Promise.all([
-      supabase.from("estoque_local").select("*, produto(nome, preco, peso_liquido, unidade_medida, fabricante(nome), familia(nome)), local_estoque(nome)").order("produto_id"),
+      supabase.from("estoque_local").select("*, produto(nome, preco, peso_liquido, unidade_medida, destacar, fabricante(nome), familia(nome)), local_estoque(nome)").order("produto_id"),
       supabase.from("produto").select("produto_id, nome").eq("ativo", true).order("nome"),
       supabase.from("local_estoque").select("local_estoque_id, nome").eq("ativo", true).order("nome"),
     ]);
@@ -373,6 +374,7 @@ const Estoque = () => {
         grupo = {
           produto_id: e.produto_id, nome: e.produto?.nome || "—",
           fabricante: e.produto?.fabricante?.nome || "—", familia: e.produto?.familia?.nome || "—",
+          destacar: e.produto?.destacar ?? false,
           locais: {}, totalEstoque: 0, totalPedidos: 0,
         };
         map.set(e.produto_id, grupo);
@@ -658,6 +660,7 @@ const Estoque = () => {
                    <TableHead className="whitespace-nowrap">Produto</TableHead>
                    <TableHead className="whitespace-nowrap">Fabricante</TableHead>
                    <TableHead className="whitespace-nowrap">Família</TableHead>
+                   <TableHead className="whitespace-nowrap text-center">Dest.</TableHead>
                    {(estoqueLocalFilter === "todos" ? locais : locais.filter(l => l.local_estoque_id === estoqueLocalFilter)).map((l) => (
                      <TableHead key={l.local_estoque_id} className="text-center whitespace-nowrap"
                        colSpan={estoqueTipoFilter === "ambos" ? 2 : 1}>
@@ -671,7 +674,7 @@ const Estoque = () => {
                  </TableRow>
                  {estoqueTipoFilter === "ambos" && (
                    <TableRow>
-                     <TableHead /><TableHead /><TableHead /><TableHead />
+                     <TableHead /><TableHead /><TableHead /><TableHead /><TableHead />
                      {(estoqueLocalFilter === "todos" ? locais : locais.filter(l => l.local_estoque_id === estoqueLocalFilter)).map((l) => (
                        <React.Fragment key={l.local_estoque_id}>
                          <TableHead className="text-center text-xs whitespace-nowrap">Est.</TableHead>
@@ -685,7 +688,7 @@ const Estoque = () => {
                </TableHeader>
                <TableBody>
                  {filtered.length === 0 ? (
-                   <TableRow><TableCell colSpan={4 + (estoqueLocalFilter === "todos" ? locais.length : 1) * (estoqueTipoFilter === "ambos" ? 2 : 1) + (estoqueTipoFilter === "ambos" ? 2 : 1)} className="text-center py-8 text-muted-foreground">Nenhum registro encontrado</TableCell></TableRow>
+                   <TableRow><TableCell colSpan={5 + (estoqueLocalFilter === "todos" ? locais.length : 1) * (estoqueTipoFilter === "ambos" ? 2 : 1) + (estoqueTipoFilter === "ambos" ? 2 : 1)} className="text-center py-8 text-muted-foreground">Nenhum registro encontrado</TableCell></TableRow>
                  ) : filtered.map((g) => {
                    const visibleLocais = estoqueLocalFilter === "todos" ? locais : locais.filter(l => l.local_estoque_id === estoqueLocalFilter);
                    const totalEst = estoqueLocalFilter === "todos" ? g.totalEstoque : (g.locais[estoqueLocalFilter]?.estoque ?? 0);
@@ -696,6 +699,15 @@ const Estoque = () => {
                      <TableCell className="font-medium whitespace-nowrap">{g.nome}</TableCell>
                      <TableCell className="text-muted-foreground whitespace-nowrap">{g.fabricante}</TableCell>
                      <TableCell className="text-muted-foreground whitespace-nowrap">{g.familia}</TableCell>
+                     <TableCell className="text-center">
+                       <Checkbox
+                         checked={g.destacar}
+                         onCheckedChange={async (v) => {
+                           await supabase.from("produto").update({ destacar: !!v }).eq("produto_id", g.produto_id);
+                           load();
+                         }}
+                       />
+                     </TableCell>
                      {visibleLocais.map((l) => {
                        const data = g.locais[l.local_estoque_id];
                        return (
