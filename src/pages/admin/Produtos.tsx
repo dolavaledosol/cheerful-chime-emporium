@@ -192,6 +192,7 @@ const Produtos = () => {
                <TableHead className="hidden md:table-cell">Fabricante</TableHead>
                <TableHead className="hidden sm:table-cell">Preço</TableHead>
                <TableHead className="hidden sm:table-cell">Status</TableHead>
+               <TableHead className="hidden sm:table-cell text-center">Dest.</TableHead>
              </TableRow>
            </TableHeader>
            <TableBody>
