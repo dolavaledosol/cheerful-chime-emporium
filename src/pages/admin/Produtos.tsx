@@ -217,6 +217,15 @@ const Produtos = () => {
                      {p.ativo ? "Ativo" : "Inativo"}
                    </span>
                  </TableCell>
+                 <TableCell className="hidden sm:table-cell text-center">
+                   <Checkbox
+                     checked={p.destacar}
+                     onCheckedChange={async (v) => {
+                       await supabase.from("produto").update({ destacar: !!v }).eq("produto_id", p.produto_id);
+                       load();
+                     }}
+                   />
+                 </TableCell>
                </TableRow>
             ))}
           </TableBody>
