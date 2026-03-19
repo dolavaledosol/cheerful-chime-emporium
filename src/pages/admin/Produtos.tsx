@@ -216,8 +216,7 @@ const Produtos = () => {
                      {p.ativo ? "Ativo" : "Inativo"}
                    </span>
                  </TableCell>
-                </TableCell>
-              </TableRow>
+               </TableRow>
             ))}
           </TableBody>
         </Table>
