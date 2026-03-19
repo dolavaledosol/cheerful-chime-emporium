@@ -321,7 +321,7 @@ const EstoqueRelatorio = () => {
     const pesoMap = new Map<string, { peso: number | null; unidade: string }>();
     if (produtosDb) {
       for (const pr of produtosDb as any[]) {
-        pesoMap.set(pr.produto_id, { peso: pr.peso_liquido, unidade: pr.unidade_medida || "un" });
+        pesoMap.set(pr.produto_id, { peso: pr.peso_liquido, unidade: pr.unidade_medida || "un", destacar: pr.destacar ?? false });
       }
     }
 
