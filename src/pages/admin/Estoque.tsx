@@ -119,7 +119,7 @@ const Estoque = () => {
 
   const load = async () => {
     const [{ data: est }, { data: prod }, { data: loc }] = await Promise.all([
-      supabase.from("estoque_local").select("*, produto(nome, preco, peso_liquido, unidade_medida, fabricante(nome), familia(nome)), local_estoque(nome)").order("produto_id"),
+      supabase.from("estoque_local").select("*, produto(nome, preco, peso_liquido, unidade_medida, destacar, fabricante(nome), familia(nome)), local_estoque(nome)").order("produto_id"),
       supabase.from("produto").select("produto_id, nome").eq("ativo", true).order("nome"),
       supabase.from("local_estoque").select("local_estoque_id, nome").eq("ativo", true).order("nome"),
     ]);
