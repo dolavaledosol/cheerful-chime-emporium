@@ -374,6 +374,7 @@ const Estoque = () => {
         grupo = {
           produto_id: e.produto_id, nome: e.produto?.nome || "—",
           fabricante: e.produto?.fabricante?.nome || "—", familia: e.produto?.familia?.nome || "—",
+          destacar: e.produto?.destacar ?? false,
           locais: {}, totalEstoque: 0, totalPedidos: 0,
         };
         map.set(e.produto_id, grupo);
