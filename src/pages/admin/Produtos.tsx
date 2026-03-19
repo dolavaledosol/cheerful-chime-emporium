@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import ProdutoImageUpload from "@/components/admin/ProdutoImageUpload";
 
 interface Produto {
