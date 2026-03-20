@@ -381,7 +381,6 @@ const EstoqueRelatorio = () => {
 
     setClientes(results);
     setLoadingClientes(false);
-    setPreviewOpen(true);
   };
 
   const sendWebhook = async () => {
