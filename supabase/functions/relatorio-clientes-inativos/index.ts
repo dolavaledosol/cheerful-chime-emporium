@@ -102,19 +102,39 @@ Deno.serve(async (req) => {
       ? supabase.from("clientewhats").select("clientewhats_id, lid").in("clientewhats_id", cwIds)
       : Promise.resolve({ data: [] as { clientewhats_id: number; lid: string | null }[] });
 
-    // --- Step 3: Fetch pedido_items for these clients (parallel with above) ---
-    const itemsPromise = supabase
-      .from("pedido_item")
-      .select("pedido_id, produto_id, quantidade, preco_unitario, pedido!inner(cliente_id, status)")
-      .in("pedido!inner.cliente_id", inactiveIds)
-      .not("pedido.status", "in", '("carrinho","cancelado")');
+    // --- Step 3: Fetch pedidos for these clients, then items ---
+    const { data: clientePedidos } = await supabase
+      .from("pedido")
+      .select("pedido_id, cliente_id")
+      .in("cliente_id", inactiveIds)
+      .not("status", "in", '("carrinho","cancelado")');
 
-    const [cwResult, itemsResult] = await Promise.all([cwPromise, itemsPromise]);
+    const pedidoClienteMap = new Map<string, string>();
+    const allPedidoIds = (clientePedidos || []).map(p => {
+      pedidoClienteMap.set(p.pedido_id, p.cliente_id);
+      return p.pedido_id;
+    });
+
+    // Fetch items in batches (Supabase 1000 row limit)
+    let allItems: { pedido_id: string; produto_id: string; quantidade: number; preco_unitario: number }[] = [];
+    const batchSize = 200;
+    const itemBatches = [];
+    for (let i = 0; i < allPedidoIds.length; i += batchSize) {
+      const batch = allPedidoIds.slice(i, i + batchSize);
+      itemBatches.push(
+        supabase.from("pedido_item").select("pedido_id, produto_id, quantidade, preco_unitario").in("pedido_id", batch)
+      );
+    }
+
+    const [cwResult, ...itemResults] = await Promise.all([cwPromise, ...itemBatches]);
 
     const cwMap = new Map<number, string | null>();
     for (const cw of (cwResult.data || []) as any[]) cwMap.set(cw.clientewhats_id, cw.lid);
 
-    const pedidoItems = itemsResult.data || [];
+    for (const res of itemResults) {
+      if (res.data) allItems.push(...res.data);
+    }
+    const pedidoItems = allItems;
 
     // --- Step 4: Fetch product + image + fabricante data ---
     const produtoIds = [...new Set(pedidoItems.map(pi => pi.produto_id))];
