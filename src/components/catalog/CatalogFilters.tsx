@@ -74,7 +74,7 @@ const CatalogFilters = ({
   return (
     <div className="space-y-2">
       {/* Main categories */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4">
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4 md:justify-center">
         <Chip active={selectedFamilia === "all"} onClick={() => onFamiliaChange("all")}>
           Tudo
         </Chip>
@@ -97,7 +97,7 @@ const CatalogFilters = ({
 
       {/* Subcategories */}
       {subFamilias.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4 md:justify-center">
           {selectedIsParent && (
             <Chip active onClick={() => {}}>
               Todas
@@ -119,7 +119,7 @@ const CatalogFilters = ({
 
       {/* Brands */}
       {fabricantes.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4 md:justify-center">
           <Chip
             active={selectedFabricante === "all"}
             onClick={() => onFabricanteChange("all")}
@@ -140,15 +140,17 @@ const CatalogFilters = ({
 
       {/* Clear */}
       {hasFilters && (
-        <button
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          onClick={() => {
-            onFamiliaChange("all");
-            onFabricanteChange("all");
-          }}
-        >
-          <X className="h-3 w-3" /> Limpar filtros
-        </button>
+        <div className="flex md:justify-center">
+          <button
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => {
+              onFamiliaChange("all");
+              onFabricanteChange("all");
+            }}
+          >
+            <X className="h-3 w-3" /> Limpar filtros
+          </button>
+        </div>
       )}
     </div>
   );
