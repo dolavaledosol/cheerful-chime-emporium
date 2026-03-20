@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Trash2, AlertCircle, Star, MessageCircle } from "lucide-react";
 import ClientesInativosRelatorio from "@/components/admin/ClientesInativosRelatorio";
+import CampanhaRelatorio from "@/components/admin/CampanhaRelatorio";
 import { PhoneInput, phoneToDigits, digitsToPhone } from "@/components/ui/phone-input";
 import { formatCpfCnpj, unformatCpfCnpj, validateCpfCnpj } from "@/lib/cpfCnpj";
 import { isValidPhoneNumber } from "react-phone-number-input";
