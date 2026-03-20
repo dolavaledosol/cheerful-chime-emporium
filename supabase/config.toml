@@ -2,3 +2,6 @@ project_id = "dehdwtqmswknlxatjqql"
 
 [functions.webhook-proxy]
 verify_jwt = false
+
+[functions.relatorio-clientes-inativos]
+verify_jwt = false
