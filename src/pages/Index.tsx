@@ -65,7 +65,7 @@ const Index = () => {
     let query = supabase
       .from("produto")
       .select(`
-        produto_id, nome, slug, descricao, preco, peso_bruto, peso_liquido,
+        produto_id, nome, slug, descricao, preco, peso_bruto, peso_liquido, destacar,
         unidade_medida, aceita_fracionado, quantidade_default, familia_id, fabricante_id,
         familia:familia_id (nome), fabricante:fabricante_id (nome),
         produto_imagem (url_imagem, ordem)
@@ -90,7 +90,8 @@ const Index = () => {
     const { data } = await query;
 
     if (data) {
-      const mapped: ProdutoComPreco[] = data.map((p: any) => {
+      const sortedData = [...data].sort((a: any, b: any) => (b.destacar ? 1 : 0) - (a.destacar ? 1 : 0));
+      const mapped: ProdutoComPreco[] = sortedData.map((p: any) => {
         const imgs = p.produto_imagem || [];
         const sorted = [...imgs].sort((a: any, b: any) => a.ordem - b.ordem);
         return {
