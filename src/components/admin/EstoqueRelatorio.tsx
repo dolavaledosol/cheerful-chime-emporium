@@ -314,7 +314,6 @@ const EstoqueRelatorio = () => {
     if (!pedidoItems) {
       setClientes([]);
       setLoadingClientes(false);
-      setPreviewOpen(true);
       return;
     }
 
