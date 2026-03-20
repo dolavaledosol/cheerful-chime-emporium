@@ -173,7 +173,8 @@ Deno.serve(async (req) => {
     // --- Step 5: Aggregate products per client ---
     const aggMap = new Map<string, { quantidade_total: number; precos: number[] }>();
     for (const pi of pedidoItems) {
-      const cid = (pi.pedido as any).cliente_id;
+      const cid = pedidoClienteMap.get(pi.pedido_id);
+      if (!cid) continue;
       const key = `${cid}__${pi.produto_id}`;
       const agg = aggMap.get(key) || { quantidade_total: 0, precos: [] };
       agg.quantidade_total += Number(pi.quantidade);
