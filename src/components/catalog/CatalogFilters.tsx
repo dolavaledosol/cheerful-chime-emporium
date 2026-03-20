@@ -74,7 +74,7 @@ const CatalogFilters = ({
   return (
     <div className="space-y-2">
       {/* Main categories */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4">
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4 md:justify-center">
         <Chip active={selectedFamilia === "all"} onClick={() => onFamiliaChange("all")}>
           Tudo
         </Chip>
