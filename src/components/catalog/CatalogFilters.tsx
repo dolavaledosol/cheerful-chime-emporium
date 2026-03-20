@@ -119,7 +119,7 @@ const CatalogFilters = ({
 
       {/* Brands */}
       {fabricantes.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4 md:justify-center">
           <Chip
             active={selectedFabricante === "all"}
             onClick={() => onFabricanteChange("all")}
