@@ -65,7 +65,7 @@ const Index = () => {
     let query = supabase
       .from("produto")
       .select(`
-        produto_id, nome, slug, descricao, preco, peso_bruto, peso_liquido,
+        produto_id, nome, slug, descricao, preco, peso_bruto, peso_liquido, destacar,
         unidade_medida, aceita_fracionado, quantidade_default, familia_id, fabricante_id,
         familia:familia_id (nome), fabricante:fabricante_id (nome),
         produto_imagem (url_imagem, ordem)
