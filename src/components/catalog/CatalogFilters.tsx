@@ -140,15 +140,17 @@ const CatalogFilters = ({
 
       {/* Clear */}
       {hasFilters && (
-        <button
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          onClick={() => {
-            onFamiliaChange("all");
-            onFabricanteChange("all");
-          }}
-        >
-          <X className="h-3 w-3" /> Limpar filtros
-        </button>
+        <div className="flex md:justify-center">
+          <button
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => {
+              onFamiliaChange("all");
+              onFabricanteChange("all");
+            }}
+          >
+            <X className="h-3 w-3" /> Limpar filtros
+          </button>
+        </div>
       )}
     </div>
   );
