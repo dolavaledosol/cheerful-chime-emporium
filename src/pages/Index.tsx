@@ -104,6 +104,11 @@ const Index = () => {
           quantidade_default: p.quantidade_default ?? 1,
         };
       });
+      mapped.sort((a, b) => {
+        const aD = (data as any[]).find((d: any) => d.produto_id === a.produto_id)?.destacar ? 1 : 0;
+        const bD = (data as any[]).find((d: any) => d.produto_id === b.produto_id)?.destacar ? 1 : 0;
+        return bD - aD;
+      });
       setProdutos(mapped);
     }
     setLoading(false);

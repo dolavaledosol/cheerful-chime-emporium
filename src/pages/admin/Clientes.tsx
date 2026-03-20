@@ -227,21 +227,27 @@ const Clientes = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-20">Código</TableHead>
+              <TableHead className="w-20">Cód</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead className="hidden md:table-cell">CPF/CNPJ</TableHead>
               <TableHead className="hidden md:table-cell">Email</TableHead>
               <TableHead className="hidden sm:table-cell">Tipo</TableHead>
               <TableHead className="hidden sm:table-cell">Status</TableHead>
-              <TableHead className="w-24">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum cliente encontrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum cliente encontrado</TableCell></TableRow>
             ) : filtered.map((c) => (
               <TableRow key={c.cliente_id}>
-                <TableCell className="text-muted-foreground text-xs font-mono">{c.cliente_id.slice(0, 8)}</TableCell>
+                <TableCell>
+                  <button
+                    className="text-xs font-mono text-primary hover:underline cursor-pointer"
+                    onClick={() => openEdit(c)}
+                  >
+                    {c.cliente_id.slice(0, 8)}
+                  </button>
+                </TableCell>
                 <TableCell className="font-medium">{c.nome}</TableCell>
                 <TableCell className="hidden md:table-cell text-muted-foreground">{c.cpf_cnpj ? formatCpfCnpj(c.cpf_cnpj) : "—"}</TableCell>
                 <TableCell className="hidden md:table-cell text-muted-foreground">{c.email || "—"}</TableCell>
@@ -252,12 +258,6 @@ const Clientes = () => {
                   <span className={`text-xs px-2 py-0.5 rounded-full ${c.ativo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                     {c.ativo ? "Ativo" : "Inativo"}
                   </span>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => softDelete(c.cliente_id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                  </div>
                 </TableCell>
               </TableRow>
             ))}
