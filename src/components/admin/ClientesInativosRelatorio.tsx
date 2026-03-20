@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Send, Loader2, UserX, Search } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ClienteInativo {
   cliente_id: string;
@@ -81,6 +82,7 @@ const ClientesInativosRelatorio = () => {
   const [clientes, setClientes] = useState<ClienteInativo[]>([]);
   const [fetched, setFetched] = useState(false);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const fetchRelatorio = async () => {
     setLoading(true);
@@ -183,9 +185,9 @@ const ClientesInativosRelatorio = () => {
 
   return (
     <>
-      <Button variant="outline" onClick={handleOpen} className="gap-2">
+      <Button variant="outline" onClick={handleOpen} size={isMobile ? "icon" : "default"} className="gap-2 shrink-0">
         <UserX className="h-4 w-4" />
-        Clientes Ausentes
+        {!isMobile && "Clientes Ausentes"}
       </Button>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -194,6 +196,7 @@ const ClientesInativosRelatorio = () => {
             <DialogTitle>Clientes Ausentes</DialogTitle>
           </DialogHeader>
 
+          {/* Filter bar */}
           <div className="flex items-end gap-3 pb-3 border-b">
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Meses sem compra</Label>
@@ -203,54 +206,58 @@ const ClientesInativosRelatorio = () => {
                 max={24}
                 value={meses}
                 onChange={(e) => { setMeses(Number(e.target.value) || 3); setFetched(false); }}
-                className="w-24 h-9"
+                className="w-20 h-11"
               />
             </div>
-            <Button onClick={fetchRelatorio} disabled={loading} className="gap-2 h-9">
+            <Button onClick={fetchRelatorio} disabled={loading} className="gap-2 h-11">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               Buscar
             </Button>
             {fetched && (
-              <span className="text-sm text-muted-foreground ml-auto">
-                {clientes.length} cliente(s) encontrado(s)
+              <span className="text-sm text-muted-foreground ml-auto hidden sm:inline">
+                {clientes.length} encontrado(s)
               </span>
             )}
           </div>
 
+          {/* Results */}
           <div className="flex-1 overflow-y-auto min-h-0">
             {!fetched ? (
               <p className="text-muted-foreground text-center py-12 text-sm">
-                Defina o período e clique em Buscar para gerar o relatório.
+                Defina o período e clique em Buscar.
               </p>
             ) : clientes.length === 0 ? (
               <p className="text-muted-foreground text-center py-12 text-sm">
-                Nenhum cliente inativo encontrado no período.
+                Nenhum cliente inativo no período.
               </p>
             ) : (
-              <div className="space-y-3 py-2">
+              <div className="space-y-2 py-2">
+                {fetched && isMobile && (
+                  <p className="text-xs text-muted-foreground">{clientes.length} cliente(s)</p>
+                )}
                 {clientes.map((c) => (
-                  <div key={c.cliente_id} className="border rounded-lg p-3 space-y-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium text-sm">{c.nome}</p>
+                  <div key={c.cliente_id} className="border rounded-xl p-3 space-y-2">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{c.nome}</p>
                         <p className="text-xs text-muted-foreground">
                           Última compra: {new Date(c.ultima_compra).toLocaleDateString("pt-BR")}
                           {c.lid && <span className="ml-2">• LID: {c.lid}</span>}
                         </p>
                       </div>
-                      <span className="text-xs bg-muted px-2 py-0.5 rounded-full shrink-0">
-                        {c.produtos.length} produto(s)
+                      <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full shrink-0">
+                        {c.produtos.length} prod.
                       </span>
                     </div>
                     <div className="grid gap-1">
-                      {c.produtos.slice(0, 5).map((pr) => (
-                        <div key={pr.produto_id} className="flex justify-between text-xs text-muted-foreground">
-                          <span className="truncate mr-2">{pr.nome}</span>
-                          <span className="shrink-0">{pr.quantidade_total}x — R$ {pr.preco.toFixed(2)}</span>
+                      {c.produtos.slice(0, 3).map((pr) => (
+                        <div key={pr.produto_id} className="flex justify-between text-xs text-muted-foreground gap-2">
+                          <span className="truncate">{pr.nome}</span>
+                          <span className="shrink-0">{pr.quantidade_total}x</span>
                         </div>
                       ))}
-                      {c.produtos.length > 5 && (
-                        <p className="text-xs text-muted-foreground">+{c.produtos.length - 5} produto(s)</p>
+                      {c.produtos.length > 3 && (
+                        <p className="text-[10px] text-muted-foreground">+{c.produtos.length - 3} produto(s)</p>
                       )}
                     </div>
                   </div>
@@ -263,7 +270,7 @@ const ClientesInativosRelatorio = () => {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Fechar</Button>
             <Button onClick={sendWebhook} disabled={sending || !fetched || clientes.length === 0} className="gap-2">
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              {sending ? "Enviando..." : "Enviar via Webhook"}
+              {sending ? "Enviando..." : "Enviar Webhook"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -14,6 +14,7 @@ import CampanhaRelatorio from "@/components/admin/CampanhaRelatorio";
 import { PhoneInput, phoneToDigits, digitsToPhone } from "@/components/ui/phone-input";
 import { formatCpfCnpj, unformatCpfCnpj, validateCpfCnpj } from "@/lib/cpfCnpj";
 import { isValidPhoneNumber } from "react-phone-number-input";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Cliente {
   cliente_id: string;
@@ -28,13 +29,21 @@ interface Cliente {
 
 interface TelefoneItem {
   id?: string;
-  telefone: string; // E.164 format
+  telefone: string;
   is_whatsapp?: boolean;
   verificado?: boolean;
-  originalTelefone?: string; // to detect changes
+  originalTelefone?: string;
 }
 
 const emptyForm = { nome: "", cpf_cnpj: "", email: "", tipo_cliente: "cliente", ativo: true };
+
+const tipoLabel = (t: string) => {
+  switch (t) {
+    case "admin": return "Admin";
+    case "vendedor": return "Vendedor";
+    default: return "Cliente";
+  }
+};
 
 const Clientes = () => {
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -49,6 +58,7 @@ const Clientes = () => {
   const [loading, setLoading] = useState(false);
   const [cpfError, setCpfError] = useState<string | null>(null);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const load = async () => {
     const { data } = await supabase.from("cliente").select("*").order("nome");
@@ -95,7 +105,6 @@ const Clientes = () => {
       if (err) { setCpfError(err); toast({ title: err, variant: "destructive" }); return; }
     }
 
-    // Validate phones
     const validPhones = telefones.filter(t => t.telefone && phoneToDigits(t.telefone).length > 0);
     for (const tel of validPhones) {
       if (!isValidPhoneNumber(tel.telefone)) {
@@ -173,9 +182,7 @@ const Clientes = () => {
           }
         }
 
-        // Save preferred phone
         let prefId = telefonePreferencialId;
-        // If preferred was a new phone (no id before save), find by index
         const prefPhone = validPhonesForSave.find(t => t.id === prefId);
         if (!prefPhone && validPhonesForSave.length > 0) {
           prefId = validPhonesForSave[0].id || null;
@@ -189,38 +196,29 @@ const Clientes = () => {
     }
   };
 
-  const softDelete = async (id: string) => {
-    await supabase.from("cliente").update({ ativo: false }).eq("cliente_id", id);
-    toast({ title: "Cliente desativado" });
-    load();
-  };
-
-  const tipoLabel = (t: string) => {
-    switch (t) {
-      case "admin": return "Admin";
-      case "vendedor": return "Vendedor";
-      default: return "Cliente";
-    }
-  };
-
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Clientes</h1>
-        <div className="flex items-center gap-3 flex-wrap">
+        <h1 className="text-xl sm:text-2xl font-bold">Clientes</h1>
+        <div className="flex items-center gap-2">
           <CampanhaRelatorio />
           <ClientesInativosRelatorio />
-          <Button onClick={openNew} className="gap-2"><Plus className="h-4 w-4" /> Novo Cliente</Button>
+          <Button onClick={openNew} size={isMobile ? "icon" : "default"} className="gap-2 shrink-0">
+            <Plus className="h-4 w-4" />
+            {!isMobile && "Novo Cliente"}
+          </Button>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative max-w-md flex-1">
+      {/* Search & Filter */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome, CPF/CNPJ ou email..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+          <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-28 sm:w-40 shrink-0"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ativo">Ativos</SelectItem>
             <SelectItem value="inativo">Inativos</SelectItem>
@@ -229,72 +227,100 @@ const Clientes = () => {
         </Select>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-20">Cód</TableHead>
-              <TableHead>Nome</TableHead>
-              <TableHead className="hidden md:table-cell">CPF/CNPJ</TableHead>
-              <TableHead className="hidden md:table-cell">Email</TableHead>
-              <TableHead className="hidden sm:table-cell">Tipo</TableHead>
-              <TableHead className="hidden sm:table-cell">Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum cliente encontrado</TableCell></TableRow>
-            ) : filtered.map((c) => (
-              <TableRow key={c.cliente_id}>
-                <TableCell>
-                  <button
-                    className="text-xs font-mono text-primary hover:underline cursor-pointer"
-                    onClick={() => openEdit(c)}
-                  >
-                    {c.cliente_id.slice(0, 8)}
-                  </button>
-                </TableCell>
-                <TableCell className="font-medium">{c.nome}</TableCell>
-                <TableCell className="hidden md:table-cell text-muted-foreground">{c.cpf_cnpj ? formatCpfCnpj(c.cpf_cnpj) : "—"}</TableCell>
-                <TableCell className="hidden md:table-cell text-muted-foreground">{c.email || "—"}</TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-muted">{tipoLabel(c.tipo_cliente)}</span>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${c.ativo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+      {/* Mobile: cards / Desktop: table */}
+      {isMobile ? (
+        <div className="space-y-2">
+          {filtered.length === 0 ? (
+            <p className="text-center py-8 text-sm text-muted-foreground">Nenhum cliente encontrado</p>
+          ) : filtered.map((c) => (
+            <button
+              key={c.cliente_id}
+              onClick={() => openEdit(c)}
+              className="w-full text-left rounded-xl border bg-card p-3.5 space-y-1.5 hover:border-primary/40 transition-colors active:scale-[0.98]"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-medium text-sm leading-tight">{c.nome}</p>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted">{tipoLabel(c.tipo_cliente)}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${c.ativo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                     {c.ativo ? "Ativo" : "Inativo"}
                   </span>
-                </TableCell>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                {c.cpf_cnpj && <span>{formatCpfCnpj(c.cpf_cnpj)}</span>}
+                {c.email && <span className="truncate">{c.email}</span>}
+                {!c.cpf_cnpj && !c.email && <span>—</span>}
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-20">Cód</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead>CPF/CNPJ</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 ? (
+                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum cliente encontrado</TableCell></TableRow>
+              ) : filtered.map((c) => (
+                <TableRow key={c.cliente_id}>
+                  <TableCell>
+                    <button className="text-xs font-mono text-primary hover:underline cursor-pointer" onClick={() => openEdit(c)}>
+                      {c.cliente_id.slice(0, 8)}
+                    </button>
+                  </TableCell>
+                  <TableCell className="font-medium">{c.nome}</TableCell>
+                  <TableCell className="text-muted-foreground">{c.cpf_cnpj ? formatCpfCnpj(c.cpf_cnpj) : "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{c.email || "—"}</TableCell>
+                  <TableCell>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted">{tipoLabel(c.tipo_cliente)}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${c.ativo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                      {c.ativo ? "Ativo" : "Inativo"}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
+      {/* Edit/Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{editId ? "Editar Cliente" : "Novo Cliente"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Nome *</Label>
-              <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+              <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="h-11" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>CPF/CNPJ</Label>
                 <Input
                   value={form.cpf_cnpj}
-                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                  placeholder="000.000.000-00"
                   onChange={(e) => { if (!cpfLocked) { setForm({ ...form, cpf_cnpj: formatCpfCnpj(e.target.value) }); setCpfError(null); } }}
                   disabled={cpfLocked}
-                  className={`${cpfError ? "border-destructive" : ""} ${cpfLocked ? "bg-muted" : ""}`}
+                  className={`h-11 ${cpfError ? "border-destructive" : ""} ${cpfLocked ? "bg-muted" : ""}`}
                 />
                 {cpfLocked && <p className="text-[11px] text-muted-foreground">Não pode ser alterado após cadastrado</p>}
                 {cpfError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {cpfError}</p>}
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
-                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="h-11" />
               </div>
             </div>
             <div className="space-y-2">
@@ -309,7 +335,7 @@ const Clientes = () => {
                   <button
                     type="button"
                     title={tel.id && telefonePreferencialId === tel.id ? "Telefone preferencial" : "Definir como preferencial"}
-                    className="shrink-0"
+                    className="shrink-0 p-1"
                     onClick={() => tel.id && setTelefonePreferencialId(tel.id)}
                   >
                     <Star className={`h-4 w-4 ${tel.id && telefonePreferencialId === tel.id ? "fill-yellow-400 text-yellow-500" : "text-muted-foreground"}`} />
@@ -340,11 +366,11 @@ const Clientes = () => {
               ))}
               <p className="text-[11px] text-muted-foreground">Clique na ★ para definir o telefone preferencial para cobrança</p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Tipo</Label>
                 <Select value={form.tipo_cliente} onValueChange={(v) => setForm({ ...form, tipo_cliente: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="cliente">Cliente</SelectItem>
                     <SelectItem value="vendedor">Vendedor</SelectItem>
@@ -352,7 +378,7 @@ const Clientes = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-2 pt-6">
+              <div className="flex items-center gap-2 sm:pt-6">
                 <Switch checked={form.ativo} onCheckedChange={(v) => setForm({ ...form, ativo: v })} />
                 <Label>Ativo</Label>
               </div>
