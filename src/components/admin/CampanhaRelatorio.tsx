@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Send, Loader2, Megaphone, Plus, Trash2 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ClienteCampanha {
   cliente_id: string;
@@ -73,6 +74,7 @@ const invokeWebhookProxy = async (body: {
   }
 };
 
+// Desktop product row
 const ProductRow = memo(({ p, onToggle }: { p: ProdutoCampanha; onToggle: (id: string, checked: boolean) => void }) => (
   <TableRow className={p.checked ? "bg-muted/30" : ""}>
     <TableCell><Checkbox checked={p.checked} onCheckedChange={(v) => onToggle(p.produto_id, !!v)} /></TableCell>
@@ -84,23 +86,39 @@ const ProductRow = memo(({ p, onToggle }: { p: ProdutoCampanha; onToggle: (id: s
 ));
 ProductRow.displayName = "ProductRow";
 
+// Mobile product card
+const ProductCard = memo(({ p, onToggle }: { p: ProdutoCampanha; onToggle: (id: string, checked: boolean) => void }) => (
+  <button
+    onClick={() => onToggle(p.produto_id, !p.checked)}
+    className={`w-full text-left rounded-xl border p-3 space-y-1 transition-colors active:scale-[0.98] ${p.checked ? "border-primary/40 bg-primary/5" : "bg-card"}`}
+  >
+    <div className="flex items-start justify-between gap-2">
+      <p className="font-medium text-sm leading-tight flex-1">{p.nome}</p>
+      <Checkbox checked={p.checked} onCheckedChange={(v) => onToggle(p.produto_id, !!v)} className="shrink-0 mt-0.5" />
+    </div>
+    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+      {p.fabricante && <span>{p.fabricante}</span>}
+      <span>R$ {p.preco.toFixed(2)}</span>
+      {p.peso != null && <span>{p.peso} {p.unidade_medida}</span>}
+    </div>
+  </button>
+));
+ProductCard.displayName = "ProductCard";
+
 const CampanhaRelatorio = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("clientes");
+  const isMobile = useIsMobile();
 
-  // Clients
   const [clientes, setClientes] = useState<ClienteCampanha[]>([]);
   const [loadingClientes, setLoadingClientes] = useState(false);
 
-  // Products
   const [produtos, setProdutos] = useState<ProdutoCampanha[]>([]);
   const [fabricantes, setFabricantes] = useState<FabricanteOption[]>([]);
   const [searchProd, setSearchProd] = useState("");
   const [filterFabricante, setFilterFabricante] = useState("all");
 
-  // URLs
   const [urls, setUrls] = useState<string[]>([""]);
-
   const [sending, setSending] = useState(false);
   const { toast } = useToast();
 
@@ -113,7 +131,6 @@ const CampanhaRelatorio = () => {
   const loadAll = async () => {
     setLoadingClientes(true);
 
-    // Load clients from both tables, deduplicate by lid
     const [{ data: clientesDb }, { data: clienteWhatsDb }, { data: telefones }] = await Promise.all([
       supabase.from("cliente").select("cliente_id, nome").eq("ativo", true).order("nome"),
       supabase.from("clientewhats").select("clientewhats_id, nome, lid, cliente_id"),
@@ -123,41 +140,28 @@ const CampanhaRelatorio = () => {
     const lidSet = new Set<string>();
     const result: ClienteCampanha[] = [];
 
-    // From clientewhats first (they have lid directly)
     if (clienteWhatsDb) {
       for (const cw of clienteWhatsDb as any[]) {
         if (cw.lid && !lidSet.has(cw.lid)) {
           lidSet.add(cw.lid);
-          result.push({
-            cliente_id: cw.cliente_id || `cw_${cw.clientewhats_id}`,
-            nome: cw.nome || "—",
-            lid: cw.lid,
-          });
+          result.push({ cliente_id: cw.cliente_id || `cw_${cw.clientewhats_id}`, nome: cw.nome || "—", lid: cw.lid });
         }
       }
     }
 
-    // From cliente_telefone (lid associated to clientes)
     const telLidMap = new Map<string, string>();
     if (telefones) {
       for (const t of telefones as any[]) {
-        if (t.lid && !telLidMap.has(t.cliente_id)) {
-          telLidMap.set(t.cliente_id, t.lid);
-        }
+        if (t.lid && !telLidMap.has(t.cliente_id)) telLidMap.set(t.cliente_id, t.lid);
       }
     }
 
-    // From clientes table
     if (clientesDb) {
       for (const c of clientesDb as any[]) {
         const lid = telLidMap.get(c.cliente_id) || null;
         if (lid) {
-          if (!lidSet.has(lid)) {
-            lidSet.add(lid);
-            result.push({ cliente_id: c.cliente_id, nome: c.nome, lid });
-          }
+          if (!lidSet.has(lid)) { lidSet.add(lid); result.push({ cliente_id: c.cliente_id, nome: c.nome, lid }); }
         } else {
-          // Client without lid - still include
           result.push({ cliente_id: c.cliente_id, nome: c.nome, lid: null });
         }
       }
@@ -166,7 +170,6 @@ const CampanhaRelatorio = () => {
     setClientes(result);
     setLoadingClientes(false);
 
-    // Load products
     const [{ data: prods }, { data: fab }] = await Promise.all([
       supabase.from("produto").select("produto_id, nome, preco, peso_liquido, unidade_medida, fabricante(nome), produto_imagem(url_imagem, ordem)").eq("ativo", true).order("nome"),
       supabase.from("fabricante").select("fabricante_id, nome").eq("ativo", true).order("nome"),
@@ -179,14 +182,9 @@ const CampanhaRelatorio = () => {
         const imagens = p.produto_imagem || [];
         const imgPrincipal = imagens.length > 0 ? imagens.sort((a: any, b: any) => a.ordem - b.ordem)[0].url_imagem : null;
         return {
-          produto_id: p.produto_id,
-          nome: p.nome,
-          peso: p.peso_liquido,
-          unidade_medida: p.unidade_medida || "un",
-          fabricante: p.fabricante?.nome || null,
-          preco: p.preco || 0,
-          url_imagem: imgPrincipal,
-          checked: false,
+          produto_id: p.produto_id, nome: p.nome, peso: p.peso_liquido,
+          unidade_medida: p.unidade_medida || "un", fabricante: p.fabricante?.nome || null,
+          preco: p.preco || 0, url_imagem: imgPrincipal, checked: false,
         };
       }));
     }
@@ -229,8 +227,7 @@ const CampanhaRelatorio = () => {
 
   const sendWebhook = async () => {
     const { data: configs } = await supabase
-      .from("configuracao")
-      .select("chave, valor")
+      .from("configuracao").select("chave, valor")
       .in("chave", ["webhook_campanha_url", "webhook_campanha_apikey"])
       .is("user_id", null);
 
@@ -244,7 +241,6 @@ const CampanhaRelatorio = () => {
       toast({ title: "Webhook não configurado", description: "Configure a URL do webhook de campanha em Configurações.", variant: "destructive" });
       return;
     }
-
     if (clientesComLid.length === 0) {
       toast({ title: "Nenhum cliente com LID", variant: "destructive" });
       return;
@@ -253,30 +249,20 @@ const CampanhaRelatorio = () => {
     setSending(true);
     try {
       const validUrls = urls.filter((u) => u.trim().length > 0);
-
       const payload = {
         tipo: "campanha",
-        clientes: clientesComLid.map((c) => ({
-          nome: c.nome,
-          lid: c.lid,
-        })),
+        clientes: clientesComLid.map((c) => ({ nome: c.nome, lid: c.lid })),
         produtos: checkedProducts.map((p) => ({
-          produto_id: p.produto_id,
-          nome: p.nome,
-          peso: p.peso,
-          unidade_medida: p.unidade_medida,
-          fabricante: p.fabricante,
-          preco: p.preco,
-          url_imagem: p.url_imagem,
+          produto_id: p.produto_id, nome: p.nome, peso: p.peso,
+          unidade_medida: p.unidade_medida, fabricante: p.fabricante,
+          preco: p.preco, url_imagem: p.url_imagem,
         })),
         urls: validUrls,
       };
 
       const response = await invokeWebhookProxy({
-        webhook_url: webhookUrl,
-        webhook_apikey: webhookApikey,
-        log_tipo: "webhook_campanha",
-        payload,
+        webhook_url: webhookUrl, webhook_apikey: webhookApikey,
+        log_tipo: "webhook_campanha", payload,
       });
 
       if (response && typeof response === "object" && "error" in response && response.error) {
@@ -295,9 +281,9 @@ const CampanhaRelatorio = () => {
 
   return (
     <>
-      <Button variant="outline" onClick={openDialog} className="gap-2 h-9">
+      <Button variant="outline" onClick={openDialog} size={isMobile ? "icon" : "default"} className="gap-2 shrink-0">
         <Megaphone className="h-4 w-4" />
-        Campanha
+        {!isMobile && "Campanha"}
       </Button>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -310,17 +296,18 @@ const CampanhaRelatorio = () => {
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="clientes">
+              <TabsTrigger value="clientes" className="text-xs sm:text-sm">
                 Clientes ({clientesComLid.length})
               </TabsTrigger>
-              <TabsTrigger value="produtos">
+              <TabsTrigger value="produtos" className="text-xs sm:text-sm">
                 Produtos ({checkedProducts.length})
               </TabsTrigger>
-              <TabsTrigger value="urls">
+              <TabsTrigger value="urls" className="text-xs sm:text-sm">
                 Vídeos ({urls.filter((u) => u.trim()).length})
               </TabsTrigger>
             </TabsList>
 
+            {/* Clientes tab */}
             <TabsContent value="clientes" className="flex-1 overflow-y-auto mt-4">
               {loadingClientes ? (
                 <div className="flex items-center justify-center py-12">
@@ -331,33 +318,47 @@ const CampanhaRelatorio = () => {
                   <p className="text-sm text-muted-foreground">
                     {clientesComLid.length} cliente(s) com LID (de {clientes.length} total)
                   </p>
-                  <div className="border rounded-lg max-h-[400px] overflow-y-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Nome</TableHead>
-                          <TableHead>LID</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {clientesComLid.length === 0 ? (
-                          <TableRow><TableCell colSpan={2} className="text-center py-8 text-muted-foreground">Nenhum cliente com LID encontrado</TableCell></TableRow>
-                        ) : clientesComLid.map((c, idx) => (
-                          <TableRow key={`${c.cliente_id}-${idx}`}>
-                            <TableCell className="font-medium">{c.nome}</TableCell>
-                            <TableCell className="text-muted-foreground font-mono text-xs">{c.lid}</TableCell>
+                  {isMobile ? (
+                    <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                      {clientesComLid.length === 0 ? (
+                        <p className="text-center py-8 text-sm text-muted-foreground">Nenhum cliente com LID</p>
+                      ) : clientesComLid.map((c, idx) => (
+                        <div key={`${c.cliente_id}-${idx}`} className="rounded-xl border bg-card p-3 flex justify-between items-center">
+                          <p className="font-medium text-sm">{c.nome}</p>
+                          <span className="text-xs text-muted-foreground font-mono">{c.lid}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg max-h-[400px] overflow-y-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>LID</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                        </TableHeader>
+                        <TableBody>
+                          {clientesComLid.length === 0 ? (
+                            <TableRow><TableCell colSpan={2} className="text-center py-8 text-muted-foreground">Nenhum cliente com LID encontrado</TableCell></TableRow>
+                          ) : clientesComLid.map((c, idx) => (
+                            <TableRow key={`${c.cliente_id}-${idx}`}>
+                              <TableCell className="font-medium">{c.nome}</TableCell>
+                              <TableCell className="text-muted-foreground font-mono text-xs">{c.lid}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </div>
               )}
             </TabsContent>
 
+            {/* Produtos tab */}
             <TabsContent value="produtos" className="flex-1 overflow-y-auto mt-4">
               <div className="space-y-3">
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input placeholder="Buscar produto..." value={searchProd} onChange={(e) => setSearchProd(e.target.value)} className="pl-10" />
@@ -370,31 +371,49 @@ const CampanhaRelatorio = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="border rounded-lg max-h-[400px] overflow-y-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-10">
-                          <Checkbox checked={allFilteredChecked} onCheckedChange={(v) => toggleAll(!!v)} />
-                        </TableHead>
-                        <TableHead>Produto</TableHead>
-                        <TableHead>Fabricante</TableHead>
-                        <TableHead className="text-right">Preço</TableHead>
-                        <TableHead className="text-center">Peso</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredProdutos.length === 0 ? (
-                        <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
-                      ) : filteredProdutos.map((p) => (
-                        <ProductRow key={p.produto_id} p={p} onToggle={toggleProduct} />
-                      ))}
-                    </TableBody>
-                  </Table>
+
+                {/* Select all */}
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={allFilteredChecked} onCheckedChange={(v) => toggleAll(!!v)} />
+                  <span className="text-xs text-muted-foreground">Selecionar todos ({filteredProdutos.length})</span>
                 </div>
+
+                {isMobile ? (
+                  <div className="space-y-2 max-h-[45vh] overflow-y-auto">
+                    {filteredProdutos.length === 0 ? (
+                      <p className="text-center py-8 text-sm text-muted-foreground">Nenhum produto encontrado</p>
+                    ) : filteredProdutos.map((p) => (
+                      <ProductCard key={p.produto_id} p={p} onToggle={toggleProduct} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="border rounded-lg max-h-[400px] overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10">
+                            <Checkbox checked={allFilteredChecked} onCheckedChange={(v) => toggleAll(!!v)} />
+                          </TableHead>
+                          <TableHead>Produto</TableHead>
+                          <TableHead>Fabricante</TableHead>
+                          <TableHead className="text-right">Preço</TableHead>
+                          <TableHead className="text-center">Peso</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredProdutos.length === 0 ? (
+                          <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
+                        ) : filteredProdutos.map((p) => (
+                          <ProductRow key={p.produto_id} p={p} onToggle={toggleProduct} />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </div>
             </TabsContent>
 
+            {/* URLs tab */}
             <TabsContent value="urls" className="flex-1 overflow-y-auto mt-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -409,10 +428,10 @@ const CampanhaRelatorio = () => {
                       value={url}
                       onChange={(e) => updateUrl(idx, e.target.value)}
                       placeholder="https://youtube.com/watch?v=..."
-                      className="flex-1"
+                      className="flex-1 h-11"
                     />
                     {urls.length > 1 && (
-                      <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => removeUrl(idx)}>
+                      <Button type="button" variant="ghost" size="icon" className="h-11 w-11 shrink-0" onClick={() => removeUrl(idx)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     )}
