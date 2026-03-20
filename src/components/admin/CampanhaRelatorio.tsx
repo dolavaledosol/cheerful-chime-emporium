@@ -95,10 +95,8 @@ const CampanhaRelatorio = () => {
 
   // Products
   const [produtos, setProdutos] = useState<ProdutoCampanha[]>([]);
-  const [familias, setFamilias] = useState<FamiliaOption[]>([]);
   const [fabricantes, setFabricantes] = useState<FabricanteOption[]>([]);
   const [searchProd, setSearchProd] = useState("");
-  const [filterFamilia, setFilterFamilia] = useState("all");
   const [filterFabricante, setFilterFabricante] = useState("all");
 
   // URLs
