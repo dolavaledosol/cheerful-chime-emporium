@@ -30,6 +30,14 @@ const WEBHOOK_SECTIONS = [
       { chave: "webhook_estoque_apikey", label: "API Key do Webhook de Estoque", placeholder: "Bearer token ou chave de autenticação" },
     ],
   },
+  {
+    title: "Webhook de Clientes",
+    description: "Configure a URL e a chave de autenticação para envio de relatórios de clientes inativos via webhook.",
+    keys: [
+      { chave: "webhook_cliente_url", label: "URL do Webhook de Clientes", placeholder: "https://exemplo.com/webhook-clientes" },
+      { chave: "webhook_cliente_apikey", label: "API Key do Webhook de Clientes", placeholder: "Bearer token ou chave de autenticação" },
+    ],
+  },
 ];
 
 const ALL_WEBHOOK_KEYS = WEBHOOK_SECTIONS.flatMap((s) => s.keys.map((k) => k.chave));
