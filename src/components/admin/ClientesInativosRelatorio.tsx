@@ -249,16 +249,27 @@ const ClientesInativosRelatorio = () => {
                         {c.produtos.length} prod.
                       </span>
                     </div>
-                    <div className="grid gap-1">
-                      {c.produtos.slice(0, 3).map((pr) => (
-                        <div key={pr.produto_id} className="flex justify-between text-xs text-muted-foreground gap-2">
-                          <span className="truncate">{pr.nome}</span>
-                          <span className="shrink-0">{pr.quantidade_total}x</span>
+                    <div className="grid gap-1.5">
+                      {c.produtos.map((pr) => (
+                        <div key={pr.produto_id} className="flex items-center gap-2 text-xs text-muted-foreground border rounded-lg p-1.5">
+                          {pr.url_imagem ? (
+                            <img src={pr.url_imagem} alt={pr.nome} className="w-8 h-8 rounded object-cover shrink-0" />
+                          ) : (
+                            <div className="w-8 h-8 rounded bg-muted shrink-0" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium text-foreground truncate">{pr.nome}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {pr.fabricante && <span>{pr.fabricante} • </span>}
+                              {pr.peso && <span>{pr.peso}{pr.unidade_medida} • </span>}
+                              {pr.quantidade_total}x comprado
+                            </p>
+                          </div>
+                          <span className="text-[10px] shrink-0 tabular-nums">
+                            R$ {pr.preco.toFixed(2)}
+                          </span>
                         </div>
                       ))}
-                      {c.produtos.length > 3 && (
-                        <p className="text-[10px] text-muted-foreground">+{c.produtos.length - 3} produto(s)</p>
-                      )}
                     </div>
                   </div>
                 ))}
