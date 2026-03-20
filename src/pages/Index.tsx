@@ -90,7 +90,8 @@ const Index = () => {
     const { data } = await query;
 
     if (data) {
-      const mapped: ProdutoComPreco[] = data.map((p: any) => {
+      const sortedData = [...data].sort((a: any, b: any) => (b.destacar ? 1 : 0) - (a.destacar ? 1 : 0));
+      const mapped: ProdutoComPreco[] = sortedData.map((p: any) => {
         const imgs = p.produto_imagem || [];
         const sorted = [...imgs].sort((a: any, b: any) => a.ordem - b.ordem);
         return {
@@ -104,7 +105,6 @@ const Index = () => {
           quantidade_default: p.quantidade_default ?? 1,
         };
       });
-      mapped.sort((a, b) => ((b as any)._destacar ? 1 : 0) - ((a as any)._destacar ? 1 : 0));
       setProdutos(mapped);
     }
     setLoading(false);
