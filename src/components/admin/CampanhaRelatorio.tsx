@@ -167,13 +167,11 @@ const CampanhaRelatorio = () => {
     setLoadingClientes(false);
 
     // Load products
-    const [{ data: prods }, { data: fam }, { data: fab }] = await Promise.all([
+    const [{ data: prods }, { data: fab }] = await Promise.all([
       supabase.from("produto").select("produto_id, nome, preco, peso_liquido, unidade_medida, fabricante(nome), produto_imagem(url_imagem, ordem)").eq("ativo", true).order("nome"),
-      supabase.from("familia").select("familia_id, nome").eq("ativo", true).order("nome"),
       supabase.from("fabricante").select("fabricante_id, nome").eq("ativo", true).order("nome"),
     ]);
 
-    if (fam) setFamilias(fam);
     if (fab) setFabricantes(fab);
 
     if (prods) {
