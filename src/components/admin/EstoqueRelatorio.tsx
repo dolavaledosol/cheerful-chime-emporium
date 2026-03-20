@@ -314,7 +314,6 @@ const EstoqueRelatorio = () => {
     if (!pedidoItems) {
       setClientes([]);
       setLoadingClientes(false);
-      setPreviewOpen(true);
       return;
     }
 
@@ -382,7 +381,6 @@ const EstoqueRelatorio = () => {
 
     setClientes(results);
     setLoadingClientes(false);
-    setPreviewOpen(true);
   };
 
   const sendWebhook = async () => {
@@ -474,21 +472,10 @@ const EstoqueRelatorio = () => {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col sm:flex-row items-end gap-3">
-          <div className="flex gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Data Início</Label>
-              <Input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="w-[150px]" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Data Fim</Label>
-              <Input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="w-[150px]" />
-            </div>
-          </div>
-          <div className="flex-1" />
-          <Button onClick={loadClientes} disabled={checkedProducts.length === 0 || loadingClientes} className="gap-2">
-            {loadingClientes ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            {loadingClientes ? "Carregando..." : "Preparar Envio"}
+        <div className="flex items-end">
+          <Button onClick={() => { if (checkedProducts.length === 0) { toast({ title: "Selecione ao menos um produto", variant: "destructive" }); return; } setPreviewOpen(true); }} disabled={checkedProducts.length === 0} className="gap-2 ml-auto">
+            <Send className="h-4 w-4" />
+            Campanha Estoque
           </Button>
         </div>
       </div>
@@ -558,10 +545,27 @@ const EstoqueRelatorio = () => {
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Pré-visualização do Envio</DialogTitle>
+            <DialogTitle>Campanha Estoque</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Date filters + load button */}
+            <div className="flex flex-col sm:flex-row items-end gap-3 border rounded-lg p-3 bg-muted/30">
+              <div className="flex gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Data Início</Label>
+                  <Input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} className="w-[150px]" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Data Fim</Label>
+                  <Input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="w-[150px]" />
+                </div>
+              </div>
+              <Button onClick={loadClientes} disabled={loadingClientes} variant="secondary" className="gap-2">
+                {loadingClientes ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                {loadingClientes ? "Carregando..." : "Buscar Clientes"}
+              </Button>
+            </div>
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Produtos Selecionados ({checkedProducts.length})</CardTitle>
