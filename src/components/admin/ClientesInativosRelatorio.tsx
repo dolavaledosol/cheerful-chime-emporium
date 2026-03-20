@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Send, Loader2, UserX } from "lucide-react";
+import { Send, Loader2, UserX, Search } from "lucide-react";
 
 interface ClienteInativo {
   cliente_id: string;
@@ -77,8 +77,9 @@ const ClientesInativosRelatorio = () => {
   const [meses, setMeses] = useState(3);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [clientes, setClientes] = useState<ClienteInativo[]>([]);
+  const [fetched, setFetched] = useState(false);
   const { toast } = useToast();
 
   const fetchRelatorio = async () => {
@@ -104,7 +105,7 @@ const ClientesInativosRelatorio = () => {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setClientes(data);
-      setPreviewOpen(true);
+      setFetched(true);
     } catch (err: any) {
       toast({ title: "Erro ao gerar relatório", description: err.message, variant: "destructive" });
     } finally {
@@ -165,7 +166,7 @@ const ClientesInativosRelatorio = () => {
       }
 
       toast({ title: "Relatório de clientes ausentes enviado!" });
-      setPreviewOpen(false);
+      setDialogOpen(false);
     } catch (err: any) {
       console.error("Erro ao enviar relatório de clientes", err);
       toast({ title: "Erro ao enviar", description: err.message, variant: "destructive" });
@@ -174,69 +175,93 @@ const ClientesInativosRelatorio = () => {
     }
   };
 
+  const handleOpen = () => {
+    setFetched(false);
+    setClientes([]);
+    setDialogOpen(true);
+  };
+
   return (
     <>
-      <div className="flex items-end gap-3">
-        <div className="space-y-1">
-          <Label className="text-xs">Meses sem compra</Label>
-          <Input
-            type="number"
-            min={1}
-            max={24}
-            value={meses}
-            onChange={(e) => setMeses(Number(e.target.value) || 3)}
-            className="w-24 h-9"
-          />
-        </div>
-        <Button variant="outline" onClick={fetchRelatorio} disabled={loading} className="gap-2 h-9">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserX className="h-4 w-4" />}
-          Clientes Ausentes
-        </Button>
-      </div>
+      <Button variant="outline" onClick={handleOpen} className="gap-2">
+        <UserX className="h-4 w-4" />
+        Clientes Ausentes
+      </Button>
 
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Clientes Ausentes — {clientes.length} cliente(s) sem compra há {meses}+ meses</DialogTitle>
+            <DialogTitle>Clientes Ausentes</DialogTitle>
           </DialogHeader>
 
-          {clientes.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">Nenhum cliente inativo encontrado no período.</p>
-          ) : (
-            <div className="space-y-4">
-              {clientes.map((c) => (
-                <div key={c.cliente_id} className="border rounded-lg p-3 space-y-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{c.nome}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Última compra: {new Date(c.ultima_compra).toLocaleDateString("pt-BR")}
-                        {c.lid && <span className="ml-2">• LID: {c.lid}</span>}
-                      </p>
-                    </div>
-                    <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
-                      {c.produtos.length} produto(s)
-                    </span>
-                  </div>
-                  <div className="grid gap-1">
-                    {c.produtos.slice(0, 5).map((pr) => (
-                      <div key={pr.produto_id} className="flex justify-between text-sm text-muted-foreground">
-                        <span>{pr.nome}</span>
-                        <span>{pr.quantidade_total}x — R$ {pr.preco.toFixed(2)}</span>
-                      </div>
-                    ))}
-                    {c.produtos.length > 5 && (
-                      <p className="text-xs text-muted-foreground">+{c.produtos.length - 5} produto(s)</p>
-                    )}
-                  </div>
-                </div>
-              ))}
+          <div className="flex items-end gap-3 pb-3 border-b">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Meses sem compra</Label>
+              <Input
+                type="number"
+                min={1}
+                max={24}
+                value={meses}
+                onChange={(e) => { setMeses(Number(e.target.value) || 3); setFetched(false); }}
+                className="w-24 h-9"
+              />
             </div>
-          )}
+            <Button onClick={fetchRelatorio} disabled={loading} className="gap-2 h-9">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              Buscar
+            </Button>
+            {fetched && (
+              <span className="text-sm text-muted-foreground ml-auto">
+                {clientes.length} cliente(s) encontrado(s)
+              </span>
+            )}
+          </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPreviewOpen(false)}>Fechar</Button>
-            <Button onClick={sendWebhook} disabled={sending || clientes.length === 0} className="gap-2">
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {!fetched ? (
+              <p className="text-muted-foreground text-center py-12 text-sm">
+                Defina o período e clique em Buscar para gerar o relatório.
+              </p>
+            ) : clientes.length === 0 ? (
+              <p className="text-muted-foreground text-center py-12 text-sm">
+                Nenhum cliente inativo encontrado no período.
+              </p>
+            ) : (
+              <div className="space-y-3 py-2">
+                {clientes.map((c) => (
+                  <div key={c.cliente_id} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-sm">{c.nome}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Última compra: {new Date(c.ultima_compra).toLocaleDateString("pt-BR")}
+                          {c.lid && <span className="ml-2">• LID: {c.lid}</span>}
+                        </p>
+                      </div>
+                      <span className="text-xs bg-muted px-2 py-0.5 rounded-full shrink-0">
+                        {c.produtos.length} produto(s)
+                      </span>
+                    </div>
+                    <div className="grid gap-1">
+                      {c.produtos.slice(0, 5).map((pr) => (
+                        <div key={pr.produto_id} className="flex justify-between text-xs text-muted-foreground">
+                          <span className="truncate mr-2">{pr.nome}</span>
+                          <span className="shrink-0">{pr.quantidade_total}x — R$ {pr.preco.toFixed(2)}</span>
+                        </div>
+                      ))}
+                      {c.produtos.length > 5 && (
+                        <p className="text-xs text-muted-foreground">+{c.produtos.length - 5} produto(s)</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="border-t pt-3">
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Fechar</Button>
+            <Button onClick={sendWebhook} disabled={sending || !fetched || clientes.length === 0} className="gap-2">
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               {sending ? "Enviando..." : "Enviar via Webhook"}
             </Button>
