@@ -260,6 +260,7 @@ const CampanhaRelatorio = () => {
         })),
         urls: validUrls,
         mensagem: mensagem.trim() || null,
+      };
 
       const response = await invokeWebhookProxy({
         webhook_url: webhookUrl, webhook_apikey: webhookApikey,
