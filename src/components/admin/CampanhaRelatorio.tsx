@@ -418,6 +418,22 @@ const CampanhaRelatorio = () => {
               </div>
             </TabsContent>
 
+            {/* Mensagem tab */}
+            <TabsContent value="mensagem" className="flex-1 overflow-y-auto mt-4">
+              <div className="space-y-3">
+                <Label>Mensagem da campanha</Label>
+                <Textarea
+                  value={mensagem}
+                  onChange={(e) => setMensagem(e.target.value)}
+                  placeholder="Digite a mensagem que será enviada junto com a campanha..."
+                  className="min-h-[200px]"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {mensagem.trim().length > 0 ? `${mensagem.length} caracteres` : "Nenhuma mensagem definida"}
+                </p>
+              </div>
+            </TabsContent>
+
             {/* URLs tab */}
             <TabsContent value="urls" className="flex-1 overflow-y-auto mt-4">
               <div className="space-y-3">
