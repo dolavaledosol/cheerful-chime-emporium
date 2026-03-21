@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Send, Loader2, Megaphone, Plus, Trash2 } from "lucide-react";
+import { Search, Send, Loader2, Megaphone, Plus, Trash2, MessageSquare } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ClienteCampanha {
@@ -119,6 +120,7 @@ const CampanhaRelatorio = () => {
   const [filterFabricante, setFilterFabricante] = useState("all");
 
   const [urls, setUrls] = useState<string[]>([""]);
+  const [mensagem, setMensagem] = useState("");
   const [sending, setSending] = useState(false);
   const { toast } = useToast();
 
@@ -258,6 +260,7 @@ const CampanhaRelatorio = () => {
           preco: p.preco, url_imagem: p.url_imagem,
         })),
         urls: validUrls,
+        mensagem: mensagem.trim() || null,
       };
 
       const response = await invokeWebhookProxy({
@@ -295,12 +298,16 @@ const CampanhaRelatorio = () => {
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="clientes" className="text-xs sm:text-sm">
                 Clientes ({clientesComLid.length})
               </TabsTrigger>
               <TabsTrigger value="produtos" className="text-xs sm:text-sm">
                 Produtos ({checkedProducts.length})
+              </TabsTrigger>
+              <TabsTrigger value="mensagem" className="text-xs sm:text-sm">
+                <MessageSquare className="h-3 w-3 mr-1" />
+                Mensagem
               </TabsTrigger>
               <TabsTrigger value="urls" className="text-xs sm:text-sm">
                 Vídeos ({urls.filter((u) => u.trim()).length})
@@ -410,6 +417,22 @@ const CampanhaRelatorio = () => {
                     </Table>
                   </div>
                 )}
+              </div>
+            </TabsContent>
+
+            {/* Mensagem tab */}
+            <TabsContent value="mensagem" className="flex-1 overflow-y-auto mt-4">
+              <div className="space-y-3">
+                <Label>Mensagem da campanha</Label>
+                <Textarea
+                  value={mensagem}
+                  onChange={(e) => setMensagem(e.target.value)}
+                  placeholder="Digite a mensagem que será enviada junto com a campanha..."
+                  className="min-h-[200px]"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {mensagem.trim().length > 0 ? `${mensagem.length} caracteres` : "Nenhuma mensagem definida"}
+                </p>
               </div>
             </TabsContent>
 
