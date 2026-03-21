@@ -296,12 +296,16 @@ const CampanhaRelatorio = () => {
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="clientes" className="text-xs sm:text-sm">
                 Clientes ({clientesComLid.length})
               </TabsTrigger>
               <TabsTrigger value="produtos" className="text-xs sm:text-sm">
                 Produtos ({checkedProducts.length})
+              </TabsTrigger>
+              <TabsTrigger value="mensagem" className="text-xs sm:text-sm">
+                <MessageSquare className="h-3 w-3 mr-1" />
+                Mensagem
               </TabsTrigger>
               <TabsTrigger value="urls" className="text-xs sm:text-sm">
                 Vídeos ({urls.filter((u) => u.trim()).length})
