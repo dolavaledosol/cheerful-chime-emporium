@@ -120,8 +120,8 @@ const CampanhaRelatorio = () => {
   const [filterFabricante, setFilterFabricante] = useState("all");
 
   const [urls, setUrls] = useState<string[]>([""]);
+  const [mensagem, setMensagem] = useState("");
   const [sending, setSending] = useState(false);
-  const { toast } = useToast();
 
   const openDialog = () => {
     setDialogOpen(true);
