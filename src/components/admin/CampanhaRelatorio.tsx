@@ -259,7 +259,7 @@ const CampanhaRelatorio = () => {
           preco: p.preco, url_imagem: p.url_imagem,
         })),
         urls: validUrls,
-      };
+        mensagem: mensagem.trim() || null,
 
       const response = await invokeWebhookProxy({
         webhook_url: webhookUrl, webhook_apikey: webhookApikey,
