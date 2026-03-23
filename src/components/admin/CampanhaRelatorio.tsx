@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Send, Loader2, Megaphone, Plus, Trash2, MessageSquare } from "lucide-react";
+import { Search, Send, Loader2, Megaphone, Plus, Trash2, MessageSquare, Image } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ClienteCampanha {
@@ -131,6 +131,7 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
   const [filterFabricante, setFilterFabricante] = useState("all");
 
   const [urls, setUrls] = useState<string[]>([""]);
+  const [imagens, setImagens] = useState<string[]>([""]);
   const [mensagem, setMensagem] = useState("");
   const [sending, setSending] = useState(false);
   const { toast } = useToast();
@@ -244,11 +245,11 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
 
   const addUrl = () => setUrls([...urls, ""]);
   const removeUrl = (idx: number) => setUrls(urls.filter((_, i) => i !== idx));
-  const updateUrl = (idx: number, val: string) => {
-    const updated = [...urls];
-    updated[idx] = val;
-    setUrls(updated);
-  };
+  const updateUrl = (idx: number, val: string) => { const u = [...urls]; u[idx] = val; setUrls(u); };
+
+  const addImagem = () => setImagens([...imagens, ""]);
+  const removeImagem = (idx: number) => setImagens(imagens.filter((_, i) => i !== idx));
+  const updateImagem = (idx: number, val: string) => { const u = [...imagens]; u[idx] = val; setImagens(u); };
 
   const clientesComLid = useMemo(() => clientes.filter((c) => c.lid), [clientes]);
 
@@ -276,6 +277,7 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
     setSending(true);
     try {
       const validUrls = urls.filter((u) => u.trim().length > 0);
+      const validImagens = imagens.filter((u) => u.trim().length > 0);
       const payload = {
         tipo: "campanha",
         clientes: clientesComLid.map((c) => ({ nome: c.nome, lid: c.lid })),
@@ -285,6 +287,7 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
           preco: p.preco, url_imagem: p.url_imagem,
         })),
         urls: validUrls,
+        imagens: validImagens,
         mensagem: mensagem.trim() || null,
       };
 
@@ -314,7 +317,7 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
 
   const tabsContent = (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-      <TabsList className="grid w-full grid-cols-4">
+      <TabsList className="grid w-full grid-cols-5">
         <TabsTrigger value="clientes" className="text-xs sm:text-sm">
           Clientes ({clientesComLid.length})
         </TabsTrigger>
@@ -324,6 +327,10 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
         <TabsTrigger value="mensagem" className="text-xs sm:text-sm">
           <MessageSquare className="h-3 w-3 mr-1" />
           Mensagem
+        </TabsTrigger>
+        <TabsTrigger value="imagens" className="text-xs sm:text-sm">
+          <Image className="h-3 w-3 mr-1" />
+          Imagens ({imagens.filter((u) => u.trim()).length})
         </TabsTrigger>
         <TabsTrigger value="urls" className="text-xs sm:text-sm">
           Vídeos ({urls.filter((u) => u.trim()).length})
@@ -458,6 +465,33 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
           <p className="text-xs text-muted-foreground">
             {mensagem.trim().length > 0 ? `${mensagem.length} caracteres` : "Nenhuma mensagem definida"}
           </p>
+        </div>
+      </TabsContent>
+
+      {/* Imagens tab */}
+      <TabsContent value="imagens" className="flex-1 overflow-y-auto mt-4">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label>Links de imagem</Label>
+            <Button type="button" variant="ghost" size="sm" className="gap-1 h-7" onClick={addImagem}>
+              <Plus className="h-3 w-3" /> Adicionar
+            </Button>
+          </div>
+          {imagens.map((img, idx) => (
+            <div key={idx} className="flex gap-2">
+              <Input
+                value={img}
+                onChange={(e) => updateImagem(idx, e.target.value)}
+                placeholder="https://exemplo.com/imagem.jpg"
+                className="flex-1 h-11"
+              />
+              {imagens.length > 1 && (
+                <Button type="button" variant="ghost" size="icon" className="h-11 w-11 shrink-0" onClick={() => removeImagem(idx)}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              )}
+            </div>
+          ))}
         </div>
       </TabsContent>
 
