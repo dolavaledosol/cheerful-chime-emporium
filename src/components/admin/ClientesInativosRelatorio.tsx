@@ -183,6 +183,104 @@ const ClientesInativosRelatorio = ({ inline = false }: { inline?: boolean }) => 
     setDialogOpen(true);
   };
 
+  const content = (
+    <>
+      {/* Filter bar */}
+      <div className="flex items-end gap-3 pb-3 border-b">
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Meses sem compra</Label>
+          <Input
+            type="number"
+            min={1}
+            max={24}
+            value={meses}
+            onChange={(e) => { setMeses(Number(e.target.value) || 3); setFetched(false); }}
+            className="w-20 h-11"
+          />
+        </div>
+        <Button onClick={fetchRelatorio} disabled={loading} className="gap-2 h-11">
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+          Buscar
+        </Button>
+        {fetched && (
+          <span className="text-sm text-muted-foreground ml-auto hidden sm:inline">
+            {clientes.length} encontrado(s)
+          </span>
+        )}
+      </div>
+
+      {/* Results */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {!fetched ? (
+          <p className="text-muted-foreground text-center py-12 text-sm">
+            Defina o período e clique em Buscar.
+          </p>
+        ) : clientes.length === 0 ? (
+          <p className="text-muted-foreground text-center py-12 text-sm">
+            Nenhum cliente inativo no período.
+          </p>
+        ) : (
+          <div className="space-y-2 py-2">
+            {fetched && isMobile && (
+              <p className="text-xs text-muted-foreground">{clientes.length} cliente(s)</p>
+            )}
+            {clientes.map((c) => (
+              <div key={c.cliente_id} className="border rounded-xl p-3 space-y-2">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm truncate">{c.nome}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Última compra: {new Date(c.ultima_compra).toLocaleDateString("pt-BR")}
+                      {c.lid && <span className="ml-2">• LID: {c.lid}</span>}
+                    </p>
+                  </div>
+                  <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full shrink-0">
+                    {c.produtos.length} prod.
+                  </span>
+                </div>
+                <div className="grid gap-1.5">
+                  {c.produtos.map((pr) => (
+                    <div key={pr.produto_id} className="flex items-center gap-2 text-xs text-muted-foreground border rounded-lg p-1.5">
+                      {pr.url_imagem ? (
+                        <img src={pr.url_imagem} alt={pr.nome} className="w-8 h-8 rounded object-cover shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded bg-muted shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-foreground truncate">{pr.nome}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {pr.fabricante && <span>{pr.fabricante} • </span>}
+                          {pr.peso && <span>{pr.peso}{pr.unidade_medida} • </span>}
+                          {pr.quantidade_total}x comprado
+                        </p>
+                      </div>
+                      <span className="text-[10px] shrink-0 tabular-nums">
+                        R$ {pr.preco.toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Send */}
+      <div className="flex justify-end gap-2 border-t pt-3">
+        {!inline && <Button variant="outline" onClick={() => setDialogOpen(false)}>Fechar</Button>}
+        <Button onClick={sendWebhook} disabled={sending || !fetched || clientes.length === 0} className="gap-2">
+          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          {sending ? "Enviando..." : "Enviar Webhook"}
+        </Button>
+      </div>
+    </>
+  );
+
+  if (inline) {
+    return <div className="space-y-4">{content}</div>;
+  }
+
   return (
     <>
       <Button variant="outline" onClick={handleOpen} size={isMobile ? "icon" : "default"} className="gap-2 shrink-0">
@@ -195,95 +293,7 @@ const ClientesInativosRelatorio = ({ inline = false }: { inline?: boolean }) => 
           <DialogHeader>
             <DialogTitle>Clientes Ausentes</DialogTitle>
           </DialogHeader>
-
-          {/* Filter bar */}
-          <div className="flex items-end gap-3 pb-3 border-b">
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Meses sem compra</Label>
-              <Input
-                type="number"
-                min={1}
-                max={24}
-                value={meses}
-                onChange={(e) => { setMeses(Number(e.target.value) || 3); setFetched(false); }}
-                className="w-20 h-11"
-              />
-            </div>
-            <Button onClick={fetchRelatorio} disabled={loading} className="gap-2 h-11">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              Buscar
-            </Button>
-            {fetched && (
-              <span className="text-sm text-muted-foreground ml-auto hidden sm:inline">
-                {clientes.length} encontrado(s)
-              </span>
-            )}
-          </div>
-
-          {/* Results */}
-          <div className="flex-1 overflow-y-auto min-h-0">
-            {!fetched ? (
-              <p className="text-muted-foreground text-center py-12 text-sm">
-                Defina o período e clique em Buscar.
-              </p>
-            ) : clientes.length === 0 ? (
-              <p className="text-muted-foreground text-center py-12 text-sm">
-                Nenhum cliente inativo no período.
-              </p>
-            ) : (
-              <div className="space-y-2 py-2">
-                {fetched && isMobile && (
-                  <p className="text-xs text-muted-foreground">{clientes.length} cliente(s)</p>
-                )}
-                {clientes.map((c) => (
-                  <div key={c.cliente_id} className="border rounded-xl p-3 space-y-2">
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm truncate">{c.nome}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Última compra: {new Date(c.ultima_compra).toLocaleDateString("pt-BR")}
-                          {c.lid && <span className="ml-2">• LID: {c.lid}</span>}
-                        </p>
-                      </div>
-                      <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full shrink-0">
-                        {c.produtos.length} prod.
-                      </span>
-                    </div>
-                    <div className="grid gap-1.5">
-                      {c.produtos.map((pr) => (
-                        <div key={pr.produto_id} className="flex items-center gap-2 text-xs text-muted-foreground border rounded-lg p-1.5">
-                          {pr.url_imagem ? (
-                            <img src={pr.url_imagem} alt={pr.nome} className="w-8 h-8 rounded object-cover shrink-0" />
-                          ) : (
-                            <div className="w-8 h-8 rounded bg-muted shrink-0" />
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium text-foreground truncate">{pr.nome}</p>
-                            <p className="text-[10px] text-muted-foreground truncate">
-                              {pr.fabricante && <span>{pr.fabricante} • </span>}
-                              {pr.peso && <span>{pr.peso}{pr.unidade_medida} • </span>}
-                              {pr.quantidade_total}x comprado
-                            </p>
-                          </div>
-                          <span className="text-[10px] shrink-0 tabular-nums">
-                            R$ {pr.preco.toFixed(2)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="border-t pt-3">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Fechar</Button>
-            <Button onClick={sendWebhook} disabled={sending || !fetched || clientes.length === 0} className="gap-2">
-              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              {sending ? "Enviando..." : "Enviar Webhook"}
-            </Button>
-          </DialogFooter>
+          {content}
         </DialogContent>
       </Dialog>
     </>

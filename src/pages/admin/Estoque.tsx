@@ -836,10 +836,6 @@ const Estoque = () => {
             </Table>
           </div>
         </TabsContent>
-        {/* ── Tab Relatório ── */}
-        <TabsContent value="relatorio">
-          <EstoqueRelatorio />
-        </TabsContent>
       </Tabs>
 
       {/* ── Edit single record dialog ── */}

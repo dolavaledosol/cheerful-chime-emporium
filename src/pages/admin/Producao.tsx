@@ -389,9 +389,6 @@ const Producao = () => {
             </Table>
           </div>
         </TabsContent>
-        <TabsContent value="relatorio">
-          <ProducaoRelatorio />
-        </TabsContent>
       </Tabs>
 
       {/* Production Dialog */}

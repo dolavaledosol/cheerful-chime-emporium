@@ -283,6 +283,199 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
     }
   };
 
+  // Auto-load when inline
+  if (inline && !inlineLoaded) {
+    setInlineLoaded(true);
+    loadAll();
+  }
+
+  const tabsContent = (
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
+      <TabsList className="grid w-full grid-cols-4">
+        <TabsTrigger value="clientes" className="text-xs sm:text-sm">
+          Clientes ({clientesComLid.length})
+        </TabsTrigger>
+        <TabsTrigger value="produtos" className="text-xs sm:text-sm">
+          Produtos ({checkedProducts.length})
+        </TabsTrigger>
+        <TabsTrigger value="mensagem" className="text-xs sm:text-sm">
+          <MessageSquare className="h-3 w-3 mr-1" />
+          Mensagem
+        </TabsTrigger>
+        <TabsTrigger value="urls" className="text-xs sm:text-sm">
+          Vídeos ({urls.filter((u) => u.trim()).length})
+        </TabsTrigger>
+      </TabsList>
+
+      {/* Clientes tab */}
+      <TabsContent value="clientes" className="flex-1 overflow-y-auto mt-4">
+        {loadingClientes ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              {clientesComLid.length} cliente(s) com LID (de {clientes.length} total)
+            </p>
+            {isMobile ? (
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                {clientesComLid.length === 0 ? (
+                  <p className="text-center py-8 text-sm text-muted-foreground">Nenhum cliente com LID</p>
+                ) : clientesComLid.map((c, idx) => (
+                  <div key={`${c.cliente_id}-${idx}`} className="rounded-xl border bg-card p-3 flex justify-between items-center">
+                    <p className="font-medium text-sm">{c.nome}</p>
+                    <span className="text-xs text-muted-foreground font-mono">{c.lid}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="border rounded-lg max-h-[400px] overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>LID</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {clientesComLid.length === 0 ? (
+                      <TableRow><TableCell colSpan={2} className="text-center py-8 text-muted-foreground">Nenhum cliente com LID encontrado</TableCell></TableRow>
+                    ) : clientesComLid.map((c, idx) => (
+                      <TableRow key={`${c.cliente_id}-${idx}`}>
+                        <TableCell className="font-medium">{c.nome}</TableCell>
+                        <TableCell className="text-muted-foreground font-mono text-xs">{c.lid}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        )}
+      </TabsContent>
+
+      {/* Produtos tab */}
+      <TabsContent value="produtos" className="flex-1 overflow-y-auto mt-4">
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar produto..." value={searchProd} onChange={(e) => setSearchProd(e.target.value)} className="pl-10" />
+            </div>
+            <Select value={filterFabricante} onValueChange={setFilterFabricante}>
+              <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Fabricante" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {fabricantes.map((f) => <SelectItem key={f.fabricante_id} value={f.nome}>{f.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Checkbox checked={allFilteredChecked} onCheckedChange={(v) => toggleAll(!!v)} />
+            <span className="text-xs text-muted-foreground">Selecionar todos ({filteredProdutos.length})</span>
+          </div>
+
+          {isMobile ? (
+            <div className="space-y-2 max-h-[45vh] overflow-y-auto">
+              {filteredProdutos.length === 0 ? (
+                <p className="text-center py-8 text-sm text-muted-foreground">Nenhum produto encontrado</p>
+              ) : filteredProdutos.map((p) => (
+                <ProductCard key={p.produto_id} p={p} onToggle={toggleProduct} />
+              ))}
+            </div>
+          ) : (
+            <div className="border rounded-lg max-h-[400px] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox checked={allFilteredChecked} onCheckedChange={(v) => toggleAll(!!v)} />
+                    </TableHead>
+                    <TableHead>Produto</TableHead>
+                    <TableHead>Fabricante</TableHead>
+                    <TableHead className="text-right">Preço</TableHead>
+                    <TableHead className="text-center">Peso</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProdutos.length === 0 ? (
+                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
+                  ) : filteredProdutos.map((p) => (
+                    <ProductRow key={p.produto_id} p={p} onToggle={toggleProduct} />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+      </TabsContent>
+
+      {/* Mensagem tab */}
+      <TabsContent value="mensagem" className="flex-1 overflow-y-auto mt-4">
+        <div className="space-y-3">
+          <Label>Mensagem da campanha</Label>
+          <Textarea
+            value={mensagem}
+            onChange={(e) => setMensagem(e.target.value)}
+            placeholder="Digite a mensagem que será enviada junto com a campanha..."
+            className="min-h-[200px]"
+          />
+          <p className="text-xs text-muted-foreground">
+            {mensagem.trim().length > 0 ? `${mensagem.length} caracteres` : "Nenhuma mensagem definida"}
+          </p>
+        </div>
+      </TabsContent>
+
+      {/* URLs tab */}
+      <TabsContent value="urls" className="flex-1 overflow-y-auto mt-4">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label>Links de vídeo</Label>
+            <Button type="button" variant="ghost" size="sm" className="gap-1 h-7" onClick={addUrl}>
+              <Plus className="h-3 w-3" /> Adicionar
+            </Button>
+          </div>
+          {urls.map((url, idx) => (
+            <div key={idx} className="flex gap-2">
+              <Input
+                value={url}
+                onChange={(e) => updateUrl(idx, e.target.value)}
+                placeholder="https://youtube.com/watch?v=..."
+                className="flex-1 h-11"
+              />
+              {urls.length > 1 && (
+                <Button type="button" variant="ghost" size="icon" className="h-11 w-11 shrink-0" onClick={() => removeUrl(idx)}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      </TabsContent>
+    </Tabs>
+  );
+
+  const sendButton = (
+    <div className="flex justify-end gap-2 mt-4">
+      {!inline && <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>}
+      <Button onClick={sendWebhook} disabled={sending || clientesComLid.length === 0} className="gap-2">
+        {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        {sending ? "Enviando..." : "Enviar Campanha"}
+      </Button>
+    </div>
+  );
+
+  if (inline) {
+    return (
+      <div className="space-y-4">
+        {tabsContent}
+        {sendButton}
+      </div>
+    );
+  }
+
   return (
     <>
       <Button variant="outline" onClick={openDialog} size={isMobile ? "icon" : "default"} className="gap-2 shrink-0">
@@ -297,174 +490,7 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
               <Megaphone className="h-5 w-5" /> Nova Campanha
             </DialogTitle>
           </DialogHeader>
-
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="clientes" className="text-xs sm:text-sm">
-                Clientes ({clientesComLid.length})
-              </TabsTrigger>
-              <TabsTrigger value="produtos" className="text-xs sm:text-sm">
-                Produtos ({checkedProducts.length})
-              </TabsTrigger>
-              <TabsTrigger value="mensagem" className="text-xs sm:text-sm">
-                <MessageSquare className="h-3 w-3 mr-1" />
-                Mensagem
-              </TabsTrigger>
-              <TabsTrigger value="urls" className="text-xs sm:text-sm">
-                Vídeos ({urls.filter((u) => u.trim()).length})
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Clientes tab */}
-            <TabsContent value="clientes" className="flex-1 overflow-y-auto mt-4">
-              {loadingClientes ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    {clientesComLid.length} cliente(s) com LID (de {clientes.length} total)
-                  </p>
-                  {isMobile ? (
-                    <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-                      {clientesComLid.length === 0 ? (
-                        <p className="text-center py-8 text-sm text-muted-foreground">Nenhum cliente com LID</p>
-                      ) : clientesComLid.map((c, idx) => (
-                        <div key={`${c.cliente_id}-${idx}`} className="rounded-xl border bg-card p-3 flex justify-between items-center">
-                          <p className="font-medium text-sm">{c.nome}</p>
-                          <span className="text-xs text-muted-foreground font-mono">{c.lid}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="border rounded-lg max-h-[400px] overflow-y-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Nome</TableHead>
-                            <TableHead>LID</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {clientesComLid.length === 0 ? (
-                            <TableRow><TableCell colSpan={2} className="text-center py-8 text-muted-foreground">Nenhum cliente com LID encontrado</TableCell></TableRow>
-                          ) : clientesComLid.map((c, idx) => (
-                            <TableRow key={`${c.cliente_id}-${idx}`}>
-                              <TableCell className="font-medium">{c.nome}</TableCell>
-                              <TableCell className="text-muted-foreground font-mono text-xs">{c.lid}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Produtos tab */}
-            <TabsContent value="produtos" className="flex-1 overflow-y-auto mt-4">
-              <div className="space-y-3">
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Buscar produto..." value={searchProd} onChange={(e) => setSearchProd(e.target.value)} className="pl-10" />
-                  </div>
-                  <Select value={filterFabricante} onValueChange={setFilterFabricante}>
-                    <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Fabricante" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {fabricantes.map((f) => <SelectItem key={f.fabricante_id} value={f.nome}>{f.nome}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Select all */}
-                <div className="flex items-center gap-2">
-                  <Checkbox checked={allFilteredChecked} onCheckedChange={(v) => toggleAll(!!v)} />
-                  <span className="text-xs text-muted-foreground">Selecionar todos ({filteredProdutos.length})</span>
-                </div>
-
-                {isMobile ? (
-                  <div className="space-y-2 max-h-[45vh] overflow-y-auto">
-                    {filteredProdutos.length === 0 ? (
-                      <p className="text-center py-8 text-sm text-muted-foreground">Nenhum produto encontrado</p>
-                    ) : filteredProdutos.map((p) => (
-                      <ProductCard key={p.produto_id} p={p} onToggle={toggleProduct} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="border rounded-lg max-h-[400px] overflow-y-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-10">
-                            <Checkbox checked={allFilteredChecked} onCheckedChange={(v) => toggleAll(!!v)} />
-                          </TableHead>
-                          <TableHead>Produto</TableHead>
-                          <TableHead>Fabricante</TableHead>
-                          <TableHead className="text-right">Preço</TableHead>
-                          <TableHead className="text-center">Peso</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredProdutos.length === 0 ? (
-                          <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
-                        ) : filteredProdutos.map((p) => (
-                          <ProductRow key={p.produto_id} p={p} onToggle={toggleProduct} />
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            {/* Mensagem tab */}
-            <TabsContent value="mensagem" className="flex-1 overflow-y-auto mt-4">
-              <div className="space-y-3">
-                <Label>Mensagem da campanha</Label>
-                <Textarea
-                  value={mensagem}
-                  onChange={(e) => setMensagem(e.target.value)}
-                  placeholder="Digite a mensagem que será enviada junto com a campanha..."
-                  className="min-h-[200px]"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {mensagem.trim().length > 0 ? `${mensagem.length} caracteres` : "Nenhuma mensagem definida"}
-                </p>
-              </div>
-            </TabsContent>
-
-            {/* URLs tab */}
-            <TabsContent value="urls" className="flex-1 overflow-y-auto mt-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Links de vídeo</Label>
-                  <Button type="button" variant="ghost" size="sm" className="gap-1 h-7" onClick={addUrl}>
-                    <Plus className="h-3 w-3" /> Adicionar
-                  </Button>
-                </div>
-                {urls.map((url, idx) => (
-                  <div key={idx} className="flex gap-2">
-                    <Input
-                      value={url}
-                      onChange={(e) => updateUrl(idx, e.target.value)}
-                      placeholder="https://youtube.com/watch?v=..."
-                      className="flex-1 h-11"
-                    />
-                    {urls.length > 1 && (
-                      <Button type="button" variant="ghost" size="icon" className="h-11 w-11 shrink-0" onClick={() => removeUrl(idx)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
-
+          {tabsContent}
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
             <Button onClick={sendWebhook} disabled={sending || clientesComLid.length === 0} className="gap-2">
