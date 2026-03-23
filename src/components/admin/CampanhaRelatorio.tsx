@@ -182,12 +182,23 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
     setClientes(result);
     setLoadingClientes(false);
 
-    const [{ data: prods }, { data: fab }] = await Promise.all([
-      supabase.from("produto").select("produto_id, nome, preco, peso_liquido, unidade_medida, fabricante(nome), produto_imagem(url_imagem, ordem)").eq("ativo", true).order("nome"),
+    const [{ data: prods }, { data: fab }, { data: fam }, { data: estoqueData }] = await Promise.all([
+      supabase.from("produto").select("produto_id, nome, preco, peso_liquido, unidade_medida, fabricante(nome), familia(nome), produto_imagem(url_imagem, ordem)").eq("ativo", true).order("nome"),
       supabase.from("fabricante").select("fabricante_id, nome").eq("ativo", true).order("nome"),
+      supabase.from("familia").select("familia_id, nome").eq("ativo", true).order("nome"),
+      supabase.from("estoque_local").select("produto_id, quantidade_disponivel"),
     ]);
 
     if (fab) setFabricantes(fab);
+    if (fam) setFamilias(fam);
+
+    // Build estoque map
+    const estoqueMap = new Map<string, number>();
+    if (estoqueData) {
+      for (const e of estoqueData as any[]) {
+        estoqueMap.set(e.produto_id, (estoqueMap.get(e.produto_id) || 0) + Number(e.quantidade_disponivel));
+      }
+    }
 
     if (prods) {
       setProdutos((prods as any[]).map((p) => {
@@ -195,8 +206,10 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
         const imgPrincipal = imagens.length > 0 ? imagens.sort((a: any, b: any) => a.ordem - b.ordem)[0].url_imagem : null;
         return {
           produto_id: p.produto_id, nome: p.nome, peso: p.peso_liquido,
-          unidade_medida: p.unidade_medida || "un", fabricante: p.fabricante?.nome || null,
-          preco: p.preco || 0, url_imagem: imgPrincipal, checked: false,
+          unidade_medida: p.unidade_medida || "un", familia: p.familia?.nome || null,
+          fabricante: p.fabricante?.nome || null,
+          preco: p.preco || 0, total_estoque: estoqueMap.get(p.produto_id) || 0,
+          url_imagem: imgPrincipal, checked: false,
         };
       }));
     }
