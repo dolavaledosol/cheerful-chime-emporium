@@ -62,6 +62,7 @@ export const ROUTE_TO_RESOURCE: Record<string, AdminResource> = {
   "/admin/configuracoes": "configuracoes",
   "/admin/receitas": "receitas",
   "/admin/producao": "producao",
+  "/admin/divulgacao": "estoque",
 };
 
 interface PermissionsContextType {
