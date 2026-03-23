@@ -528,13 +528,14 @@ const EstoqueRelatorio = () => {
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
             ) : filtered.map((p) => (
               <TableRow key={p.produto_id} className={p.checked ? "bg-muted/30" : ""}>
                 <TableCell>
                   <Checkbox checked={p.checked} onCheckedChange={(v) => toggleProduct(p.produto_id, !!v)} />
                 </TableCell>
                 <TableCell className="font-medium">{p.nome}</TableCell>
+                <TableCell className="text-muted-foreground whitespace-nowrap">{p.peso_liquido != null ? `${p.peso_liquido} ${p.unidade_medida}` : "—"}</TableCell>
                 <TableCell className="text-muted-foreground">{p.familia}</TableCell>
                 <TableCell className="text-muted-foreground">{p.fabricante}</TableCell>
                 <TableCell className="text-right">R$ {p.preco.toFixed(2)}</TableCell>

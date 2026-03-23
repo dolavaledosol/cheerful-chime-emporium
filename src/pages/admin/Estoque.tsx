@@ -696,10 +696,11 @@ const Estoque = () => {
                    const totalPed = estoqueLocalFilter === "todos" ? g.totalPedidos : (g.locais[estoqueLocalFilter]?.pedidos ?? 0);
                    return (
                    <TableRow key={g.produto_id}>
-                     <TableCell className="text-xs text-muted-foreground font-mono whitespace-nowrap">{g.produto_id.substring(0, 8)}</TableCell>
-                     <TableCell className="font-medium whitespace-nowrap">{g.nome}</TableCell>
-                     <TableCell className="text-muted-foreground whitespace-nowrap">{g.fabricante}</TableCell>
-                     <TableCell className="text-muted-foreground whitespace-nowrap">{g.familia}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground font-mono whitespace-nowrap">{g.produto_id.substring(0, 8)}</TableCell>
+                      <TableCell className="font-medium whitespace-nowrap">{g.nome}</TableCell>
+                      <TableCell className="text-muted-foreground whitespace-nowrap">{g.peso_liquido != null ? `${g.peso_liquido} ${g.unidade_medida}` : "—"}</TableCell>
+                      <TableCell className="text-muted-foreground whitespace-nowrap">{g.familia}</TableCell>
+                      <TableCell className="text-muted-foreground whitespace-nowrap">{g.fabricante}</TableCell>
                      <TableCell className="text-center">
                        <Checkbox
                          checked={g.destacar}
