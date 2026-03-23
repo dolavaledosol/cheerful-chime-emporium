@@ -319,7 +319,6 @@ const Producao = () => {
       <Tabs defaultValue="historico">
         <TabsList>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
-          <TabsTrigger value="relatorio">Relatório</TabsTrigger>
         </TabsList>
         <TabsContent value="historico">
           <div className="border rounded-lg">
