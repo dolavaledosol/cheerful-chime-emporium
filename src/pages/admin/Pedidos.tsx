@@ -821,8 +821,8 @@ const Pedidos = () => {
   const updatePedido = async () => {
     if (!selectedPedido) return;
 
-    // Require local_estoque when moving to aguardando_pagamento
-    if (editStatus === "aguardando_pagamento" && !editLocalEstoqueId) {
+    // Require local_estoque when moving to aguardando_pagamento for retirada
+    if (editStatus === "aguardando_pagamento" && editTipoEntrega === "retirada" && !editLocalEstoqueId) {
       toast({ title: "Selecione o local de estoque antes de passar para Aguardando Pagamento", variant: "destructive" });
       return;
     }
