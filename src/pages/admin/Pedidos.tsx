@@ -217,6 +217,7 @@ const Pedidos = () => {
   const [splitMode, setSplitMode] = useState(false);
   const [splitSelectedDetail, setSplitSelectedDetail] = useState<Record<string, boolean>>({});
   const [splitLoading, setSplitLoading] = useState(false);
+  const [editTipoEntrega, setEditTipoEntrega] = useState<"entrega" | "retirada">("retirada");
 
   // New order dialog
   const [newOrderOpen, setNewOrderOpen] = useState(false);
