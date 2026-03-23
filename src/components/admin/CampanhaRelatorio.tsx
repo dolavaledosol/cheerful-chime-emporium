@@ -219,10 +219,11 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
     const term = searchProd.toLowerCase();
     return produtos.filter((p) => {
       const matchSearch = !term || p.nome.toLowerCase().includes(term);
+      const matchFamilia = filterFamilia === "all" || p.familia === filterFamilia;
       const matchFabricante = filterFabricante === "all" || p.fabricante === filterFabricante;
-      return matchSearch && matchFabricante;
+      return matchSearch && matchFamilia && matchFabricante;
     });
-  }, [produtos, searchProd, filterFabricante]);
+  }, [produtos, searchProd, filterFamilia, filterFabricante]);
 
   const checkedProducts = useMemo(() => produtos.filter((p) => p.checked), [produtos]);
 
