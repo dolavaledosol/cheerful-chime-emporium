@@ -1693,16 +1693,39 @@ const Pedidos = () => {
                 <div><span className="text-muted-foreground">Origem:</span> {origemLabels[selectedPedido.origem] || selectedPedido.origem}{selectedPedido.vendedor?.nome && ` — ${selectedPedido.vendedor.nome}`}</div>
                 <div>
                   <span className="text-muted-foreground">Tipo:</span>{" "}
-                  {(() => {
-                    const tipo = getTipoEntrega(selectedPedido);
-                    const TipoIcon = tipo.icon;
-                    return (
-                      <span className="inline-flex items-center gap-1">
-                        <TipoIcon className="h-3 w-3" /> {tipo.label}
-                        {selectedPedido.local_estoque?.nome && ` — ${selectedPedido.local_estoque.nome}`}
-                      </span>
-                    );
-                  })()}
+                  {selectedPedido.status === "separacao" ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={editTipoEntrega === "entrega" ? "default" : "outline"}
+                        className="h-6 px-2 text-xs gap-1"
+                        onClick={() => { setEditTipoEntrega("entrega"); setEditLocalEstoqueId(null); }}
+                      >
+                        <Truck className="h-3 w-3" /> Entrega
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={editTipoEntrega === "retirada" ? "default" : "outline"}
+                        className="h-6 px-2 text-xs gap-1"
+                        onClick={() => setEditTipoEntrega("retirada")}
+                      >
+                        <Store className="h-3 w-3" /> Retirada
+                      </Button>
+                    </span>
+                  ) : (
+                    (() => {
+                      const tipo = getTipoEntrega(selectedPedido);
+                      const TipoIcon = tipo.icon;
+                      return (
+                        <span className="inline-flex items-center gap-1">
+                          <TipoIcon className="h-3 w-3" /> {tipo.label}
+                          {selectedPedido.local_estoque?.nome && ` — ${selectedPedido.local_estoque.nome}`}
+                        </span>
+                      );
+                    })()
+                  )}
                 </div>
               </div>
               {selectedPedido.observacao && <p className="text-sm text-muted-foreground">Obs: {selectedPedido.observacao}</p>}
