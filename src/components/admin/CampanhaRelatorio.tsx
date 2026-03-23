@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Send, Loader2, Megaphone, Plus, Trash2, MessageSquare, Image } from "lucide-react";
+import { Search, Send, Loader2, Megaphone, Plus, Trash2, MessageSquare, Image, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ClienteCampanha {
@@ -34,6 +34,9 @@ interface ProdutoCampanha {
 
 interface FamiliaOption { familia_id: string; nome: string; }
 interface FabricanteOption { fabricante_id: string; nome: string; }
+
+type SortKey = "nome" | "peso" | "familia" | "fabricante" | "preco" | "total_estoque" | "valor_total";
+type SortDir = "asc" | "desc";
 
 const safeJsonParse = (value: string) => {
   try { return JSON.parse(value); } catch { return null; }
@@ -118,7 +121,9 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("clientes");
   const isMobile = useIsMobile();
-  
+
+  const [sortKey, setSortKey] = useState<SortKey>("nome");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const [clientes, setClientes] = useState<ClienteCampanha[]>([]);
   const [loadingClientes, setLoadingClientes] = useState(false);
@@ -219,13 +224,45 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
 
   const filteredProdutos = useMemo(() => {
     const term = searchProd.toLowerCase();
-    return produtos.filter((p) => {
+    const result = produtos.filter((p) => {
       const matchSearch = !term || p.nome.toLowerCase().includes(term);
       const matchFamilia = filterFamilia === "all" || p.familia === filterFamilia;
       const matchFabricante = filterFabricante === "all" || p.fabricante === filterFabricante;
       return matchSearch && matchFamilia && matchFabricante;
     });
-  }, [produtos, searchProd, filterFamilia, filterFabricante]);
+    result.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "valor_total") {
+        cmp = (a.preco * a.total_estoque) - (b.preco * b.total_estoque);
+      } else if (sortKey === "preco" || sortKey === "total_estoque") {
+        cmp = a[sortKey] - b[sortKey];
+      } else if (sortKey === "peso") {
+        cmp = (a.peso ?? 0) - (b.peso ?? 0);
+      } else if (sortKey === "familia" || sortKey === "fabricante") {
+        cmp = (a[sortKey] || "").localeCompare(b[sortKey] || "", "pt-BR");
+      } else {
+        cmp = a.nome.localeCompare(b.nome, "pt-BR");
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return result;
+  }, [produtos, searchProd, filterFamilia, filterFabricante, sortKey, sortDir]);
+
+  const handleSort = useCallback((key: SortKey) => {
+    setSortKey((prev) => {
+      if (prev === key) {
+        setSortDir((d) => d === "asc" ? "desc" : "asc");
+        return key;
+      }
+      setSortDir("asc");
+      return key;
+    });
+  }, []);
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortKey !== col) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="h-3 w-3 ml-1" /> : <ArrowDown className="h-3 w-3 ml-1" />;
+  };
 
   const checkedProducts = useMemo(() => produtos.filter((p) => p.checked), [produtos]);
 
@@ -430,13 +467,27 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
                     <TableHead className="w-10">
                       <Checkbox checked={allFilteredChecked} onCheckedChange={(v) => toggleAll(!!v)} />
                     </TableHead>
-                    <TableHead>Produto</TableHead>
-                    <TableHead>Peso</TableHead>
-                    <TableHead>Família</TableHead>
-                    <TableHead>Fabricante</TableHead>
-                    <TableHead className="text-right">Preço</TableHead>
-                    <TableHead className="text-center">Estoque</TableHead>
-                    <TableHead className="text-right">Valor Total</TableHead>
+                    <TableHead className="cursor-pointer select-none" onClick={() => handleSort("nome")}>
+                      <span className="inline-flex items-center">Produto<SortIcon col="nome" /></span>
+                    </TableHead>
+                    <TableHead className="cursor-pointer select-none" onClick={() => handleSort("peso")}>
+                      <span className="inline-flex items-center">Peso<SortIcon col="peso" /></span>
+                    </TableHead>
+                    <TableHead className="cursor-pointer select-none" onClick={() => handleSort("familia")}>
+                      <span className="inline-flex items-center">Família<SortIcon col="familia" /></span>
+                    </TableHead>
+                    <TableHead className="cursor-pointer select-none" onClick={() => handleSort("fabricante")}>
+                      <span className="inline-flex items-center">Fabricante<SortIcon col="fabricante" /></span>
+                    </TableHead>
+                    <TableHead className="text-right cursor-pointer select-none" onClick={() => handleSort("preco")}>
+                      <span className="inline-flex items-center justify-end w-full">Preço<SortIcon col="preco" /></span>
+                    </TableHead>
+                    <TableHead className="text-center cursor-pointer select-none" onClick={() => handleSort("total_estoque")}>
+                      <span className="inline-flex items-center justify-center w-full">Estoque<SortIcon col="total_estoque" /></span>
+                    </TableHead>
+                    <TableHead className="text-right cursor-pointer select-none" onClick={() => handleSort("valor_total")}>
+                      <span className="inline-flex items-center justify-end w-full">Valor Total<SortIcon col="valor_total" /></span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
