@@ -373,6 +373,7 @@ const Estoque = () => {
       if (!grupo) {
         grupo = {
           produto_id: e.produto_id, nome: e.produto?.nome || "—",
+          peso_liquido: e.produto?.peso_liquido ?? null, unidade_medida: e.produto?.unidade_medida || "un",
           fabricante: e.produto?.fabricante?.nome || "—", familia: e.produto?.familia?.nome || "—",
           destacar: e.produto?.destacar ?? false,
           locais: {}, totalEstoque: 0, totalPedidos: 0,
