@@ -131,6 +131,7 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
   const [filterFabricante, setFilterFabricante] = useState("all");
 
   const [urls, setUrls] = useState<string[]>([""]);
+  const [imagens, setImagens] = useState<string[]>([""]);
   const [mensagem, setMensagem] = useState("");
   const [sending, setSending] = useState(false);
   const { toast } = useToast();
