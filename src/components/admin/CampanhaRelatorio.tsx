@@ -423,14 +423,17 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
                       <Checkbox checked={allFilteredChecked} onCheckedChange={(v) => toggleAll(!!v)} />
                     </TableHead>
                     <TableHead>Produto</TableHead>
+                    <TableHead>Peso</TableHead>
+                    <TableHead>Família</TableHead>
                     <TableHead>Fabricante</TableHead>
                     <TableHead className="text-right">Preço</TableHead>
-                    <TableHead className="text-center">Peso</TableHead>
+                    <TableHead className="text-center">Estoque</TableHead>
+                    <TableHead className="text-right">Valor Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredProdutos.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
                   ) : filteredProdutos.map((p) => (
                     <ProductRow key={p.produto_id} p={p} onToggle={toggleProduct} />
                   ))}
