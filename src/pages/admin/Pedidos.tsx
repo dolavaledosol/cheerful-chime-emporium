@@ -1849,8 +1849,8 @@ const Pedidos = () => {
                 </div>
               )}
 
-              {/* Local de Estoque - editable only during separacao */}
-              {selectedPedido.status === "separacao" && (
+              {/* Local de Estoque - editable only during separacao + retirada */}
+              {selectedPedido.status === "separacao" && editTipoEntrega === "retirada" && (
                 <div className="space-y-2">
                   <Label>Local de Estoque</Label>
                   <Select value={editLocalEstoqueId || ""} onValueChange={(v) => setEditLocalEstoqueId(v || null)}>
