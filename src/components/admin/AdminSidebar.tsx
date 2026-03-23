@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Package, Layers, Factory, Users, ShoppingCart,
   DollarSign, Settings, LogOut, Truck, Warehouse, Boxes, Landmark, CreditCard,
-  ChevronDown, FolderOpen, UserCog, ChefHat, FlaskConical,
+  ChevronDown, FolderOpen, UserCog, ChefHat, FlaskConical, Megaphone,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
