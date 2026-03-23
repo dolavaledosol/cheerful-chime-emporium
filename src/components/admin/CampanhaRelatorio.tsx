@@ -104,8 +104,10 @@ const ProductCard = memo(({ p, onToggle }: { p: ProdutoCampanha; onToggle: (id: 
     </div>
     <div className="flex items-center gap-3 text-xs text-muted-foreground">
       {p.fabricante && <span>{p.fabricante}</span>}
+      {p.familia && <span>{p.familia}</span>}
       <span>R$ {p.preco.toFixed(2)}</span>
       {p.peso != null && <span>{p.peso} {p.unidade_medida}</span>}
+      <span>Est: {p.total_estoque}</span>
     </div>
   </button>
 ));
