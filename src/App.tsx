@@ -30,6 +30,7 @@ import Usuarios from "./pages/admin/Usuarios";
 import Configuracoes from "./pages/admin/Configuracoes";
 import Receitas from "./pages/admin/Receitas";
 import Producao from "./pages/admin/Producao";
+import Divulgacao from "./pages/admin/Divulgacao";
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
 
 const queryClient = new QueryClient();
