@@ -277,6 +277,7 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
     setSending(true);
     try {
       const validUrls = urls.filter((u) => u.trim().length > 0);
+      const validImagens = imagens.filter((u) => u.trim().length > 0);
       const payload = {
         tipo: "campanha",
         clientes: clientesComLid.map((c) => ({ nome: c.nome, lid: c.lid })),
@@ -286,6 +287,7 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
           preco: p.preco, url_imagem: p.url_imagem,
         })),
         urls: validUrls,
+        imagens: validImagens,
         mensagem: mensagem.trim() || null,
       };
 
