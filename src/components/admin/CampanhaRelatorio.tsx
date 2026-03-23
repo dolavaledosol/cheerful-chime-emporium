@@ -106,10 +106,11 @@ const ProductCard = memo(({ p, onToggle }: { p: ProdutoCampanha; onToggle: (id: 
 ));
 ProductCard.displayName = "ProductCard";
 
-const CampanhaRelatorio = () => {
+const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("clientes");
   const isMobile = useIsMobile();
+  const [inlineLoaded, setInlineLoaded] = useState(false);
 
   const [clientes, setClientes] = useState<ClienteCampanha[]>([]);
   const [loadingClientes, setLoadingClientes] = useState(false);
