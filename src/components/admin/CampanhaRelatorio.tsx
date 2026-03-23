@@ -317,7 +317,7 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
 
   const tabsContent = (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-      <TabsList className="grid w-full grid-cols-4">
+      <TabsList className="grid w-full grid-cols-5">
         <TabsTrigger value="clientes" className="text-xs sm:text-sm">
           Clientes ({clientesComLid.length})
         </TabsTrigger>
@@ -327,6 +327,10 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
         <TabsTrigger value="mensagem" className="text-xs sm:text-sm">
           <MessageSquare className="h-3 w-3 mr-1" />
           Mensagem
+        </TabsTrigger>
+        <TabsTrigger value="imagens" className="text-xs sm:text-sm">
+          <Image className="h-3 w-3 mr-1" />
+          Imagens ({imagens.filter((u) => u.trim()).length})
         </TabsTrigger>
         <TabsTrigger value="urls" className="text-xs sm:text-sm">
           Vídeos ({urls.filter((u) => u.trim()).length})
