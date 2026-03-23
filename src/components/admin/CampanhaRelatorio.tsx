@@ -82,9 +82,12 @@ const ProductRow = memo(({ p, onToggle }: { p: ProdutoCampanha; onToggle: (id: s
   <TableRow className={p.checked ? "bg-muted/30" : ""}>
     <TableCell><Checkbox checked={p.checked} onCheckedChange={(v) => onToggle(p.produto_id, !!v)} /></TableCell>
     <TableCell className="font-medium">{p.nome}</TableCell>
+    <TableCell className="text-muted-foreground whitespace-nowrap">{p.peso != null ? `${p.peso} ${p.unidade_medida}` : "—"}</TableCell>
+    <TableCell className="text-muted-foreground">{p.familia || "—"}</TableCell>
     <TableCell className="text-muted-foreground">{p.fabricante || "—"}</TableCell>
     <TableCell className="text-right">R$ {p.preco.toFixed(2)}</TableCell>
-    <TableCell className="text-center">{p.peso ?? "—"} {p.unidade_medida}</TableCell>
+    <TableCell className="text-center font-semibold">{p.total_estoque}</TableCell>
+    <TableCell className="text-right font-medium">R$ {(p.preco * p.total_estoque).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
   </TableRow>
 ));
 ProductRow.displayName = "ProductRow";
