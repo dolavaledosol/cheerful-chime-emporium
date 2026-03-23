@@ -223,6 +223,8 @@ const EstoqueRelatorio = () => {
             nome: e.produto?.nome || "—",
             descricao: e.produto?.descricao || null,
             preco: e.produto?.preco || 0,
+            peso_liquido: e.produto?.peso_liquido ?? null,
+            unidade_medida: e.produto?.unidade_medida || "un",
             familia: e.produto?.familia?.nome || "—",
             fabricante: e.produto?.fabricante?.nome || "—",
             imagem_url: imgPrincipal,
