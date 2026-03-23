@@ -385,10 +385,17 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar produto..." value={searchProd} onChange={(e) => setSearchProd(e.target.value)} className="pl-10" />
             </div>
+            <Select value={filterFamilia} onValueChange={setFilterFamilia}>
+              <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Família" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Famílias</SelectItem>
+                {familias.map((f) => <SelectItem key={f.familia_id} value={f.nome}>{f.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <Select value={filterFabricante} onValueChange={setFilterFabricante}>
               <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Fabricante" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="all">Todos os Fabricantes</SelectItem>
                 {fabricantes.map((f) => <SelectItem key={f.fabricante_id} value={f.nome}>{f.nome}</SelectItem>)}
               </SelectContent>
             </Select>
