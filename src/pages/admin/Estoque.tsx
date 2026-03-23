@@ -13,7 +13,7 @@ import { Search, ArrowRightLeft, Download, Upload, CalendarIcon } from "lucide-r
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import * as XLSX from "xlsx";
-import EstoqueRelatorio from "@/components/admin/EstoqueRelatorio";
+
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
