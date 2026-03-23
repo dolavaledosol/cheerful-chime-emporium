@@ -54,23 +54,33 @@ const Configuracoes = () => {
   const [items, setItems] = useState<Configuracao[]>([]);
   const [webhookValues, setWebhookValues] = useState<Record<string, string>>({});
   const [savingSection, setSavingSection] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   const load = async () => {
-    const { data } = await supabase
+    setLoading(true);
+    const { data, error } = await supabase
       .from("configuracao")
       .select("configuracao_id, chave, valor")
       .is("user_id", null)
       .order("chave");
-    if (data) {
-      setItems(data);
-      const wv: Record<string, string> = {};
-      for (const key of ALL_WEBHOOK_KEYS) {
-        const found = data.find((d) => d.chave === key);
-        wv[key] = found?.valor || "";
-      }
-      setWebhookValues(wv);
+
+    if (error) {
+      toast({ title: "Erro ao carregar configurações", description: error.message, variant: "destructive" });
+      setLoading(false);
+      return;
     }
+
+    const loadedItems = data || [];
+    setItems(loadedItems);
+
+    const wv: Record<string, string> = {};
+    for (const key of ALL_WEBHOOK_KEYS) {
+      const found = loadedItems.find((d) => d.chave === key);
+      wv[key] = found?.valor || "";
+    }
+    setWebhookValues(wv);
+    setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
@@ -94,6 +104,9 @@ const Configuracoes = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Configurações</h1>
+      <p className="text-sm text-muted-foreground">
+        URLs dos payloads ficam visíveis abaixo de cada campo para facilitar a conferência.
+      </p>
 
       {WEBHOOK_SECTIONS.map((section) => (
         <Card key={section.title}>
@@ -111,6 +124,11 @@ const Configuracoes = () => {
                   placeholder={wk.placeholder}
                   type={wk.chave.includes("apikey") ? "password" : "text"}
                 />
+                {wk.chave.includes("_url") && (
+                  <p className="text-xs text-muted-foreground break-all">
+                    URL atual: {loading ? "Carregando..." : webhookValues[wk.chave] || "Não configurada"}
+                  </p>
+                )}
               </div>
             ))}
             <Button onClick={() => saveWebhookSection(section.title, section.keys)} disabled={savingSection === section.title} className="gap-2">
