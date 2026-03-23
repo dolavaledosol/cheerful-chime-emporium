@@ -217,6 +217,7 @@ const Pedidos = () => {
   const [splitMode, setSplitMode] = useState(false);
   const [splitSelectedDetail, setSplitSelectedDetail] = useState<Record<string, boolean>>({});
   const [splitLoading, setSplitLoading] = useState(false);
+  const [editTipoEntrega, setEditTipoEntrega] = useState<"entrega" | "retirada">("retirada");
 
   // New order dialog
   const [newOrderOpen, setNewOrderOpen] = useState(false);
@@ -600,6 +601,7 @@ const Pedidos = () => {
     setEditStatus(p.status);
     setEditFrete(Number(p.frete).toFixed(2));
     setEditLocalEstoqueId(p.local_estoque_id);
+    setEditTipoEntrega(p.local_estoque_id ? "retirada" : "entrega");
     setPagFormaId("");
     setPagBancoId("");
     setPagData(new Date());
@@ -634,7 +636,7 @@ const Pedidos = () => {
     setDialogOpen(true);
   };
 
-  const isEntrega = selectedPedido ? !selectedPedido.local_estoque_id : false;
+  const isEntrega = selectedPedido ? editTipoEntrega === "entrega" : false;
   const freteNum = parseFloat(editFrete) || 0;
   const allowedStatuses = selectedPedido ? getAllowedNextStatuses(selectedPedido.status) : [];
   const needsPaymentInfo = editStatus === "pago" && selectedPedido?.status === "aguardando_pagamento" && stockCheckPassed;
@@ -819,8 +821,8 @@ const Pedidos = () => {
   const updatePedido = async () => {
     if (!selectedPedido) return;
 
-    // Require local_estoque when moving to aguardando_pagamento
-    if (editStatus === "aguardando_pagamento" && !editLocalEstoqueId) {
+    // Require local_estoque when moving to aguardando_pagamento for retirada
+    if (editStatus === "aguardando_pagamento" && editTipoEntrega === "retirada" && !editLocalEstoqueId) {
       toast({ title: "Selecione o local de estoque antes de passar para Aguardando Pagamento", variant: "destructive" });
       return;
     }
@@ -852,8 +854,12 @@ const Pedidos = () => {
       updateData.status = editStatus;
     }
     // Update local_estoque_id if changed during separacao
-    if (selectedPedido.status === "separacao" && editLocalEstoqueId !== selectedPedido.local_estoque_id) {
-      updateData.local_estoque_id = editLocalEstoqueId || null;
+    if (selectedPedido.status === "separacao") {
+      if (editTipoEntrega === "entrega") {
+        updateData.local_estoque_id = null;
+      } else if (editLocalEstoqueId !== selectedPedido.local_estoque_id) {
+        updateData.local_estoque_id = editLocalEstoqueId || null;
+      }
     }
 
     const { error } = await supabase.from("pedido").update(updateData).eq("pedido_id", selectedPedido.pedido_id);
@@ -1691,16 +1697,39 @@ const Pedidos = () => {
                 <div><span className="text-muted-foreground">Origem:</span> {origemLabels[selectedPedido.origem] || selectedPedido.origem}{selectedPedido.vendedor?.nome && ` — ${selectedPedido.vendedor.nome}`}</div>
                 <div>
                   <span className="text-muted-foreground">Tipo:</span>{" "}
-                  {(() => {
-                    const tipo = getTipoEntrega(selectedPedido);
-                    const TipoIcon = tipo.icon;
-                    return (
-                      <span className="inline-flex items-center gap-1">
-                        <TipoIcon className="h-3 w-3" /> {tipo.label}
-                        {selectedPedido.local_estoque?.nome && ` — ${selectedPedido.local_estoque.nome}`}
-                      </span>
-                    );
-                  })()}
+                  {selectedPedido.status === "separacao" ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={editTipoEntrega === "entrega" ? "default" : "outline"}
+                        className="h-6 px-2 text-xs gap-1"
+                        onClick={() => { setEditTipoEntrega("entrega"); setEditLocalEstoqueId(null); }}
+                      >
+                        <Truck className="h-3 w-3" /> Entrega
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={editTipoEntrega === "retirada" ? "default" : "outline"}
+                        className="h-6 px-2 text-xs gap-1"
+                        onClick={() => setEditTipoEntrega("retirada")}
+                      >
+                        <Store className="h-3 w-3" /> Retirada
+                      </Button>
+                    </span>
+                  ) : (
+                    (() => {
+                      const tipo = getTipoEntrega(selectedPedido);
+                      const TipoIcon = tipo.icon;
+                      return (
+                        <span className="inline-flex items-center gap-1">
+                          <TipoIcon className="h-3 w-3" /> {tipo.label}
+                          {selectedPedido.local_estoque?.nome && ` — ${selectedPedido.local_estoque.nome}`}
+                        </span>
+                      );
+                    })()
+                  )}
                 </div>
               </div>
               {selectedPedido.observacao && <p className="text-sm text-muted-foreground">Obs: {selectedPedido.observacao}</p>}
@@ -1820,8 +1849,8 @@ const Pedidos = () => {
                 </div>
               )}
 
-              {/* Local de Estoque - editable only during separacao */}
-              {selectedPedido.status === "separacao" && (
+              {/* Local de Estoque - editable only during separacao + retirada */}
+              {selectedPedido.status === "separacao" && editTipoEntrega === "retirada" && (
                 <div className="space-y-2">
                   <Label>Local de Estoque</Label>
                   <Select value={editLocalEstoqueId || ""} onValueChange={(v) => setEditLocalEstoqueId(v || null)}>
