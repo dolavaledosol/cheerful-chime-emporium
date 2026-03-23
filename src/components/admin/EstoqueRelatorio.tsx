@@ -201,7 +201,7 @@ const EstoqueRelatorio = () => {
 
   const loadData = async () => {
     const [{ data: estoque }, { data: fam }, { data: fab }] = await Promise.all([
-      supabase.from("estoque_local").select("produto_id, quantidade_disponivel, produto(nome, descricao, preco, familia(familia_id, nome), fabricante(fabricante_id, nome), produto_imagem(url_imagem, ordem))"),
+      supabase.from("estoque_local").select("produto_id, quantidade_disponivel, produto(nome, descricao, preco, peso_liquido, unidade_medida, familia(familia_id, nome), fabricante(fabricante_id, nome), produto_imagem(url_imagem, ordem))"),
       supabase.from("familia").select("familia_id, nome").eq("ativo", true).order("nome"),
       supabase.from("fabricante").select("fabricante_id, nome").eq("ativo", true).order("nome"),
     ]);
