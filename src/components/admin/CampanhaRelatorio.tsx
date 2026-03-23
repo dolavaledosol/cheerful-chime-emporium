@@ -284,10 +284,9 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
   };
 
   // Auto-load when inline
-  if (inline && !inlineLoaded) {
-    setInlineLoaded(true);
-    loadAll();
-  }
+  useEffect(() => {
+    if (inline) loadAll();
+  }, [inline]);
 
   const tabsContent = (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
