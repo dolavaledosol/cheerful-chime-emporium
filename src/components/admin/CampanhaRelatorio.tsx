@@ -24,12 +24,15 @@ interface ProdutoCampanha {
   nome: string;
   peso: number | null;
   unidade_medida: string;
+  familia: string | null;
   fabricante: string | null;
   preco: number;
+  total_estoque: number;
   url_imagem: string | null;
   checked: boolean;
 }
 
+interface FamiliaOption { familia_id: string; nome: string; }
 interface FabricanteOption { fabricante_id: string; nome: string; }
 
 const safeJsonParse = (value: string) => {
@@ -80,9 +83,12 @@ const ProductRow = memo(({ p, onToggle }: { p: ProdutoCampanha; onToggle: (id: s
   <TableRow className={p.checked ? "bg-muted/30" : ""}>
     <TableCell><Checkbox checked={p.checked} onCheckedChange={(v) => onToggle(p.produto_id, !!v)} /></TableCell>
     <TableCell className="font-medium">{p.nome}</TableCell>
+    <TableCell className="text-muted-foreground whitespace-nowrap">{p.peso != null ? `${p.peso} ${p.unidade_medida}` : "—"}</TableCell>
+    <TableCell className="text-muted-foreground">{p.familia || "—"}</TableCell>
     <TableCell className="text-muted-foreground">{p.fabricante || "—"}</TableCell>
     <TableCell className="text-right">R$ {p.preco.toFixed(2)}</TableCell>
-    <TableCell className="text-center">{p.peso ?? "—"} {p.unidade_medida}</TableCell>
+    <TableCell className="text-center font-semibold">{p.total_estoque}</TableCell>
+    <TableCell className="text-right font-medium">R$ {(p.preco * p.total_estoque).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
   </TableRow>
 ));
 ProductRow.displayName = "ProductRow";
@@ -99,8 +105,10 @@ const ProductCard = memo(({ p, onToggle }: { p: ProdutoCampanha; onToggle: (id: 
     </div>
     <div className="flex items-center gap-3 text-xs text-muted-foreground">
       {p.fabricante && <span>{p.fabricante}</span>}
+      {p.familia && <span>{p.familia}</span>}
       <span>R$ {p.preco.toFixed(2)}</span>
       {p.peso != null && <span>{p.peso} {p.unidade_medida}</span>}
+      <span>Est: {p.total_estoque}</span>
     </div>
   </button>
 ));
@@ -117,7 +125,9 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
 
   const [produtos, setProdutos] = useState<ProdutoCampanha[]>([]);
   const [fabricantes, setFabricantes] = useState<FabricanteOption[]>([]);
+  const [familias, setFamilias] = useState<FamiliaOption[]>([]);
   const [searchProd, setSearchProd] = useState("");
+  const [filterFamilia, setFilterFamilia] = useState("all");
   const [filterFabricante, setFilterFabricante] = useState("all");
 
   const [urls, setUrls] = useState<string[]>([""]);
@@ -173,12 +183,23 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
     setClientes(result);
     setLoadingClientes(false);
 
-    const [{ data: prods }, { data: fab }] = await Promise.all([
-      supabase.from("produto").select("produto_id, nome, preco, peso_liquido, unidade_medida, fabricante(nome), produto_imagem(url_imagem, ordem)").eq("ativo", true).order("nome"),
+    const [{ data: prods }, { data: fab }, { data: fam }, { data: estoqueData }] = await Promise.all([
+      supabase.from("produto").select("produto_id, nome, preco, peso_liquido, unidade_medida, fabricante(nome), familia(nome), produto_imagem(url_imagem, ordem)").eq("ativo", true).order("nome"),
       supabase.from("fabricante").select("fabricante_id, nome").eq("ativo", true).order("nome"),
+      supabase.from("familia").select("familia_id, nome").eq("ativo", true).order("nome"),
+      supabase.from("estoque_local").select("produto_id, quantidade_disponivel"),
     ]);
 
     if (fab) setFabricantes(fab);
+    if (fam) setFamilias(fam);
+
+    // Build estoque map
+    const estoqueMap = new Map<string, number>();
+    if (estoqueData) {
+      for (const e of estoqueData as any[]) {
+        estoqueMap.set(e.produto_id, (estoqueMap.get(e.produto_id) || 0) + Number(e.quantidade_disponivel));
+      }
+    }
 
     if (prods) {
       setProdutos((prods as any[]).map((p) => {
@@ -186,8 +207,10 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
         const imgPrincipal = imagens.length > 0 ? imagens.sort((a: any, b: any) => a.ordem - b.ordem)[0].url_imagem : null;
         return {
           produto_id: p.produto_id, nome: p.nome, peso: p.peso_liquido,
-          unidade_medida: p.unidade_medida || "un", fabricante: p.fabricante?.nome || null,
-          preco: p.preco || 0, url_imagem: imgPrincipal, checked: false,
+          unidade_medida: p.unidade_medida || "un", familia: p.familia?.nome || null,
+          fabricante: p.fabricante?.nome || null,
+          preco: p.preco || 0, total_estoque: estoqueMap.get(p.produto_id) || 0,
+          url_imagem: imgPrincipal, checked: false,
         };
       }));
     }
@@ -197,10 +220,11 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
     const term = searchProd.toLowerCase();
     return produtos.filter((p) => {
       const matchSearch = !term || p.nome.toLowerCase().includes(term);
+      const matchFamilia = filterFamilia === "all" || p.familia === filterFamilia;
       const matchFabricante = filterFabricante === "all" || p.fabricante === filterFabricante;
-      return matchSearch && matchFabricante;
+      return matchSearch && matchFamilia && matchFabricante;
     });
-  }, [produtos, searchProd, filterFabricante]);
+  }, [produtos, searchProd, filterFamilia, filterFabricante]);
 
   const checkedProducts = useMemo(() => produtos.filter((p) => p.checked), [produtos]);
 
@@ -362,10 +386,17 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar produto..." value={searchProd} onChange={(e) => setSearchProd(e.target.value)} className="pl-10" />
             </div>
+            <Select value={filterFamilia} onValueChange={setFilterFamilia}>
+              <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Família" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Famílias</SelectItem>
+                {familias.map((f) => <SelectItem key={f.familia_id} value={f.nome}>{f.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <Select value={filterFabricante} onValueChange={setFilterFabricante}>
               <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Fabricante" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="all">Todos os Fabricantes</SelectItem>
                 {fabricantes.map((f) => <SelectItem key={f.fabricante_id} value={f.nome}>{f.nome}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -393,14 +424,17 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
                       <Checkbox checked={allFilteredChecked} onCheckedChange={(v) => toggleAll(!!v)} />
                     </TableHead>
                     <TableHead>Produto</TableHead>
+                    <TableHead>Peso</TableHead>
+                    <TableHead>Família</TableHead>
                     <TableHead>Fabricante</TableHead>
                     <TableHead className="text-right">Preço</TableHead>
-                    <TableHead className="text-center">Peso</TableHead>
+                    <TableHead className="text-center">Estoque</TableHead>
+                    <TableHead className="text-right">Valor Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredProdutos.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
                   ) : filteredProdutos.map((p) => (
                     <ProductRow key={p.produto_id} p={p} onToggle={toggleProduct} />
                   ))}
