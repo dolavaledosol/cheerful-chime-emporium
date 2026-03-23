@@ -24,13 +24,15 @@ interface ProdutoCampanha {
   nome: string;
   peso: number | null;
   unidade_medida: string;
+  familia: string | null;
   fabricante: string | null;
   preco: number;
+  total_estoque: number;
   url_imagem: string | null;
   checked: boolean;
 }
 
-interface FabricanteOption { fabricante_id: string; nome: string; }
+interface FamiliaOption { familia_id: string; nome: string; }
 
 const safeJsonParse = (value: string) => {
   try { return JSON.parse(value); } catch { return null; }
