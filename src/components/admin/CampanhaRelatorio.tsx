@@ -124,7 +124,9 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
 
   const [produtos, setProdutos] = useState<ProdutoCampanha[]>([]);
   const [fabricantes, setFabricantes] = useState<FabricanteOption[]>([]);
+  const [familias, setFamilias] = useState<FamiliaOption[]>([]);
   const [searchProd, setSearchProd] = useState("");
+  const [filterFamilia, setFilterFamilia] = useState("all");
   const [filterFabricante, setFilterFabricante] = useState("all");
 
   const [urls, setUrls] = useState<string[]>([""]);
