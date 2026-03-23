@@ -33,6 +33,7 @@ interface ProdutoCampanha {
 }
 
 interface FamiliaOption { familia_id: string; nome: string; }
+interface FabricanteOption { fabricante_id: string; nome: string; }
 
 const safeJsonParse = (value: string) => {
   try { return JSON.parse(value); } catch { return null; }
