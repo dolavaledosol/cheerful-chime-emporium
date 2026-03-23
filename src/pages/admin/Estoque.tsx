@@ -34,7 +34,7 @@ interface EstoqueRow {
 interface LocalEstoque { local_estoque_id: string; nome: string; }
 interface SelectOption { id: string; nome: string; }
 interface ProdutoAgrupado {
-  produto_id: string; nome: string; fabricante: string; familia: string;
+  produto_id: string; nome: string; peso_liquido: number | null; unidade_medida: string; fabricante: string; familia: string;
   destacar: boolean;
   locais: Record<string, { estoque: number; pedidos: number; estoque_local_id: string }>;
   totalEstoque: number; totalPedidos: number;
@@ -373,6 +373,7 @@ const Estoque = () => {
       if (!grupo) {
         grupo = {
           produto_id: e.produto_id, nome: e.produto?.nome || "—",
+          peso_liquido: e.produto?.peso_liquido ?? null, unidade_medida: e.produto?.unidade_medida || "un",
           fabricante: e.produto?.fabricante?.nome || "—", familia: e.produto?.familia?.nome || "—",
           destacar: e.produto?.destacar ?? false,
           locais: {}, totalEstoque: 0, totalPedidos: 0,
@@ -655,10 +656,11 @@ const Estoque = () => {
              <Table>
                <TableHeader>
                  <TableRow>
-                   <TableHead className="whitespace-nowrap">Cód</TableHead>
-                   <TableHead className="whitespace-nowrap">Produto</TableHead>
-                   <TableHead className="whitespace-nowrap">Fabricante</TableHead>
-                   <TableHead className="whitespace-nowrap">Família</TableHead>
+                    <TableHead className="whitespace-nowrap">Cód</TableHead>
+                    <TableHead className="whitespace-nowrap">Produto</TableHead>
+                    <TableHead className="whitespace-nowrap">Peso</TableHead>
+                    <TableHead className="whitespace-nowrap">Família</TableHead>
+                    <TableHead className="whitespace-nowrap">Fabricante</TableHead>
                    <TableHead className="whitespace-nowrap text-center">Dest.</TableHead>
                    {(estoqueLocalFilter === "todos" ? locais : locais.filter(l => l.local_estoque_id === estoqueLocalFilter)).map((l) => (
                      <TableHead key={l.local_estoque_id} className="text-center whitespace-nowrap"
@@ -673,7 +675,7 @@ const Estoque = () => {
                  </TableRow>
                  {estoqueTipoFilter === "ambos" && (
                    <TableRow>
-                     <TableHead /><TableHead /><TableHead /><TableHead /><TableHead />
+                     <TableHead /><TableHead /><TableHead /><TableHead /><TableHead /><TableHead />
                      {(estoqueLocalFilter === "todos" ? locais : locais.filter(l => l.local_estoque_id === estoqueLocalFilter)).map((l) => (
                        <React.Fragment key={l.local_estoque_id}>
                          <TableHead className="text-center text-xs whitespace-nowrap">Est.</TableHead>
@@ -687,17 +689,18 @@ const Estoque = () => {
                </TableHeader>
                <TableBody>
                  {filtered.length === 0 ? (
-                   <TableRow><TableCell colSpan={5 + (estoqueLocalFilter === "todos" ? locais.length : 1) * (estoqueTipoFilter === "ambos" ? 2 : 1) + (estoqueTipoFilter === "ambos" ? 2 : 1)} className="text-center py-8 text-muted-foreground">Nenhum registro encontrado</TableCell></TableRow>
+                   <TableRow><TableCell colSpan={6 + (estoqueLocalFilter === "todos" ? locais.length : 1) * (estoqueTipoFilter === "ambos" ? 2 : 1) + (estoqueTipoFilter === "ambos" ? 2 : 1)} className="text-center py-8 text-muted-foreground">Nenhum registro encontrado</TableCell></TableRow>
                  ) : filtered.map((g) => {
                    const visibleLocais = estoqueLocalFilter === "todos" ? locais : locais.filter(l => l.local_estoque_id === estoqueLocalFilter);
                    const totalEst = estoqueLocalFilter === "todos" ? g.totalEstoque : (g.locais[estoqueLocalFilter]?.estoque ?? 0);
                    const totalPed = estoqueLocalFilter === "todos" ? g.totalPedidos : (g.locais[estoqueLocalFilter]?.pedidos ?? 0);
                    return (
                    <TableRow key={g.produto_id}>
-                     <TableCell className="text-xs text-muted-foreground font-mono whitespace-nowrap">{g.produto_id.substring(0, 8)}</TableCell>
-                     <TableCell className="font-medium whitespace-nowrap">{g.nome}</TableCell>
-                     <TableCell className="text-muted-foreground whitespace-nowrap">{g.fabricante}</TableCell>
-                     <TableCell className="text-muted-foreground whitespace-nowrap">{g.familia}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground font-mono whitespace-nowrap">{g.produto_id.substring(0, 8)}</TableCell>
+                      <TableCell className="font-medium whitespace-nowrap">{g.nome}</TableCell>
+                      <TableCell className="text-muted-foreground whitespace-nowrap">{g.peso_liquido != null ? `${g.peso_liquido} ${g.unidade_medida}` : "—"}</TableCell>
+                      <TableCell className="text-muted-foreground whitespace-nowrap">{g.familia}</TableCell>
+                      <TableCell className="text-muted-foreground whitespace-nowrap">{g.fabricante}</TableCell>
                      <TableCell className="text-center">
                        <Checkbox
                          checked={g.destacar}

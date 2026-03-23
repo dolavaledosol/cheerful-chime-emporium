@@ -18,6 +18,8 @@ interface ProdutoEstoque {
   nome: string;
   descricao: string | null;
   preco: number;
+  peso_liquido: number | null;
+  unidade_medida: string;
   familia: string;
   fabricante: string;
   imagem_url: string | null;
@@ -199,7 +201,7 @@ const EstoqueRelatorio = () => {
 
   const loadData = async () => {
     const [{ data: estoque }, { data: fam }, { data: fab }] = await Promise.all([
-      supabase.from("estoque_local").select("produto_id, quantidade_disponivel, produto(nome, descricao, preco, familia(familia_id, nome), fabricante(fabricante_id, nome), produto_imagem(url_imagem, ordem))"),
+      supabase.from("estoque_local").select("produto_id, quantidade_disponivel, produto(nome, descricao, preco, peso_liquido, unidade_medida, familia(familia_id, nome), fabricante(fabricante_id, nome), produto_imagem(url_imagem, ordem))"),
       supabase.from("familia").select("familia_id, nome").eq("ativo", true).order("nome"),
       supabase.from("fabricante").select("fabricante_id, nome").eq("ativo", true).order("nome"),
     ]);
@@ -221,6 +223,8 @@ const EstoqueRelatorio = () => {
             nome: e.produto?.nome || "—",
             descricao: e.produto?.descricao || null,
             preco: e.produto?.preco || 0,
+            peso_liquido: e.produto?.peso_liquido ?? null,
+            unidade_medida: e.produto?.unidade_medida || "un",
             familia: e.produto?.familia?.nome || "—",
             fabricante: e.produto?.fabricante?.nome || "—",
             imagem_url: imgPrincipal,
@@ -504,6 +508,7 @@ const EstoqueRelatorio = () => {
               <TableHead className="whitespace-nowrap cursor-pointer select-none" onClick={() => handleSort("nome")}>
                 <span className="flex items-center">Produto <SortIcon col="nome" /></span>
               </TableHead>
+              <TableHead className="whitespace-nowrap">Peso</TableHead>
               <TableHead className="whitespace-nowrap cursor-pointer select-none" onClick={() => handleSort("familia")}>
                 <span className="flex items-center">Família <SortIcon col="familia" /></span>
               </TableHead>
@@ -523,13 +528,14 @@ const EstoqueRelatorio = () => {
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado</TableCell></TableRow>
             ) : filtered.map((p) => (
               <TableRow key={p.produto_id} className={p.checked ? "bg-muted/30" : ""}>
                 <TableCell>
                   <Checkbox checked={p.checked} onCheckedChange={(v) => toggleProduct(p.produto_id, !!v)} />
                 </TableCell>
                 <TableCell className="font-medium">{p.nome}</TableCell>
+                <TableCell className="text-muted-foreground whitespace-nowrap">{p.peso_liquido != null ? `${p.peso_liquido} ${p.unidade_medida}` : "—"}</TableCell>
                 <TableCell className="text-muted-foreground">{p.familia}</TableCell>
                 <TableCell className="text-muted-foreground">{p.fabricante}</TableCell>
                 <TableCell className="text-right">R$ {p.preco.toFixed(2)}</TableCell>
