@@ -656,10 +656,11 @@ const Estoque = () => {
              <Table>
                <TableHeader>
                  <TableRow>
-                   <TableHead className="whitespace-nowrap">Cód</TableHead>
-                   <TableHead className="whitespace-nowrap">Produto</TableHead>
-                   <TableHead className="whitespace-nowrap">Fabricante</TableHead>
-                   <TableHead className="whitespace-nowrap">Família</TableHead>
+                    <TableHead className="whitespace-nowrap">Cód</TableHead>
+                    <TableHead className="whitespace-nowrap">Produto</TableHead>
+                    <TableHead className="whitespace-nowrap">Peso</TableHead>
+                    <TableHead className="whitespace-nowrap">Família</TableHead>
+                    <TableHead className="whitespace-nowrap">Fabricante</TableHead>
                    <TableHead className="whitespace-nowrap text-center">Dest.</TableHead>
                    {(estoqueLocalFilter === "todos" ? locais : locais.filter(l => l.local_estoque_id === estoqueLocalFilter)).map((l) => (
                      <TableHead key={l.local_estoque_id} className="text-center whitespace-nowrap"
