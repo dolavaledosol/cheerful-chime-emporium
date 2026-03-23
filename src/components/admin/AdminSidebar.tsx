@@ -14,7 +14,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, type AdminResource } from "@/hooks/usePermissions";
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface MenuItem {
   title: string;
@@ -59,6 +59,10 @@ const AdminSidebar = () => {
 
   const cadastroActive = visibleCadastroItems.some((i) => isActive(i.url));
   const [cadastroOpen, setCadastroOpen] = useState(cadastroActive);
+
+  useEffect(() => {
+    if (cadastroActive) setCadastroOpen(true);
+  }, [cadastroActive]);
 
   const menuLink = (item: MenuItem, end = false) => (
     <SidebarMenuItem key={item.title}>

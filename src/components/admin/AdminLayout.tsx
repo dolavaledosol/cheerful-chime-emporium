@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShieldAlert, Store } from "lucide-react";
+import { Megaphone, Settings, ShieldAlert, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const AdminLayout = ({ children }: { children: ReactNode }) => {
@@ -56,15 +56,39 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
               </Link>
               <span className="text-sm font-semibold text-muted-foreground hidden sm:inline">Painel Admin</span>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-xs text-muted-foreground hover:text-foreground shrink-0"
-              onClick={() => navigate("/")}
-            >
-              <Store className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Catálogo</span>
-            </Button>
+            <div className="flex items-center gap-1 shrink-0">
+              {can("estoque", "ver") && (
+                <Button
+                  variant={location.pathname === "/admin/divulgacao" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="gap-1.5 text-xs shrink-0"
+                  onClick={() => navigate("/admin/divulgacao")}
+                >
+                  <Megaphone className="h-3.5 w-3.5" />
+                  <span className="hidden md:inline">Divulgação</span>
+                </Button>
+              )}
+              {can("configuracoes", "ver") && (
+                <Button
+                  variant={location.pathname === "/admin/configuracoes" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="gap-1.5 text-xs shrink-0"
+                  onClick={() => navigate("/admin/configuracoes")}
+                >
+                  <Settings className="h-3.5 w-3.5" />
+                  <span className="hidden md:inline">Configurações</span>
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-xs text-muted-foreground hover:text-foreground shrink-0"
+                onClick={() => navigate("/")}
+              >
+                <Store className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Catálogo</span>
+              </Button>
+            </div>
           </header>
           <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto">
             {hasAccess ? children : (
