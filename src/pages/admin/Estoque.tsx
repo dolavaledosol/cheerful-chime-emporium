@@ -689,7 +689,7 @@ const Estoque = () => {
                </TableHeader>
                <TableBody>
                  {filtered.length === 0 ? (
-                   <TableRow><TableCell colSpan={5 + (estoqueLocalFilter === "todos" ? locais.length : 1) * (estoqueTipoFilter === "ambos" ? 2 : 1) + (estoqueTipoFilter === "ambos" ? 2 : 1)} className="text-center py-8 text-muted-foreground">Nenhum registro encontrado</TableCell></TableRow>
+                   <TableRow><TableCell colSpan={6 + (estoqueLocalFilter === "todos" ? locais.length : 1) * (estoqueTipoFilter === "ambos" ? 2 : 1) + (estoqueTipoFilter === "ambos" ? 2 : 1)} className="text-center py-8 text-muted-foreground">Nenhum registro encontrado</TableCell></TableRow>
                  ) : filtered.map((g) => {
                    const visibleLocais = estoqueLocalFilter === "todos" ? locais : locais.filter(l => l.local_estoque_id === estoqueLocalFilter);
                    const totalEst = estoqueLocalFilter === "todos" ? g.totalEstoque : (g.locais[estoqueLocalFilter]?.estoque ?? 0);
