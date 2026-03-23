@@ -18,6 +18,8 @@ interface ProdutoEstoque {
   nome: string;
   descricao: string | null;
   preco: number;
+  peso_liquido: number | null;
+  unidade_medida: string;
   familia: string;
   fabricante: string;
   imagem_url: string | null;
