@@ -9,8 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Trash2, AlertCircle, Star, MessageCircle } from "lucide-react";
-import ClientesInativosRelatorio from "@/components/admin/ClientesInativosRelatorio";
-import CampanhaRelatorio from "@/components/admin/CampanhaRelatorio";
 import { PhoneInput, phoneToDigits, digitsToPhone } from "@/components/ui/phone-input";
 import { formatCpfCnpj, unformatCpfCnpj, validateCpfCnpj } from "@/lib/cpfCnpj";
 import { isValidPhoneNumber } from "react-phone-number-input";
@@ -202,8 +200,6 @@ const Clientes = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h1 className="text-xl sm:text-2xl font-bold">Clientes</h1>
         <div className="flex items-center gap-2">
-          <CampanhaRelatorio />
-          <ClientesInativosRelatorio />
           <Button onClick={openNew} size={isMobile ? "icon" : "default"} className="gap-2 shrink-0">
             <Plus className="h-4 w-4" />
             {!isMobile && "Novo Cliente"}

@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Package, Layers, Factory, Users, ShoppingCart,
   DollarSign, Settings, LogOut, Truck, Warehouse, Boxes, Landmark, CreditCard,
-  ChevronDown, FolderOpen, UserCog, ChefHat, FlaskConical,
+  ChevronDown, FolderOpen, UserCog, ChefHat, FlaskConical, Megaphone,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -95,6 +95,8 @@ const AdminSidebar = () => {
                 menuLink({ title: "Financeiro", url: "/admin/financeiro", icon: DollarSign, resource: "financeiro" })}
               {can("estoque", "ver") &&
                 menuLink({ title: "Estoque", url: "/admin/estoque", icon: Boxes, resource: "estoque" })}
+              {can("estoque", "ver") &&
+                menuLink({ title: "Divulgação", url: "/admin/divulgacao", icon: Megaphone, resource: "estoque" })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

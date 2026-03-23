@@ -13,7 +13,7 @@ import { Search, ArrowRightLeft, Download, Upload, CalendarIcon } from "lucide-r
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import * as XLSX from "xlsx";
-import EstoqueRelatorio from "@/components/admin/EstoqueRelatorio";
+
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -618,7 +618,6 @@ const Estoque = () => {
         <TabsList>
           <TabsTrigger value="estoque">Estoque</TabsTrigger>
           <TabsTrigger value="movimentacao">Movimentação</TabsTrigger>
-          <TabsTrigger value="relatorio">Relatório</TabsTrigger>
         </TabsList>
 
         {/* ── Tab Estoque ── */}
@@ -836,10 +835,6 @@ const Estoque = () => {
               </TableBody>
             </Table>
           </div>
-        </TabsContent>
-        {/* ── Tab Relatório ── */}
-        <TabsContent value="relatorio">
-          <EstoqueRelatorio />
         </TabsContent>
       </Tabs>
 

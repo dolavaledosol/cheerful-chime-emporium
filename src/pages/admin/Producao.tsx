@@ -19,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, X, AlertTriangle, Undo2 } from "lucide-react";
-import ProducaoRelatorio from "@/components/admin/ProducaoRelatorio";
+
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -319,7 +319,6 @@ const Producao = () => {
       <Tabs defaultValue="historico">
         <TabsList>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
-          <TabsTrigger value="relatorio">Relatório</TabsTrigger>
         </TabsList>
         <TabsContent value="historico">
           <div className="border rounded-lg">
@@ -389,9 +388,6 @@ const Producao = () => {
               </TableBody>
             </Table>
           </div>
-        </TabsContent>
-        <TabsContent value="relatorio">
-          <ProducaoRelatorio />
         </TabsContent>
       </Tabs>
 
