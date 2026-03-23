@@ -74,7 +74,7 @@ const invokeWebhookProxy = async (body: {
   }
 };
 
-const ClientesInativosRelatorio = () => {
+const ClientesInativosRelatorio = ({ inline = false }: { inline?: boolean }) => {
   const [meses, setMeses] = useState(3);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
