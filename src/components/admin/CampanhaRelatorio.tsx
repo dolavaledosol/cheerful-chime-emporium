@@ -245,11 +245,11 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
 
   const addUrl = () => setUrls([...urls, ""]);
   const removeUrl = (idx: number) => setUrls(urls.filter((_, i) => i !== idx));
-  const updateUrl = (idx: number, val: string) => {
-    const updated = [...urls];
-    updated[idx] = val;
-    setUrls(updated);
-  };
+  const updateUrl = (idx: number, val: string) => { const u = [...urls]; u[idx] = val; setUrls(u); };
+
+  const addImagem = () => setImagens([...imagens, ""]);
+  const removeImagem = (idx: number) => setImagens(imagens.filter((_, i) => i !== idx));
+  const updateImagem = (idx: number, val: string) => { const u = [...imagens]; u[idx] = val; setImagens(u); };
 
   const clientesComLid = useMemo(() => clientes.filter((c) => c.lid), [clientes]);
 
