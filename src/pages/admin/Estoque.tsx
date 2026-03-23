@@ -34,7 +34,7 @@ interface EstoqueRow {
 interface LocalEstoque { local_estoque_id: string; nome: string; }
 interface SelectOption { id: string; nome: string; }
 interface ProdutoAgrupado {
-  produto_id: string; nome: string; fabricante: string; familia: string;
+  produto_id: string; nome: string; peso_liquido: number | null; unidade_medida: string; fabricante: string; familia: string;
   destacar: boolean;
   locais: Record<string, { estoque: number; pedidos: number; estoque_local_id: string }>;
   totalEstoque: number; totalPedidos: number;
