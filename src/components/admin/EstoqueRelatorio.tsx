@@ -508,6 +508,7 @@ const EstoqueRelatorio = () => {
               <TableHead className="whitespace-nowrap cursor-pointer select-none" onClick={() => handleSort("nome")}>
                 <span className="flex items-center">Produto <SortIcon col="nome" /></span>
               </TableHead>
+              <TableHead className="whitespace-nowrap">Peso</TableHead>
               <TableHead className="whitespace-nowrap cursor-pointer select-none" onClick={() => handleSort("familia")}>
                 <span className="flex items-center">Família <SortIcon col="familia" /></span>
               </TableHead>
