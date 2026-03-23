@@ -854,8 +854,12 @@ const Pedidos = () => {
       updateData.status = editStatus;
     }
     // Update local_estoque_id if changed during separacao
-    if (selectedPedido.status === "separacao" && editLocalEstoqueId !== selectedPedido.local_estoque_id) {
-      updateData.local_estoque_id = editLocalEstoqueId || null;
+    if (selectedPedido.status === "separacao") {
+      if (editTipoEntrega === "entrega") {
+        updateData.local_estoque_id = null;
+      } else if (editLocalEstoqueId !== selectedPedido.local_estoque_id) {
+        updateData.local_estoque_id = editLocalEstoqueId || null;
+      }
     }
 
     const { error } = await supabase.from("pedido").update(updateData).eq("pedido_id", selectedPedido.pedido_id);
