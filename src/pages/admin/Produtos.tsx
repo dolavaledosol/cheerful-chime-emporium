@@ -30,10 +30,8 @@ interface Produto {
   fabricante?: { nome: string } | null;
 }
 
-const unidadeLabels: Record<string, string> = {
-  un: "un", kg: "kg", g: "g", l: "l", ml: "ml",
-  cx: "cx", pct: "pct", par: "par", m: "m", cm: "cm",
-};
+type SortKey = "produto_id" | "nome" | "familia" | "fabricante" | "preco" | "ativo" | "destacar";
+
 
 const emptyForm = {
   nome: "", descricao: "", ativo: true, familia_id: "", fabricante_id: "",
