@@ -221,6 +221,8 @@ const Pedidos = () => {
   // Enderecos for edit dialog (entrega)
   const [editEnderecos, setEditEnderecos] = useState<{ endereco_id: string; logradouro: string; numero: string | null; bairro: string | null; cidade: string; estado: string; cep: string | null }[]>([]);
   const [editEnderecoId, setEditEnderecoId] = useState("");
+  const [editShowNewEndereco, setEditShowNewEndereco] = useState(false);
+  const [editNewEndereco, setEditNewEndereco] = useState({ cep: "", logradouro: "", numero: "", bairro: "", cidade: "", estado: "", complemento: "" });
 
   // New order dialog
   const [newOrderOpen, setNewOrderOpen] = useState(false);
