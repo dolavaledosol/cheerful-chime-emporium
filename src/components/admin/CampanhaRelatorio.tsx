@@ -192,7 +192,7 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
     setLoadingClientes(false);
 
     const [{ data: prods }, { data: fab }, { data: fam }, { data: estoqueData }] = await Promise.all([
-      supabase.from("produto").select("produto_id, nome, preco, peso_liquido, unidade_medida, fabricante(nome), familia(nome), produto_imagem(url_imagem, ordem)").eq("ativo", true).order("nome"),
+      supabase.from("produto").select("produto_id, nome, preco, peso_liquido, unidade_medida, aceita_fracionado, quantidade_default, fabricante(nome), familia(nome), produto_imagem(url_imagem, ordem)").eq("ativo", true).order("nome"),
       supabase.from("fabricante").select("fabricante_id, nome").eq("ativo", true).order("nome"),
       supabase.from("familia").select("familia_id, nome").eq("ativo", true).order("nome"),
       supabase.from("estoque_local").select("produto_id, quantidade_disponivel"),
@@ -219,6 +219,8 @@ const CampanhaRelatorio = ({ inline = false }: { inline?: boolean }) => {
           fabricante: p.fabricante?.nome || null,
           preco: p.preco || 0, total_estoque: estoqueMap.get(p.produto_id) || 0,
           url_imagem: imgPrincipal, checked: false,
+          aceita_fracionado: p.aceita_fracionado ?? false,
+          quantidade_default: p.quantidade_default ?? 1,
         };
       }));
     }
