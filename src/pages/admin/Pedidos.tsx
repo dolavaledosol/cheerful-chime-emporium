@@ -620,10 +620,10 @@ const Pedidos = () => {
     setSplitMode(false);
     setSplitSelectedDetail({});
     setSplitLoading(false);
-    const [itemsRes, histRes] = await Promise.all([
+    const [itemsRes, histRes, endRes] = await Promise.all([
       supabase
         .from("pedido_item")
-        .select("pedido_item_id, produto_id, quantidade, preco_unitario, produto(nome)")
+        .select("pedido_item_id, produto_id, quantidade, preco_unitario, produto(nome, aceita_fracionado)")
         .eq("pedido_id", p.pedido_id),
       supabase
         .from("pedido_status_historico")
