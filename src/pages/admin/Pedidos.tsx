@@ -218,6 +218,9 @@ const Pedidos = () => {
   const [splitSelectedDetail, setSplitSelectedDetail] = useState<Record<string, boolean>>({});
   const [splitLoading, setSplitLoading] = useState(false);
   const [editTipoEntrega, setEditTipoEntrega] = useState<"entrega" | "retirada">("retirada");
+  // Enderecos for edit dialog (entrega)
+  const [editEnderecos, setEditEnderecos] = useState<{ endereco_id: string; logradouro: string; numero: string | null; bairro: string | null; cidade: string; estado: string; cep: string | null }[]>([]);
+  const [editEnderecoId, setEditEnderecoId] = useState("");
 
   // New order dialog
   const [newOrderOpen, setNewOrderOpen] = useState(false);
