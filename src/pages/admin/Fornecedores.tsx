@@ -190,29 +190,44 @@ const Fornecedores = () => {
         <h1 className="text-2xl font-bold">Fornecedores</h1>
         <Button onClick={openNew} className="gap-2"><Plus className="h-4 w-4" /> Novo Fornecedor</Button>
       </div>
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+        </div>
+        <Select value={filterAtivo} onValueChange={setFilterAtivo}>
+          <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="true">Ativos</SelectItem>
+            <SelectItem value="false">Inativos</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div className="border rounded-lg overflow-hidden">
         <Table>
-          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Status</TableHead><TableHead className="w-24">Ações</TableHead></TableRow></TableHeader>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="cursor-pointer select-none" onClick={() => handleSort("fornecedor_id")}>Cód <SortIcon col="fornecedor_id" /></TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => handleSort("nome")}>Nome <SortIcon col="nome" /></TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => handleSort("ativo")}>Status <SortIcon col="ativo" /></TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground">Nenhum fornecedor encontrado</TableCell></TableRow>
             ) : filtered.map((f) => (
               <TableRow key={f.fornecedor_id}>
+                <TableCell>
+                  <button className="text-xs font-mono text-primary hover:underline cursor-pointer" onClick={() => openEdit(f)}>
+                    {f.fornecedor_id.substring(0, 8)}
+                  </button>
+                </TableCell>
                 <TableCell className="font-medium">{f.nome}</TableCell>
                 <TableCell>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${f.ativo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                     {f.ativo ? "Ativo" : "Inativo"}
                   </span>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(f)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => softDelete(f.fornecedor_id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                  </div>
                 </TableCell>
               </TableRow>
             ))}
