@@ -69,12 +69,37 @@ const Clientes = () => {
 
   useEffect(() => { load(); }, []);
 
-  const filtered = clientes.filter((c) => {
-    const term = search.toLowerCase();
-    const matchText = c.nome.toLowerCase().includes(term) || c.cpf_cnpj?.includes(term) || c.email?.toLowerCase().includes(term);
-    const matchStatus = statusFilter === "todos" ? true : statusFilter === "ativo" ? c.ativo : !c.ativo;
-    return matchText && matchStatus;
-  });
+  const filtered = useMemo(() => {
+    let result = clientes.filter((c) => {
+      const term = search.toLowerCase();
+      const matchText = c.nome.toLowerCase().includes(term) || c.cpf_cnpj?.includes(term) || c.email?.toLowerCase().includes(term);
+      const matchStatus = statusFilter === "todos" ? true : statusFilter === "ativo" ? c.ativo : !c.ativo;
+      return matchText && matchStatus;
+    });
+    result.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "cliente_id": cmp = a.cliente_id.localeCompare(b.cliente_id); break;
+        case "nome": cmp = a.nome.localeCompare(b.nome, "pt-BR"); break;
+        case "cpf_cnpj": cmp = (a.cpf_cnpj || "").localeCompare(b.cpf_cnpj || ""); break;
+        case "email": cmp = (a.email || "").localeCompare(b.email || "", "pt-BR"); break;
+        case "tipo_cliente": cmp = a.tipo_cliente.localeCompare(b.tipo_cliente); break;
+        case "ativo": cmp = (a.ativo === b.ativo ? 0 : a.ativo ? -1 : 1); break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return result;
+  }, [clientes, search, statusFilter, sortKey, sortDir]);
+
+  const handleSort = (key: ClienteSortKey) => {
+    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+
+  const SortIcon = ({ col }: { col: ClienteSortKey }) => {
+    if (sortKey !== col) return <ArrowUpDown className="h-3 w-3 ml-1 inline opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="h-3 w-3 ml-1 inline" /> : <ArrowDown className="h-3 w-3 ml-1 inline" />;
+  };
 
   const openNew = () => { setEditId(null); setForm(emptyForm); setTelefones([{ telefone: "" }]); setTelefonePreferencialId(null); setCpfError(null); setCpfLocked(false); setDialogOpen(true); };
   const openEdit = (c: Cliente) => {
