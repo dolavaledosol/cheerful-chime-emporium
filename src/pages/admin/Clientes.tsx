@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Trash2, AlertCircle, Star, MessageCircle } from "lucide-react";
+import { Plus, Search, Trash2, AlertCircle, Star, MessageCircle, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { PhoneInput, phoneToDigits, digitsToPhone } from "@/components/ui/phone-input";
 import { formatCpfCnpj, unformatCpfCnpj, validateCpfCnpj } from "@/lib/cpfCnpj";
 import { isValidPhoneNumber } from "react-phone-number-input";
@@ -35,6 +35,8 @@ interface TelefoneItem {
 
 const emptyForm = { nome: "", cpf_cnpj: "", email: "", tipo_cliente: "cliente", ativo: true };
 
+type ClienteSortKey = "cliente_id" | "nome" | "cpf_cnpj" | "email" | "tipo_cliente" | "ativo";
+
 const tipoLabel = (t: string) => {
   switch (t) {
     case "admin": return "Admin";
@@ -55,6 +57,8 @@ const Clientes = () => {
   const [telefonePreferencialId, setTelefonePreferencialId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [cpfError, setCpfError] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<ClienteSortKey>("nome");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -65,12 +69,37 @@ const Clientes = () => {
 
   useEffect(() => { load(); }, []);
 
-  const filtered = clientes.filter((c) => {
-    const term = search.toLowerCase();
-    const matchText = c.nome.toLowerCase().includes(term) || c.cpf_cnpj?.includes(term) || c.email?.toLowerCase().includes(term);
-    const matchStatus = statusFilter === "todos" ? true : statusFilter === "ativo" ? c.ativo : !c.ativo;
-    return matchText && matchStatus;
-  });
+  const filtered = useMemo(() => {
+    let result = clientes.filter((c) => {
+      const term = search.toLowerCase();
+      const matchText = c.nome.toLowerCase().includes(term) || c.cpf_cnpj?.includes(term) || c.email?.toLowerCase().includes(term);
+      const matchStatus = statusFilter === "todos" ? true : statusFilter === "ativo" ? c.ativo : !c.ativo;
+      return matchText && matchStatus;
+    });
+    result.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "cliente_id": cmp = a.cliente_id.localeCompare(b.cliente_id); break;
+        case "nome": cmp = a.nome.localeCompare(b.nome, "pt-BR"); break;
+        case "cpf_cnpj": cmp = (a.cpf_cnpj || "").localeCompare(b.cpf_cnpj || ""); break;
+        case "email": cmp = (a.email || "").localeCompare(b.email || "", "pt-BR"); break;
+        case "tipo_cliente": cmp = a.tipo_cliente.localeCompare(b.tipo_cliente); break;
+        case "ativo": cmp = (a.ativo === b.ativo ? 0 : a.ativo ? -1 : 1); break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return result;
+  }, [clientes, search, statusFilter, sortKey, sortDir]);
+
+  const handleSort = (key: ClienteSortKey) => {
+    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+
+  const SortIcon = ({ col }: { col: ClienteSortKey }) => {
+    if (sortKey !== col) return <ArrowUpDown className="h-3 w-3 ml-1 inline opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="h-3 w-3 ml-1 inline" /> : <ArrowDown className="h-3 w-3 ml-1 inline" />;
+  };
 
   const openNew = () => { setEditId(null); setForm(emptyForm); setTelefones([{ telefone: "" }]); setTelefonePreferencialId(null); setCpfError(null); setCpfLocked(false); setDialogOpen(true); };
   const openEdit = (c: Cliente) => {
@@ -256,12 +285,12 @@ const Clientes = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-20">Cód</TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead>CPF/CNPJ</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead className="w-20 cursor-pointer select-none" onClick={() => handleSort("cliente_id")}>Cód <SortIcon col="cliente_id" /></TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => handleSort("nome")}>Nome <SortIcon col="nome" /></TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => handleSort("cpf_cnpj")}>CPF/CNPJ <SortIcon col="cpf_cnpj" /></TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => handleSort("email")}>Email <SortIcon col="email" /></TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => handleSort("tipo_cliente")}>Tipo <SortIcon col="tipo_cliente" /></TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => handleSort("ativo")}>Status <SortIcon col="ativo" /></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
