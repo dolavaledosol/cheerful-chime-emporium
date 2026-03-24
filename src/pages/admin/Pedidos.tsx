@@ -1894,6 +1894,14 @@ const Pedidos = () => {
                 </div>
               )}
 
+              {/* Show recalculated total when quantities changed during separação */}
+              {selectedPedido.status === "separacao" && (
+                <div className="flex items-center justify-between text-sm font-medium border-t pt-2">
+                  <span>Total dos itens:</span>
+                  <span>R$ {items.reduce((s, i) => s + Number(i.preco_unitario) * Number(i.quantidade), 0).toFixed(2)}</span>
+                </div>
+              )}
+
               {isEntrega && (
                 <div className="space-y-2">
                   <Label>Valor do Frete (R$)</Label>
@@ -1908,6 +1916,27 @@ const Pedidos = () => {
                         </p>
                       )}
                     </>
+                  )}
+                </div>
+              )}
+
+              {/* Endereço de entrega - editable during separacao + entrega */}
+              {selectedPedido.status === "separacao" && editTipoEntrega === "entrega" && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Endereço de Entrega</Label>
+                  {editEnderecos.length > 0 ? (
+                    <Select value={editEnderecoId} onValueChange={setEditEnderecoId}>
+                      <SelectTrigger><SelectValue placeholder="Selecione o endereço" /></SelectTrigger>
+                      <SelectContent>
+                        {editEnderecos.map(e => (
+                          <SelectItem key={e.endereco_id} value={e.endereco_id}>
+                            {e.logradouro}{e.numero ? `, ${e.numero}` : ""} — {e.bairro || ""} — {e.cidade}/{e.estado}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Nenhum endereço cadastrado para este cliente</p>
                   )}
                 </div>
               )}
