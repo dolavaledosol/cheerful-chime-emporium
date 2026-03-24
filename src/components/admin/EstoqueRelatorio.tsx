@@ -36,6 +36,8 @@ interface ClienteProdutoCompra {
   quantidade: number;
   data_compra: string;
   destacar: boolean;
+  aceita_fracionado: boolean;
+  quantidade_default: number;
 }
 
 interface ClienteCompra {
