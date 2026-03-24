@@ -416,15 +416,22 @@ const EstoqueRelatorio = () => {
           cliente_id: c.cliente_id,
           nome: c.nome,
           ...(c.lid ? { lid: c.lid } : {}),
-          produtos: c.produtos.map((pr) => ({
-            produto_id: pr.produto_id,
-            nome: pr.produto_nome,
-            peso: pr.peso,
-            unidade_medida: pr.unidade_medida,
-            valor: pr.valor,
-            quantidade: pr.quantidade,
-            destacar: pr.destacar,
-          })),
+          produtos: c.produtos.map((pr) => {
+            const isFrac = pr.aceita_fracionado;
+            const qtdDefault = pr.quantidade_default;
+            return {
+              produto_id: pr.produto_id,
+              nome: pr.produto_nome,
+              peso: isFrac && pr.peso ? Math.round(qtdDefault * 10) / 10 : pr.peso,
+              unidade_medida: pr.unidade_medida,
+              valor: isFrac ? Math.round(pr.valor * qtdDefault * 100) / 100 : pr.valor,
+              preco_unitario: pr.valor,
+              quantidade: pr.quantidade,
+              quantidade_default: qtdDefault,
+              aceita_fracionado: isFrac,
+              destacar: pr.destacar,
+            };
+          }),
         })),
     };
 
