@@ -2039,7 +2039,7 @@ const Pedidos = () => {
             </Button>
             <div className="flex gap-2 ml-auto">
               <Button variant="outline" onClick={() => setDialogOpen(false)}>Fechar</Button>
-              <Button onClick={() => updatePedido()} disabled={loading || (editStatus === selectedPedido?.status && editFrete === Number(selectedPedido?.frete || 0).toFixed(2) && editLocalEstoqueId === selectedPedido?.local_estoque_id)}>
+              <Button onClick={() => updatePedido()} disabled={loading}>
                 {loading ? "Salvando..." : "Salvar Alterações"}
               </Button>
             </div>
