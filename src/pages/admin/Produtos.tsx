@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import ProdutoImageUpload from "@/components/admin/ProdutoImageUpload";
 
 interface Produto {
@@ -30,10 +30,8 @@ interface Produto {
   fabricante?: { nome: string } | null;
 }
 
-const unidadeLabels: Record<string, string> = {
-  un: "un", kg: "kg", g: "g", l: "l", ml: "ml",
-  cx: "cx", pct: "pct", par: "par", m: "m", cm: "cm",
-};
+type SortKey = "produto_id" | "nome" | "familia" | "fabricante" | "preco" | "ativo" | "destacar";
+
 
 const emptyForm = {
   nome: "", descricao: "", ativo: true, familia_id: "", fabricante_id: "",
@@ -53,6 +51,8 @@ const Produtos = () => {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("nome");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const { toast } = useToast();
 
   const load = async () => {
@@ -68,13 +68,39 @@ const Produtos = () => {
 
   useEffect(() => { load(); }, []);
 
-  const filtered = produtos.filter((p) => {
-    const matchSearch = p.nome.toLowerCase().includes(search.toLowerCase());
-    const matchAtivo = filterAtivo === "all" || (filterAtivo === "true" ? p.ativo : !p.ativo);
-    const matchFamilia = filterFamilia === "all" || p.familia_id === filterFamilia;
-    const matchFabricante = filterFabricante === "all" || p.fabricante_id === filterFabricante;
-    return matchSearch && matchAtivo && matchFamilia && matchFabricante;
-  });
+  const filtered = useMemo(() => {
+    let result = produtos.filter((p) => {
+      const matchSearch = p.nome.toLowerCase().includes(search.toLowerCase());
+      const matchAtivo = filterAtivo === "all" || (filterAtivo === "true" ? p.ativo : !p.ativo);
+      const matchFamilia = filterFamilia === "all" || p.familia_id === filterFamilia;
+      const matchFabricante = filterFabricante === "all" || p.fabricante_id === filterFabricante;
+      return matchSearch && matchAtivo && matchFamilia && matchFabricante;
+    });
+    result.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "produto_id": cmp = a.produto_id.localeCompare(b.produto_id); break;
+        case "nome": cmp = a.nome.localeCompare(b.nome, "pt-BR"); break;
+        case "familia": cmp = (a.familia?.nome || "").localeCompare(b.familia?.nome || "", "pt-BR"); break;
+        case "fabricante": cmp = (a.fabricante?.nome || "").localeCompare(b.fabricante?.nome || "", "pt-BR"); break;
+        case "preco": cmp = (a.preco || 0) - (b.preco || 0); break;
+        case "ativo": cmp = (a.ativo === b.ativo ? 0 : a.ativo ? -1 : 1); break;
+        case "destacar": cmp = (a.destacar === b.destacar ? 0 : a.destacar ? -1 : 1); break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return result;
+  }, [produtos, search, filterAtivo, filterFamilia, filterFabricante, sortKey, sortDir]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortKey !== col) return <ArrowUpDown className="h-3 w-3 ml-1 inline opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="h-3 w-3 ml-1 inline" /> : <ArrowDown className="h-3 w-3 ml-1 inline" />;
+  };
 
   const openNew = () => { setEditId(null); setForm(emptyForm); setDialogOpen(true); };
 
@@ -139,11 +165,6 @@ const Produtos = () => {
     load();
   };
 
-  const softDelete = async (id: string) => {
-    await supabase.from("produto").update({ ativo: false }).eq("produto_id", id);
-    toast({ title: "Produto desativado" });
-    load();
-  };
 
   const weightUnit = (form.unidade_medida === "g" || form.unidade_medida === "kg") ? form.unidade_medida : "kg";
 
@@ -185,15 +206,15 @@ const Produtos = () => {
 
       <div className="border rounded-lg overflow-hidden">
         <Table>
-          <TableHeader>
+           <TableHeader>
              <TableRow>
-               <TableHead>Cód</TableHead>
-               <TableHead>Nome</TableHead>
-               <TableHead className="hidden md:table-cell">Família</TableHead>
-               <TableHead className="hidden md:table-cell">Fabricante</TableHead>
-               <TableHead className="hidden sm:table-cell">Preço</TableHead>
-               <TableHead className="hidden sm:table-cell">Status</TableHead>
-               <TableHead className="hidden sm:table-cell text-center">Dest.</TableHead>
+               <TableHead className="cursor-pointer select-none" onClick={() => handleSort("produto_id")}>Cód <SortIcon col="produto_id" /></TableHead>
+               <TableHead className="cursor-pointer select-none" onClick={() => handleSort("nome")}>Nome <SortIcon col="nome" /></TableHead>
+               <TableHead className="hidden md:table-cell cursor-pointer select-none" onClick={() => handleSort("familia")}>Família <SortIcon col="familia" /></TableHead>
+               <TableHead className="hidden md:table-cell cursor-pointer select-none" onClick={() => handleSort("fabricante")}>Fabricante <SortIcon col="fabricante" /></TableHead>
+               <TableHead className="hidden sm:table-cell cursor-pointer select-none" onClick={() => handleSort("preco")}>Preço <SortIcon col="preco" /></TableHead>
+               <TableHead className="hidden sm:table-cell cursor-pointer select-none" onClick={() => handleSort("ativo")}>Status <SortIcon col="ativo" /></TableHead>
+               <TableHead className="hidden sm:table-cell text-center cursor-pointer select-none" onClick={() => handleSort("destacar")}>Dest. <SortIcon col="destacar" /></TableHead>
              </TableRow>
            </TableHeader>
            <TableBody>
