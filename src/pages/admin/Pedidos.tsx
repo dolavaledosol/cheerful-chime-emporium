@@ -81,7 +81,7 @@ interface PedidoItem {
   produto_id: string;
   quantidade: number;
   preco_unitario: number;
-  produto: { nome: string } | null;
+  produto: { nome: string; aceita_fracionado: boolean } | null;
 }
 
 interface StatusHistorico {
