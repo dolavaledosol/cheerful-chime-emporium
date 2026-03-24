@@ -30,13 +30,18 @@ interface Fabricante {
   nome: string;
 }
 
+type FornecedorSortKey = "fornecedor_id" | "nome" | "ativo";
+
 const Fornecedores = () => {
   const [items, setItems] = useState<Fornecedor[]>([]);
   const [search, setSearch] = useState("");
+  const [filterAtivo, setFilterAtivo] = useState<string>("true");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ nome: "", ativo: true });
   const [loading, setLoading] = useState(false);
+  const [sortKey, setSortKey] = useState<FornecedorSortKey>("nome");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const { toast } = useToast();
 
   // Produtos tab state
