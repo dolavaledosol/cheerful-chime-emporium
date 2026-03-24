@@ -36,6 +36,8 @@ interface TelefoneItem {
 const emptyForm = { nome: "", cpf_cnpj: "", email: "", tipo_cliente: "cliente", ativo: true };
 
 type ClienteSortKey = "cliente_id" | "nome" | "cpf_cnpj" | "email" | "tipo_cliente" | "ativo";
+
+const tipoLabel = (t: string) => {
   switch (t) {
     case "admin": return "Admin";
     case "vendedor": return "Vendedor";
