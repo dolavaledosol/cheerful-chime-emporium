@@ -165,11 +165,6 @@ const Produtos = () => {
     load();
   };
 
-  const softDelete = async (id: string) => {
-    await supabase.from("produto").update({ ativo: false }).eq("produto_id", id);
-    toast({ title: "Produto desativado" });
-    load();
-  };
 
   const weightUnit = (form.unidade_medida === "g" || form.unidade_medida === "kg") ? form.unidade_medida : "kg";
 
