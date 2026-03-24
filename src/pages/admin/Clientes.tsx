@@ -57,6 +57,8 @@ const Clientes = () => {
   const [telefonePreferencialId, setTelefonePreferencialId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [cpfError, setCpfError] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<ClienteSortKey>("nome");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
