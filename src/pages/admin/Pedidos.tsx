@@ -879,6 +879,13 @@ const Pedidos = () => {
 
     const { error } = await supabase.from("pedido").update(updateData).eq("pedido_id", selectedPedido.pedido_id);
     if (!error) {
+      // Persist quantity changes during separação
+      if (selectedPedido.status === "separacao") {
+        for (const item of items) {
+          await supabase.from("pedido_item").update({ quantidade: Number(item.quantidade) }).eq("pedido_item_id", item.pedido_item_id);
+        }
+      }
+
       if (editStatus !== selectedPedido.status) {
         await supabase.from("pedido_status_historico").insert({
           pedido_id: selectedPedido.pedido_id,
