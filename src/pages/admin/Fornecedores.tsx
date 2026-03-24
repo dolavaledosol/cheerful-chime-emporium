@@ -75,7 +75,33 @@ const Fornecedores = () => {
 
   useEffect(() => { load(); loadProdutosAndFabricantes(); }, []);
 
-  const filtered = items.filter((f) => f.nome.toLowerCase().includes(search.toLowerCase()));
+  const filtered = useMemo(() => {
+    let result = items.filter((f) => {
+      const matchSearch = f.nome.toLowerCase().includes(search.toLowerCase());
+      const matchAtivo = filterAtivo === "all" || (filterAtivo === "true" ? f.ativo : !f.ativo);
+      return matchSearch && matchAtivo;
+    });
+    result.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "fornecedor_id": cmp = a.fornecedor_id.localeCompare(b.fornecedor_id); break;
+        case "nome": cmp = a.nome.localeCompare(b.nome, "pt-BR"); break;
+        case "ativo": cmp = (a.ativo === b.ativo ? 0 : a.ativo ? -1 : 1); break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return result;
+  }, [items, search, filterAtivo, sortKey, sortDir]);
+
+  const handleSort = (key: FornecedorSortKey) => {
+    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+
+  const SortIcon = ({ col }: { col: FornecedorSortKey }) => {
+    if (sortKey !== col) return <ArrowUpDown className="h-3 w-3 ml-1 inline opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="h-3 w-3 ml-1 inline" /> : <ArrowDown className="h-3 w-3 ml-1 inline" />;
+  };
 
   const filteredProdutos = useMemo(() => {
     return produtos.filter((p) => {
