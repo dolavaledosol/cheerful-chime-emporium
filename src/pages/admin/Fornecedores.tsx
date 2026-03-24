@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Pencil, Trash2, Package } from "lucide-react";
+import { Plus, Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 
