@@ -177,11 +177,6 @@ const Fornecedores = () => {
     load();
   };
 
-  const softDelete = async (id: string) => {
-    await supabase.from("fornecedor").update({ ativo: false }).eq("fornecedor_id", id);
-    toast({ title: "Fornecedor desativado" });
-    load();
-  };
 
   const fabricanteMap = useMemo(() => {
     const m: Record<string, string> = {};
