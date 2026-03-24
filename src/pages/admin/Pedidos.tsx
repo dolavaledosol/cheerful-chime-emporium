@@ -1965,19 +1965,68 @@ const Pedidos = () => {
               {selectedPedido.status === "separacao" && editTipoEntrega === "entrega" && (
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Endereço de Entrega</Label>
-                  {editEnderecos.length > 0 ? (
-                    <Select value={editEnderecoId} onValueChange={setEditEnderecoId}>
-                      <SelectTrigger><SelectValue placeholder="Selecione o endereço" /></SelectTrigger>
-                      <SelectContent>
-                        {editEnderecos.map(e => (
-                          <SelectItem key={e.endereco_id} value={e.endereco_id}>
-                            {e.logradouro}{e.numero ? `, ${e.numero}` : ""} — {e.bairro || ""} — {e.cidade}/{e.estado}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  {!editShowNewEndereco ? (
+                    <div className="space-y-2">
+                      {editEnderecos.length > 0 ? (
+                        <Select value={editEnderecoId} onValueChange={setEditEnderecoId}>
+                          <SelectTrigger><SelectValue placeholder="Selecione o endereço" /></SelectTrigger>
+                          <SelectContent>
+                            {editEnderecos.map(e => (
+                              <SelectItem key={e.endereco_id} value={e.endereco_id}>
+                                {e.logradouro}{e.numero ? `, ${e.numero}` : ""} — {e.cidade}/{e.estado}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Nenhum endereço cadastrado para este cliente</p>
+                      )}
+                      <Button type="button" variant="outline" size="sm" onClick={() => setEditShowNewEndereco(true)} className="gap-1.5">
+                        <Plus className="h-3 w-3" /> Cadastrar novo endereço
+                      </Button>
+                    </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground">Nenhum endereço cadastrado para este cliente</p>
+                    <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+                      <div className="flex items-center justify-between">
+                        <Label className="font-semibold">Novo Endereço</Label>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setEditShowNewEndereco(false)}>Cancelar</Button>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="CEP"
+                            value={editNewEndereco.cep}
+                            onChange={e => setEditNewEndereco({ ...editNewEndereco, cep: e.target.value })}
+                            className="w-32"
+                            onBlur={async () => {
+                              const data = await fetchCep(editNewEndereco.cep);
+                              if (data) {
+                                setEditNewEndereco(prev => ({
+                                  ...prev,
+                                  logradouro: data.street || prev.logradouro,
+                                  bairro: data.neighborhood || prev.bairro,
+                                  cidade: data.city || prev.cidade,
+                                  estado: data.state || prev.estado,
+                                }));
+                              }
+                            }}
+                          />
+                          {cepLoading && <span className="text-xs text-muted-foreground self-center">Buscando...</span>}
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <Input placeholder="Logradouro *" value={editNewEndereco.logradouro} onChange={e => setEditNewEndereco({ ...editNewEndereco, logradouro: e.target.value })} className="col-span-2" />
+                          <Input placeholder="Número" value={editNewEndereco.numero} onChange={e => setEditNewEndereco({ ...editNewEndereco, numero: e.target.value })} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input placeholder="Bairro" value={editNewEndereco.bairro} onChange={e => setEditNewEndereco({ ...editNewEndereco, bairro: e.target.value })} />
+                          <Input placeholder="Complemento" value={editNewEndereco.complemento} onChange={e => setEditNewEndereco({ ...editNewEndereco, complemento: e.target.value })} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input placeholder="Cidade *" value={editNewEndereco.cidade} onChange={e => setEditNewEndereco({ ...editNewEndereco, cidade: e.target.value })} />
+                          <Input placeholder="Estado *" value={editNewEndereco.estado} onChange={e => setEditNewEndereco({ ...editNewEndereco, estado: e.target.value })} />
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
