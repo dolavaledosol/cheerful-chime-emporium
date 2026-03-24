@@ -372,6 +372,8 @@ const EstoqueRelatorio = () => {
           quantidade: Number(item.quantidade),
           data_compra: pedido.data,
           destacar: pesoInfo?.destacar ?? false,
+          aceita_fracionado: pesoInfo?.aceita_fracionado ?? false,
+          quantidade_default: pesoInfo?.quantidade_default ?? 1,
         });
       }
     }
