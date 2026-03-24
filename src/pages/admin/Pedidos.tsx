@@ -1753,26 +1753,74 @@ const Pedidos = () => {
                 <Table>
                   <TableHeader><TableRow>
                     {splitMode && <TableHead className="w-8"></TableHead>}
-                    <TableHead>Produto</TableHead><TableHead>Qtd</TableHead><TableHead>Preço</TableHead>
+                    <TableHead>Produto</TableHead><TableHead>Qtd</TableHead><TableHead>Preço</TableHead><TableHead>Subtotal</TableHead>
                   </TableRow></TableHeader>
                   <TableBody>
-                    {items.map((i) => (
-                      <TableRow key={i.pedido_item_id}>
-                        {splitMode && (
+                    {items.map((i) => {
+                      const isFracionado = i.produto?.aceita_fracionado ?? false;
+                      const step = isFracionado ? 0.1 : 1;
+                      const canEditQty = selectedPedido.status === "separacao" && !splitMode;
+                      return (
+                        <TableRow key={i.pedido_item_id}>
+                          {splitMode && (
+                            <TableCell>
+                              <Checkbox
+                                checked={!!splitSelectedDetail[i.pedido_item_id]}
+                                onCheckedChange={(checked) =>
+                                  setSplitSelectedDetail(prev => ({ ...prev, [i.pedido_item_id]: !!checked }))
+                                }
+                              />
+                            </TableCell>
+                          )}
+                          <TableCell className="text-sm">{i.produto?.nome || "—"}</TableCell>
                           <TableCell>
-                            <Checkbox
-                              checked={!!splitSelectedDetail[i.pedido_item_id]}
-                              onCheckedChange={(checked) =>
-                                setSplitSelectedDetail(prev => ({ ...prev, [i.pedido_item_id]: !!checked }))
-                              }
-                            />
+                            {canEditQty ? (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button" size="icon" variant="outline"
+                                  className="h-6 w-6"
+                                  onClick={() => {
+                                    const newQty = Math.round((Number(i.quantidade) - step) * 10) / 10;
+                                    if (newQty > 0) {
+                                      setItems(prev => prev.map(it => it.pedido_item_id === i.pedido_item_id ? { ...it, quantidade: newQty } : it));
+                                    }
+                                  }}
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <Input
+                                  type="number"
+                                  step={step}
+                                  min={step}
+                                  value={i.quantidade}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    if (val > 0) {
+                                      setItems(prev => prev.map(it => it.pedido_item_id === i.pedido_item_id ? { ...it, quantidade: val } : it));
+                                    }
+                                  }}
+                                  className="h-6 w-16 text-center text-xs px-1"
+                                />
+                                <Button
+                                  type="button" size="icon" variant="outline"
+                                  className="h-6 w-6"
+                                  onClick={() => {
+                                    const newQty = Math.round((Number(i.quantidade) + step) * 10) / 10;
+                                    setItems(prev => prev.map(it => it.pedido_item_id === i.pedido_item_id ? { ...it, quantidade: newQty } : it));
+                                  }}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <span>{i.quantidade}</span>
+                            )}
                           </TableCell>
-                        )}
-                        <TableCell className="text-sm">{i.produto?.nome || "—"}</TableCell>
-                        <TableCell>{i.quantidade}</TableCell>
-                        <TableCell>R$ {Number(i.preco_unitario).toFixed(2)}</TableCell>
-                      </TableRow>
-                    ))}
+                          <TableCell>R$ {Number(i.preco_unitario).toFixed(2)}</TableCell>
+                          <TableCell className="text-sm font-medium">R$ {(Number(i.preco_unitario) * Number(i.quantidade)).toFixed(2)}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
