@@ -68,13 +68,39 @@ const Produtos = () => {
 
   useEffect(() => { load(); }, []);
 
-  const filtered = produtos.filter((p) => {
-    const matchSearch = p.nome.toLowerCase().includes(search.toLowerCase());
-    const matchAtivo = filterAtivo === "all" || (filterAtivo === "true" ? p.ativo : !p.ativo);
-    const matchFamilia = filterFamilia === "all" || p.familia_id === filterFamilia;
-    const matchFabricante = filterFabricante === "all" || p.fabricante_id === filterFabricante;
-    return matchSearch && matchAtivo && matchFamilia && matchFabricante;
-  });
+  const filtered = useMemo(() => {
+    let result = produtos.filter((p) => {
+      const matchSearch = p.nome.toLowerCase().includes(search.toLowerCase());
+      const matchAtivo = filterAtivo === "all" || (filterAtivo === "true" ? p.ativo : !p.ativo);
+      const matchFamilia = filterFamilia === "all" || p.familia_id === filterFamilia;
+      const matchFabricante = filterFabricante === "all" || p.fabricante_id === filterFabricante;
+      return matchSearch && matchAtivo && matchFamilia && matchFabricante;
+    });
+    result.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "produto_id": cmp = a.produto_id.localeCompare(b.produto_id); break;
+        case "nome": cmp = a.nome.localeCompare(b.nome, "pt-BR"); break;
+        case "familia": cmp = (a.familia?.nome || "").localeCompare(b.familia?.nome || "", "pt-BR"); break;
+        case "fabricante": cmp = (a.fabricante?.nome || "").localeCompare(b.fabricante?.nome || "", "pt-BR"); break;
+        case "preco": cmp = (a.preco || 0) - (b.preco || 0); break;
+        case "ativo": cmp = (a.ativo === b.ativo ? 0 : a.ativo ? -1 : 1); break;
+        case "destacar": cmp = (a.destacar === b.destacar ? 0 : a.destacar ? -1 : 1); break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return result;
+  }, [produtos, search, filterAtivo, filterFamilia, filterFabricante, sortKey, sortDir]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortKey !== col) return <ArrowUpDown className="h-3 w-3 ml-1 inline opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="h-3 w-3 ml-1 inline" /> : <ArrowDown className="h-3 w-3 ml-1 inline" />;
+  };
 
   const openNew = () => { setEditId(null); setForm(emptyForm); setDialogOpen(true); };
 
