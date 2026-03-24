@@ -311,7 +311,7 @@ const EstoqueRelatorio = () => {
         .in("produto_id", prodIds),
       supabase
         .from("produto")
-        .select("produto_id, peso_liquido, unidade_medida, destacar")
+        .select("produto_id, peso_liquido, unidade_medida, destacar, aceita_fracionado, quantidade_default")
         .in("produto_id", prodIds),
     ]);
 
@@ -321,10 +321,10 @@ const EstoqueRelatorio = () => {
       return;
     }
 
-    const pesoMap = new Map<string, { peso: number | null; unidade: string; destacar: boolean }>();
+    const pesoMap = new Map<string, { peso: number | null; unidade: string; destacar: boolean; aceita_fracionado: boolean; quantidade_default: number }>();
     if (produtosDb) {
       for (const pr of produtosDb as any[]) {
-        pesoMap.set(pr.produto_id, { peso: pr.peso_liquido, unidade: pr.unidade_medida || "un", destacar: pr.destacar ?? false });
+        pesoMap.set(pr.produto_id, { peso: pr.peso_liquido, unidade: pr.unidade_medida || "un", destacar: pr.destacar ?? false, aceita_fracionado: pr.aceita_fracionado ?? false, quantidade_default: pr.quantidade_default ?? 1 });
       }
     }
 
