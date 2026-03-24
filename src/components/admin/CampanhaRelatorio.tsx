@@ -30,6 +30,8 @@ interface ProdutoCampanha {
   total_estoque: number;
   url_imagem: string | null;
   checked: boolean;
+  aceita_fracionado: boolean;
+  quantidade_default: number;
 }
 
 interface FamiliaOption { familia_id: string; nome: string; }
