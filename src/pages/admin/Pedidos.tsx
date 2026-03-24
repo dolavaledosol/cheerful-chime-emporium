@@ -865,6 +865,36 @@ const Pedidos = () => {
 
     setLoading(true);
 
+    // Create new address if needed during separação + entrega
+    if (selectedPedido.status === "separacao" && editTipoEntrega === "entrega" && editShowNewEndereco && editNewEndereco.logradouro) {
+      const { data: endData, error: endError } = await supabase
+        .from("endereco")
+        .insert({
+          logradouro: editNewEndereco.logradouro,
+          numero: editNewEndereco.numero || null,
+          bairro: editNewEndereco.bairro || null,
+          cidade: editNewEndereco.cidade,
+          estado: editNewEndereco.estado,
+          cep: editNewEndereco.cep || null,
+          complemento: editNewEndereco.complemento || null,
+        })
+        .select("endereco_id")
+        .single();
+      if (endError || !endData) {
+        toast({ title: "Erro ao cadastrar endereço", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+      // Link address to client
+      await supabase.from("cliente_endereco").insert({
+        cliente_id: selectedPedido.cliente_id,
+        endereco_id: endData.endereco_id,
+      });
+      setEditEnderecoId(endData.endereco_id);
+      setEditEnderecos(prev => [...prev, { endereco_id: endData.endereco_id, logradouro: editNewEndereco.logradouro, numero: editNewEndereco.numero || null, bairro: editNewEndereco.bairro || null, cidade: editNewEndereco.cidade, estado: editNewEndereco.estado, cep: editNewEndereco.cep || null }]);
+      setEditShowNewEndereco(false);
+    }
+
     const itemsTotal = items.reduce((sum, i) => sum + Number(i.preco_unitario) * Number(i.quantidade), 0);
     let newTotal = itemsTotal + freteNum;
 
