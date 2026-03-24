@@ -129,7 +129,7 @@ const ProductCard = memo(function ProductCard({
         </div>
 
         {/* Info */}
-        <div className="p-3 space-y-1.5">
+        <div className="p-3 space-y-2">
           {familia_nome && (
             <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
               {familia_nome}
@@ -138,23 +138,31 @@ const ProductCard = memo(function ProductCard({
           <h3 className="font-semibold text-sm leading-snug line-clamp-2 min-h-[2.5em] text-card-foreground">
             {nome}
           </h3>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {pesoStr && (
-              <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
-                <Weight className="h-3 w-3" /> {pesoStr}
-              </span>
-            )}
-            {aceita_fracionado && pesoPorcao && (
-              <span className="text-[10px] text-muted-foreground">
-                · porção {pesoPorcao}
-              </span>
-            )}
-            {aceita_fracionado && (
-              <span className="text-[10px] uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded-full font-semibold">
-                Fracionado
-              </span>
-            )}
-          </div>
+
+          {/* Weight & fractionated badge */}
+          {(pesoStr || aceita_fracionado) && (
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1.5">
+                {pesoStr && (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
+                    <Weight className="h-3.5 w-3.5" /> {pesoStr}
+                  </span>
+                )}
+                {aceita_fracionado && (
+                  <span className="text-[10px] uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded-full font-semibold">
+                    Fracionado
+                  </span>
+                )}
+              </div>
+              {aceita_fracionado && pesoPorcao && (
+                <p className="text-[11px] text-muted-foreground pl-[1.125rem]">
+                  Porção: {pesoPorcao}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Price */}
           <div className="pt-1">
             {aceita_fracionado ? (
               <>
