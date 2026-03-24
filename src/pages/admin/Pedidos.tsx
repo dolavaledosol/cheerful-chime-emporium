@@ -623,7 +623,7 @@ const Pedidos = () => {
     setSplitMode(false);
     setSplitSelectedDetail({});
     setSplitLoading(false);
-    const [itemsRes, histRes, endRes] = await Promise.all([
+    const [itemsRes, histRes] = await Promise.all([
       supabase
         .from("pedido_item")
         .select("pedido_item_id, produto_id, quantidade, preco_unitario, produto(nome, aceita_fracionado)")
@@ -636,6 +636,18 @@ const Pedidos = () => {
     ]);
     setItems((itemsRes.data as any) || []);
     setHistorico((histRes.data as any) || []);
+    setEditEnderecos([]);
+    setEditEnderecoId("");
+    // Load client addresses for entrega option
+    if (p.cliente_id) {
+      const { data: ceData } = await supabase
+        .from("cliente_endereco")
+        .select("endereco_id, endereco:endereco_id(endereco_id, logradouro, numero, bairro, cidade, estado, cep)")
+        .eq("cliente_id", p.cliente_id);
+      if (ceData) {
+        setEditEnderecos(ceData.map((d: any) => d.endereco).filter(Boolean));
+      }
+    }
     setDialogOpen(true);
   };
 
