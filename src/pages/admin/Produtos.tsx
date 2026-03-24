@@ -206,15 +206,15 @@ const Produtos = () => {
 
       <div className="border rounded-lg overflow-hidden">
         <Table>
-          <TableHeader>
+           <TableHeader>
              <TableRow>
-               <TableHead>Cód</TableHead>
-               <TableHead>Nome</TableHead>
-               <TableHead className="hidden md:table-cell">Família</TableHead>
-               <TableHead className="hidden md:table-cell">Fabricante</TableHead>
-               <TableHead className="hidden sm:table-cell">Preço</TableHead>
-               <TableHead className="hidden sm:table-cell">Status</TableHead>
-               <TableHead className="hidden sm:table-cell text-center">Dest.</TableHead>
+               <TableHead className="cursor-pointer select-none" onClick={() => handleSort("produto_id")}>Cód <SortIcon col="produto_id" /></TableHead>
+               <TableHead className="cursor-pointer select-none" onClick={() => handleSort("nome")}>Nome <SortIcon col="nome" /></TableHead>
+               <TableHead className="hidden md:table-cell cursor-pointer select-none" onClick={() => handleSort("familia")}>Família <SortIcon col="familia" /></TableHead>
+               <TableHead className="hidden md:table-cell cursor-pointer select-none" onClick={() => handleSort("fabricante")}>Fabricante <SortIcon col="fabricante" /></TableHead>
+               <TableHead className="hidden sm:table-cell cursor-pointer select-none" onClick={() => handleSort("preco")}>Preço <SortIcon col="preco" /></TableHead>
+               <TableHead className="hidden sm:table-cell cursor-pointer select-none" onClick={() => handleSort("ativo")}>Status <SortIcon col="ativo" /></TableHead>
+               <TableHead className="hidden sm:table-cell text-center cursor-pointer select-none" onClick={() => handleSort("destacar")}>Dest. <SortIcon col="destacar" /></TableHead>
              </TableRow>
            </TableHeader>
            <TableBody>
