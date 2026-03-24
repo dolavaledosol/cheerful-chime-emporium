@@ -81,7 +81,7 @@ interface PedidoItem {
   produto_id: string;
   quantidade: number;
   preco_unitario: number;
-  produto: { nome: string } | null;
+  produto: { nome: string; aceita_fracionado: boolean } | null;
 }
 
 interface StatusHistorico {
@@ -218,6 +218,9 @@ const Pedidos = () => {
   const [splitSelectedDetail, setSplitSelectedDetail] = useState<Record<string, boolean>>({});
   const [splitLoading, setSplitLoading] = useState(false);
   const [editTipoEntrega, setEditTipoEntrega] = useState<"entrega" | "retirada">("retirada");
+  // Enderecos for edit dialog (entrega)
+  const [editEnderecos, setEditEnderecos] = useState<{ endereco_id: string; logradouro: string; numero: string | null; bairro: string | null; cidade: string; estado: string; cep: string | null }[]>([]);
+  const [editEnderecoId, setEditEnderecoId] = useState("");
 
   // New order dialog
   const [newOrderOpen, setNewOrderOpen] = useState(false);
@@ -623,7 +626,7 @@ const Pedidos = () => {
     const [itemsRes, histRes] = await Promise.all([
       supabase
         .from("pedido_item")
-        .select("pedido_item_id, produto_id, quantidade, preco_unitario, produto(nome)")
+        .select("pedido_item_id, produto_id, quantidade, preco_unitario, produto(nome, aceita_fracionado)")
         .eq("pedido_id", p.pedido_id),
       supabase
         .from("pedido_status_historico")
@@ -633,6 +636,18 @@ const Pedidos = () => {
     ]);
     setItems((itemsRes.data as any) || []);
     setHistorico((histRes.data as any) || []);
+    setEditEnderecos([]);
+    setEditEnderecoId("");
+    // Load client addresses for entrega option
+    if (p.cliente_id) {
+      const { data: ceData } = await supabase
+        .from("cliente_endereco")
+        .select("endereco_id, endereco:endereco_id(endereco_id, logradouro, numero, bairro, cidade, estado, cep)")
+        .eq("cliente_id", p.cliente_id);
+      if (ceData) {
+        setEditEnderecos(ceData.map((d: any) => d.endereco).filter(Boolean));
+      }
+    }
     setDialogOpen(true);
   };
 
@@ -864,6 +879,13 @@ const Pedidos = () => {
 
     const { error } = await supabase.from("pedido").update(updateData).eq("pedido_id", selectedPedido.pedido_id);
     if (!error) {
+      // Persist quantity changes during separação
+      if (selectedPedido.status === "separacao") {
+        for (const item of items) {
+          await supabase.from("pedido_item").update({ quantidade: Number(item.quantidade) }).eq("pedido_item_id", item.pedido_item_id);
+        }
+      }
+
       if (editStatus !== selectedPedido.status) {
         await supabase.from("pedido_status_historico").insert({
           pedido_id: selectedPedido.pedido_id,
@@ -1738,26 +1760,74 @@ const Pedidos = () => {
                 <Table>
                   <TableHeader><TableRow>
                     {splitMode && <TableHead className="w-8"></TableHead>}
-                    <TableHead>Produto</TableHead><TableHead>Qtd</TableHead><TableHead>Preço</TableHead>
+                    <TableHead>Produto</TableHead><TableHead>Qtd</TableHead><TableHead>Preço</TableHead><TableHead>Subtotal</TableHead>
                   </TableRow></TableHeader>
                   <TableBody>
-                    {items.map((i) => (
-                      <TableRow key={i.pedido_item_id}>
-                        {splitMode && (
+                    {items.map((i) => {
+                      const isFracionado = i.produto?.aceita_fracionado ?? false;
+                      const step = isFracionado ? 0.1 : 1;
+                      const canEditQty = selectedPedido.status === "separacao" && !splitMode;
+                      return (
+                        <TableRow key={i.pedido_item_id}>
+                          {splitMode && (
+                            <TableCell>
+                              <Checkbox
+                                checked={!!splitSelectedDetail[i.pedido_item_id]}
+                                onCheckedChange={(checked) =>
+                                  setSplitSelectedDetail(prev => ({ ...prev, [i.pedido_item_id]: !!checked }))
+                                }
+                              />
+                            </TableCell>
+                          )}
+                          <TableCell className="text-sm">{i.produto?.nome || "—"}</TableCell>
                           <TableCell>
-                            <Checkbox
-                              checked={!!splitSelectedDetail[i.pedido_item_id]}
-                              onCheckedChange={(checked) =>
-                                setSplitSelectedDetail(prev => ({ ...prev, [i.pedido_item_id]: !!checked }))
-                              }
-                            />
+                            {canEditQty ? (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button" size="icon" variant="outline"
+                                  className="h-6 w-6"
+                                  onClick={() => {
+                                    const newQty = Math.round((Number(i.quantidade) - step) * 10) / 10;
+                                    if (newQty > 0) {
+                                      setItems(prev => prev.map(it => it.pedido_item_id === i.pedido_item_id ? { ...it, quantidade: newQty } : it));
+                                    }
+                                  }}
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <Input
+                                  type="number"
+                                  step={step}
+                                  min={step}
+                                  value={i.quantidade}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    if (val > 0) {
+                                      setItems(prev => prev.map(it => it.pedido_item_id === i.pedido_item_id ? { ...it, quantidade: val } : it));
+                                    }
+                                  }}
+                                  className="h-6 w-16 text-center text-xs px-1"
+                                />
+                                <Button
+                                  type="button" size="icon" variant="outline"
+                                  className="h-6 w-6"
+                                  onClick={() => {
+                                    const newQty = Math.round((Number(i.quantidade) + step) * 10) / 10;
+                                    setItems(prev => prev.map(it => it.pedido_item_id === i.pedido_item_id ? { ...it, quantidade: newQty } : it));
+                                  }}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <span>{i.quantidade}</span>
+                            )}
                           </TableCell>
-                        )}
-                        <TableCell className="text-sm">{i.produto?.nome || "—"}</TableCell>
-                        <TableCell>{i.quantidade}</TableCell>
-                        <TableCell>R$ {Number(i.preco_unitario).toFixed(2)}</TableCell>
-                      </TableRow>
-                    ))}
+                          <TableCell>R$ {Number(i.preco_unitario).toFixed(2)}</TableCell>
+                          <TableCell className="text-sm font-medium">R$ {(Number(i.preco_unitario) * Number(i.quantidade)).toFixed(2)}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -1831,6 +1901,14 @@ const Pedidos = () => {
                 </div>
               )}
 
+              {/* Show recalculated total when quantities changed during separação */}
+              {selectedPedido.status === "separacao" && (
+                <div className="flex items-center justify-between text-sm font-medium border-t pt-2">
+                  <span>Total dos itens:</span>
+                  <span>R$ {items.reduce((s, i) => s + Number(i.preco_unitario) * Number(i.quantidade), 0).toFixed(2)}</span>
+                </div>
+              )}
+
               {isEntrega && (
                 <div className="space-y-2">
                   <Label>Valor do Frete (R$)</Label>
@@ -1845,6 +1923,27 @@ const Pedidos = () => {
                         </p>
                       )}
                     </>
+                  )}
+                </div>
+              )}
+
+              {/* Endereço de entrega - editable during separacao + entrega */}
+              {selectedPedido.status === "separacao" && editTipoEntrega === "entrega" && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Endereço de Entrega</Label>
+                  {editEnderecos.length > 0 ? (
+                    <Select value={editEnderecoId} onValueChange={setEditEnderecoId}>
+                      <SelectTrigger><SelectValue placeholder="Selecione o endereço" /></SelectTrigger>
+                      <SelectContent>
+                        {editEnderecos.map(e => (
+                          <SelectItem key={e.endereco_id} value={e.endereco_id}>
+                            {e.logradouro}{e.numero ? `, ${e.numero}` : ""} — {e.bairro || ""} — {e.cidade}/{e.estado}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Nenhum endereço cadastrado para este cliente</p>
                   )}
                 </div>
               )}
@@ -1940,7 +2039,7 @@ const Pedidos = () => {
             </Button>
             <div className="flex gap-2 ml-auto">
               <Button variant="outline" onClick={() => setDialogOpen(false)}>Fechar</Button>
-              <Button onClick={() => updatePedido()} disabled={loading || (editStatus === selectedPedido?.status && editFrete === Number(selectedPedido?.frete || 0).toFixed(2) && editLocalEstoqueId === selectedPedido?.local_estoque_id)}>
+              <Button onClick={() => updatePedido()} disabled={loading}>
                 {loading ? "Salvando..." : "Salvar Alterações"}
               </Button>
             </div>
