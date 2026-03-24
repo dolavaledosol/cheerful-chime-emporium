@@ -640,6 +640,8 @@ const Pedidos = () => {
     setHistorico((histRes.data as any) || []);
     setEditEnderecos([]);
     setEditEnderecoId("");
+    setEditShowNewEndereco(false);
+    setEditNewEndereco({ cep: "", logradouro: "", numero: "", bairro: "", cidade: "", estado: "", complemento: "" });
     // Load client addresses for entrega option
     if (p.cliente_id) {
       const { data: ceData } = await supabase
