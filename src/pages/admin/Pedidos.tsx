@@ -141,6 +141,7 @@ interface ContaPagarCompra {
 interface EntradaLinha {
   produto_id: string; nome: string; checked: boolean;
   quantidade: string; preco_venda: string; preco_custo: string;
+  aceita_fracionado: boolean;
 }
 
 function validateCpfCnpj(value: string): boolean {
