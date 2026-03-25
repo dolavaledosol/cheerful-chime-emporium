@@ -853,8 +853,8 @@ const Financeiro = () => {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2"><Label>Data NF</Label><Input type="date" value={formPagar.data_nf} onChange={(e) => setFormPagar({ ...formPagar, data_nf: e.target.value })} disabled={isPago} /></div>
-              <div className="space-y-2"><Label>Data Pagamento</Label><Input type="date" value={formPagar.data_pagamento} onChange={(e) => setFormPagar({ ...formPagar, data_pagamento: e.target.value })} disabled={isPago} /></div>
-              <div className="flex items-center gap-2 pt-6"><Switch checked={formPagar.pago} onCheckedChange={(v) => setFormPagar({ ...formPagar, pago: v })} disabled={isPago} /><Label>Pago</Label></div>
+              <div className="space-y-2"><Label>Data Pagamento</Label><Input type="date" value={formPagar.data_pagamento} onChange={(e) => setFormPagar({ ...formPagar, data_pagamento: e.target.value })} /></div>
+              <div className="flex items-center gap-2 pt-6"><Switch checked={formPagar.pago} onCheckedChange={(v) => setFormPagar({ ...formPagar, pago: v })} /><Label>Pago</Label></div>
             </div>
             <div className="space-y-2"><Label>Observação</Label><Input value={formPagar.observacao} onChange={(e) => setFormPagar({ ...formPagar, observacao: e.target.value })} disabled={isPago} /></div>
 
