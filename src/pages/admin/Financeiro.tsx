@@ -111,7 +111,7 @@ const Financeiro = () => {
   const loadPagar = async () => {
     const { data } = await supabase
       .from("contas_pagar")
-      .select("*, fornecedor(nome), banco(nome), forma_pagamento(nome)")
+      .select("*, fornecedor(nome), banco(nome), forma_pagamento(nome), local_estoque:local_estoque_id(nome)")
       .order("data_vencimento", { ascending: false });
     if (data) setPagar(data as any);
   };
@@ -128,27 +128,40 @@ const Financeiro = () => {
     return matchSearch && matchStatus && matchDate && matchFornecedor;
   });
 
-  const openNewPagar = () => { setEditPagarId(null); setFormPagar(emptyPagar); setDialogPagar(true); };
+  const openNewPagar = () => {
+    setEditPagarId(null);
+    setFormPagar(emptyPagar);
+    setCompraItens([]);
+    setDialogPagar(true);
+  };
   const openEditPagar = (c: ContaPagar) => {
     setEditPagarId(c.contas_pagar_id);
     setFormPagar({
       descricao: c.descricao, valor: String(c.valor), data_vencimento: c.data_vencimento,
       data_pagamento: c.data_pagamento || "", pago: c.pago, observacao: c.observacao || "",
       fornecedor_id: c.fornecedor_id || "", banco_id: c.banco_id || "", forma_pagamento_id: c.forma_pagamento_id || "",
+      status_compra: c.status_compra || "pendente", data_nf: c.data_nf || "", local_estoque_id: c.local_estoque_id || "",
     });
+    setCompraItens(Array.isArray(c.compra_itens) ? c.compra_itens : []);
     setDialogPagar(true);
   };
 
   const savePagar = async () => {
     setLoadingPagar(true);
+    const totalItens = compraItens.reduce((s, i) => s + i.quantidade * i.preco_custo, 0);
+    const valorFinal = compraItens.length > 0 ? totalItens : Number(formPagar.valor);
     const payload = {
-      descricao: formPagar.descricao, valor: Number(formPagar.valor),
+      descricao: formPagar.descricao, valor: valorFinal,
       data_vencimento: formPagar.data_vencimento,
       data_pagamento: formPagar.data_pagamento || null,
       pago: formPagar.pago, observacao: formPagar.observacao || null,
       fornecedor_id: formPagar.fornecedor_id || null,
       banco_id: formPagar.banco_id || null,
       forma_pagamento_id: formPagar.forma_pagamento_id || null,
+      status_compra: formPagar.status_compra,
+      data_nf: formPagar.data_nf || null,
+      local_estoque_id: formPagar.local_estoque_id || null,
+      compra_itens: compraItens.length > 0 ? compraItens : null,
     };
     const { error } = editPagarId
       ? await supabase.from("contas_pagar").update(payload).eq("contas_pagar_id", editPagarId).select()
