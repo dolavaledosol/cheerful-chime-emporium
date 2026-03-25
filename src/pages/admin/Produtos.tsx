@@ -35,7 +35,7 @@ type SortKey = "produto_id" | "nome" | "familia" | "fabricante" | "preco" | "ati
 
 const emptyForm = {
   nome: "", descricao: "", ativo: true, familia_pai_id: "", familia_id: "", fabricante_id: "",
-  unidade_medida: "un", peso_bruto: "", peso_liquido: "", preco: "",
+  unidade_medida: "kg", peso_bruto: "", peso_liquido: "", preco: "",
   aceita_fracionado: false, quantidade_default: "1", destacar: false,
 };
 
