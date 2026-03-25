@@ -26,7 +26,7 @@ interface Produto {
   preco: number;
   aceita_fracionado: boolean;
   destacar: boolean;
-  familia?: { nome: string } | null;
+  familia?: { nome: string; pai: { nome: string } | null } | null;
   fabricante?: { nome: string } | null;
 }
 
