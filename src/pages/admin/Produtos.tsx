@@ -34,14 +34,14 @@ type SortKey = "produto_id" | "nome" | "familia" | "fabricante" | "preco" | "ati
 
 
 const emptyForm = {
-  nome: "", descricao: "", ativo: true, familia_id: "", fabricante_id: "",
+  nome: "", descricao: "", ativo: true, familia_pai_id: "", familia_id: "", fabricante_id: "",
   unidade_medida: "un", peso_bruto: "", peso_liquido: "", preco: "",
   aceita_fracionado: false, quantidade_default: "1", destacar: false,
 };
 
 const Produtos = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [familias, setFamilias] = useState<{ familia_id: string; nome: string }[]>([]);
+  const [familias, setFamilias] = useState<{ familia_id: string; nome: string; familia_pai_id: string | null }[]>([]);
   const [fabricantes, setFabricantes] = useState<{ fabricante_id: string; nome: string }[]>([]);
   const [search, setSearch] = useState("");
   const [filterAtivo, setFilterAtivo] = useState<string>("true");
@@ -58,7 +58,7 @@ const Produtos = () => {
   const load = async () => {
     const [prodRes, famRes, fabRes] = await Promise.all([
       supabase.from("produto").select("*, familia:familia_id(nome), fabricante:fabricante_id(nome)").order("nome"),
-      supabase.from("familia").select("familia_id, nome").eq("ativo", true).order("nome"),
+      supabase.from("familia").select("familia_id, nome, familia_pai_id").eq("ativo", true).order("nome"),
       supabase.from("fabricante").select("fabricante_id, nome").eq("ativo", true).order("nome"),
     ]);
     if (prodRes.data) setProdutos(prodRes.data as any);
@@ -105,11 +105,14 @@ const Produtos = () => {
   const openNew = () => { setEditId(null); setForm(emptyForm); setDialogOpen(true); };
 
   const openEdit = (p: Produto) => {
+    const fam = familias.find(f => f.familia_id === p.familia_id);
+    const famPaiId = fam?.familia_pai_id || "";
     setEditId(p.produto_id);
     setForm({
       nome: p.nome,
       descricao: p.descricao || "",
       ativo: p.ativo,
+      familia_pai_id: famPaiId,
       familia_id: p.familia_id || "",
       fabricante_id: p.fabricante_id || "",
       unidade_medida: p.unidade_medida,
@@ -270,25 +273,38 @@ const Produtos = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label>Família pai</Label>
+                <Select value={form.familia_pai_id || "none"} onValueChange={(v) => setForm({ ...form, familia_pai_id: v === "none" ? "" : v, familia_id: "" })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    {familias.filter((f) => !f.familia_pai_id).map((f) => <SelectItem key={f.familia_id} value={f.familia_id}>{f.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label>Família</Label>
                 <Select value={form.familia_id || "none"} onValueChange={(v) => setForm({ ...form, familia_id: v === "none" ? "" : v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhuma</SelectItem>
-                    {familias.map((f) => <SelectItem key={f.familia_id} value={f.familia_id}>{f.nome}</SelectItem>)}
+                    {form.familia_pai_id
+                      ? familias.filter((f) => f.familia_pai_id === form.familia_pai_id).map((f) => <SelectItem key={f.familia_id} value={f.familia_id}>{f.nome}</SelectItem>)
+                      : familias.map((f) => <SelectItem key={f.familia_id} value={f.familia_id}>{f.nome}</SelectItem>)
+                    }
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Fabricante</Label>
-                <Select value={form.fabricante_id || "none"} onValueChange={(v) => setForm({ ...form, fabricante_id: v === "none" ? "" : v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {fabricantes.map((f) => <SelectItem key={f.fabricante_id} value={f.fabricante_id}>{f.nome}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Fabricante</Label>
+              <Select value={form.fabricante_id || "none"} onValueChange={(v) => setForm({ ...form, fabricante_id: v === "none" ? "" : v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {fabricantes.map((f) => <SelectItem key={f.fabricante_id} value={f.fabricante_id}>{f.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
