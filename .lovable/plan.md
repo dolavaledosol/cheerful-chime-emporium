@@ -1,40 +1,28 @@
 
-# Melhorar exibição do card fracionado
 
-## Problema atual
-O card de produtos fracionados tem informações densas e confusas: peso, porção, badge "FRACIONADO" e preços ficam amontoados em linhas pequenas, dificultando a leitura rápida.
+## Ajuste no Cadastro de Produto: Separar Peso da Venda
 
-## Mudanças propostas
+### Situacao atual
+O campo "Unidade" (unidade_medida) mistura unidades de peso (kg, g) com unidades de venda (un, cx, pct, etc.). O peso bruto/liquido usa esse campo para definir o rotulo.
 
-### Reorganização do layout do card (`ProductCard.tsx`)
+### Regra de negocio correta
+- **Unidade de medida** = apenas para peso do produto (kg ou g)
+- **Venda** = sempre por quantidade (unidade)
+- **Aceita fracionado** = permite vender fracoes (0.5, 0.3, etc.)
 
-1. **Peso com destaque** - Mover o peso total do produto para uma posição mais visível, logo abaixo do nome, com ícone e tamanho maior
-2. **Porção como subtexto** - A informação de porção padrão fica como texto secundário abaixo do peso, sem o prefixo "·"
-3. **Badge "Fracionado" ao lado do peso** - Manter o badge mas posicioná-lo na mesma linha do peso para melhor hierarquia visual
-4. **Bloco de preço reorganizado** - Separar visualmente o preço da porção (destaque) do preço unitário (secundário), com mais espaçamento
+### Plano de implementacao
 
-### Layout proposto
+**Arquivo: `src/pages/admin/Produtos.tsx`**
 
-```text
-┌─────────────────────┐
-│      [IMAGEM]    🛒 │
-├─────────────────────┤
-│ CHARCUTARIA         │
-│ Copa lombo maturado │
-│                     │
-│ ⚖ 1un  FRACIONADO  │
-│ Porção: 0.3un      │
-│                     │
-│ R$ 25.92           │
-│ R$ 86.40 / un      │
-└─────────────────────┘
-```
+1. **Renomear o campo "Unidade"** para **"Unidade de peso"** com opcoes apenas `kg` e `g`
+2. **Remover** as opcoes `un, l, ml, cx, pct, par, m, cm` do select de unidade de medida
+3. **Ajustar o default** de `unidade_medida` no `emptyForm` para `"kg"` em vez de `"un"`
+4. **Reorganizar o formulario**: mover o campo "Unidade de peso" para ficar ao lado dos campos de peso bruto/liquido (3 colunas: Unidade de peso | Peso bruto | Peso liquido)
+5. **Manter** o campo "Preco" em linha separada ou junto com "Quantidade padrao"
+6. **Manter** o switch "Aceita fracionado" como esta — ele controla se o cliente pode comprar fracoes
 
-Diferenças vs atual:
-- Peso em texto maior (text-xs em vez de text-[11px])
-- Badge "Fracionado" na mesma linha do peso
-- Porção em linha própria, mais legível
-- Mais espaço entre peso/porção e preço
+### Detalhes tecnicos
+- O campo `unidade_medida` no banco continua como esta (enum), apenas limitamos as opcoes no UI
+- O `weightUnit` pode ser simplificado para usar diretamente `form.unidade_medida` ja que so tera kg/g
+- Sem mudancas no banco de dados
 
-### Arquivo alterado
-- `src/components/catalog/ProductCard.tsx` - seção de info do card (linhas ~131-170)
