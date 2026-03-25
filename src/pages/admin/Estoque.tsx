@@ -614,6 +614,46 @@ const Estoque = () => {
     }
   };
 
+  /* ── Editar Movimentação ── */
+  const openMovEdit = (m: MovimentacaoRow) => {
+    setMovEditId(m.movimentacao_estoque_id);
+    setMovEditForm({
+      tipo: m.tipo,
+      documento: m.documento || "",
+      quantidade: String(m.quantidade),
+      observacao: m.observacao || "",
+    });
+    setMovEditOpen(true);
+  };
+
+  const saveMovEdit = async () => {
+    if (!movEditId) return;
+    setMovEditLoading(true);
+    const { error } = await supabase.from("movimentacao_estoque").update({
+      tipo: movEditForm.tipo,
+      documento: movEditForm.documento || null,
+      quantidade: Number(movEditForm.quantidade),
+      observacao: movEditForm.observacao || null,
+    }).eq("movimentacao_estoque_id", movEditId);
+    setMovEditLoading(false);
+    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Movimentação atualizada" });
+    setMovEditOpen(false);
+    loadMovimentacoes();
+  };
+
+  const deleteMovEdit = async () => {
+    if (!movEditId) return;
+    if (!window.confirm("Excluir esta movimentação?")) return;
+    setMovEditLoading(true);
+    const { error } = await supabase.from("movimentacao_estoque").delete().eq("movimentacao_estoque_id", movEditId);
+    setMovEditLoading(false);
+    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Movimentação excluída" });
+    setMovEditOpen(false);
+    loadMovimentacoes();
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
