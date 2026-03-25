@@ -300,9 +300,11 @@ const Pedidos = () => {
 
   /* ── Compra edit state ── */
   const [compraEditOpen, setCompraEditOpen] = useState(false);
-  const [compraEdit, setCompraEdit] = useState<{ contas_pagar_id: string; descricao: string; valor: string; data_vencimento: string; data_nf: string; pago: boolean; observacao: string; fornecedor_id: string }>({ contas_pagar_id: "", descricao: "", valor: "", data_vencimento: "", data_nf: "", pago: false, observacao: "", fornecedor_id: "" });
+  const [compraEdit, setCompraEdit] = useState<{ contas_pagar_id: string; descricao: string; valor: string; data_vencimento: string; data_nf: string; pago: boolean; observacao: string; fornecedor_id: string; frete: string; status_compra: string }>({ contas_pagar_id: "", descricao: "", valor: "", data_vencimento: "", data_nf: "", pago: false, observacao: "", fornecedor_id: "", frete: "0", status_compra: "pendente" });
   const [compraEditLoading, setCompraEditLoading] = useState(false);
   const [compraEditFornecedores, setCompraEditFornecedores] = useState<{ fornecedor_id: string; nome: string }[]>([]);
+  const [compraEditItens, setCompraEditItens] = useState<{ produto_id: string; nome: string; quantidade: number; preco_custo: number }[]>([]);
+  const [compraEditProdutos, setCompraEditProdutos] = useState<{ produto_id: string; nome: string }[]>([]);
 
   const loadCompras = async () => {
     const { data } = await supabase
@@ -315,12 +317,20 @@ const Pedidos = () => {
   useEffect(() => { loadCompras(); }, []);
 
   const openCompraEdit = async (c: ContaPagarCompra) => {
-    const { data: forns } = await supabase.from("fornecedor").select("fornecedor_id, nome").eq("ativo", true).order("nome");
-    if (forns) setCompraEditFornecedores(forns);
+    const [fornsRes, prodsRes] = await Promise.all([
+      supabase.from("fornecedor").select("fornecedor_id, nome").eq("ativo", true).order("nome"),
+      supabase.from("produto").select("produto_id, nome").eq("ativo", true).order("nome"),
+    ]);
+    if (fornsRes.data) setCompraEditFornecedores(fornsRes.data);
+    if (prodsRes.data) setCompraEditProdutos(prodsRes.data);
+    const itens = Array.isArray(c.compra_itens) ? c.compra_itens : [];
+    // Extract frete from description pattern or default to 0
+    const freteItem = itens.find((i: any) => i.nome?.toLowerCase().includes("frete"));
+    setCompraEditItens(itens.filter((i: any) => !i.nome?.toLowerCase().includes("frete")).map((i: any) => ({ produto_id: i.produto_id || "", nome: i.nome || "", quantidade: i.quantidade || 1, preco_custo: i.preco_custo || 0 })));
     setCompraEdit({
       contas_pagar_id: c.contas_pagar_id, descricao: c.descricao, valor: String(c.valor),
       data_vencimento: c.data_vencimento, data_nf: c.data_nf || "", pago: c.pago, observacao: c.observacao || "",
-      fornecedor_id: c.fornecedor_id || "",
+      fornecedor_id: c.fornecedor_id || "", frete: "0", status_compra: c.status_compra || "pendente",
     });
     setCompraEditOpen(true);
   };
