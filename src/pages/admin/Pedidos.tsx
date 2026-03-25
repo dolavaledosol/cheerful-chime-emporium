@@ -141,6 +141,7 @@ interface ContaPagarCompra {
 interface EntradaLinha {
   produto_id: string; nome: string; checked: boolean;
   quantidade: string; preco_venda: string; preco_custo: string;
+  aceita_fracionado: boolean;
 }
 
 function validateCpfCnpj(value: string): boolean {
@@ -303,8 +304,8 @@ const Pedidos = () => {
   const [compraEdit, setCompraEdit] = useState<{ contas_pagar_id: string; descricao: string; valor: string; data_vencimento: string; data_nf: string; pago: boolean; observacao: string; fornecedor_id: string; frete: string; status_compra: string }>({ contas_pagar_id: "", descricao: "", valor: "", data_vencimento: "", data_nf: "", pago: false, observacao: "", fornecedor_id: "", frete: "0", status_compra: "pendente" });
   const [compraEditLoading, setCompraEditLoading] = useState(false);
   const [compraEditFornecedores, setCompraEditFornecedores] = useState<{ fornecedor_id: string; nome: string }[]>([]);
-  const [compraEditItens, setCompraEditItens] = useState<{ produto_id: string; nome: string; quantidade: number; preco_custo: number }[]>([]);
-  const [compraEditProdutos, setCompraEditProdutos] = useState<{ produto_id: string; nome: string }[]>([]);
+  const [compraEditItens, setCompraEditItens] = useState<{ produto_id: string; nome: string; quantidade: number; preco_custo: number; aceita_fracionado: boolean }[]>([]);
+  const [compraEditProdutos, setCompraEditProdutos] = useState<{ produto_id: string; nome: string; aceita_fracionado: boolean }[]>([]);
 
   const loadCompras = async () => {
     const { data } = await supabase
@@ -319,14 +320,17 @@ const Pedidos = () => {
   const openCompraEdit = async (c: ContaPagarCompra) => {
     const [fornsRes, prodsRes] = await Promise.all([
       supabase.from("fornecedor").select("fornecedor_id, nome").eq("ativo", true).order("nome"),
-      supabase.from("produto").select("produto_id, nome").eq("ativo", true).order("nome"),
+      supabase.from("produto").select("produto_id, nome, aceita_fracionado").eq("ativo", true).order("nome"),
     ]);
     if (fornsRes.data) setCompraEditFornecedores(fornsRes.data);
     if (prodsRes.data) setCompraEditProdutos(prodsRes.data);
     const itens = Array.isArray(c.compra_itens) ? c.compra_itens : [];
     // Extract frete from description pattern or default to 0
     const freteItem = itens.find((i: any) => i.nome?.toLowerCase().includes("frete"));
-    setCompraEditItens(itens.filter((i: any) => !i.nome?.toLowerCase().includes("frete")).map((i: any) => ({ produto_id: i.produto_id || "", nome: i.nome || "", quantidade: i.quantidade || 1, preco_custo: i.preco_custo || 0 })));
+    setCompraEditItens(itens.filter((i: any) => !i.nome?.toLowerCase().includes("frete")).map((i: any) => {
+      const prod = prodsRes.data?.find((p: any) => p.produto_id === i.produto_id);
+      return { produto_id: i.produto_id || "", nome: i.nome || "", quantidade: i.quantidade || 1, preco_custo: i.preco_custo || 0, aceita_fracionado: prod?.aceita_fracionado ?? false };
+    }));
     setCompraEdit({
       contas_pagar_id: c.contas_pagar_id, descricao: c.descricao, valor: String(c.valor),
       data_vencimento: c.data_vencimento, data_nf: c.data_nf || "", pago: c.pago, observacao: c.observacao || "",
@@ -388,14 +392,15 @@ const Pedidos = () => {
     const { data: links } = await supabase.from("fornecedor_produto").select("produto_id").eq("fornecedor_id", fornecedorId);
     if (!links || links.length === 0) { setEntradaLinhas([]); return; }
     const prodIds = links.map((l) => l.produto_id);
-    const { data: prods } = await supabase.from("produto").select("produto_id, nome, preco").in("produto_id", prodIds).eq("ativo", true).order("nome");
+    const { data: prods } = await supabase.from("produto").select("produto_id, nome, preco, aceita_fracionado").in("produto_id", prodIds).eq("ativo", true).order("nome");
     const { data: existingEstoque } = await supabase.from("estoque_local").select("produto_id, preco_custo").in("produto_id", prodIds);
     const custoMap: Record<string, number> = {};
     if (existingEstoque) { for (const e of existingEstoque as any[]) { if (e.preco_custo && !custoMap[e.produto_id]) custoMap[e.produto_id] = e.preco_custo; } }
     if (prods) {
-      setEntradaLinhas(prods.map((p) => ({
+      setEntradaLinhas(prods.map((p: any) => ({
         produto_id: p.produto_id, nome: p.nome, checked: false, quantidade: "1",
         preco_venda: String(p.preco || 0), preco_custo: String(custoMap[p.produto_id] || 0),
+        aceita_fracionado: p.aceita_fracionado ?? false,
       })));
     }
   };
@@ -2814,7 +2819,7 @@ const Pedidos = () => {
               <div className="space-y-3 border-t pt-4">
                 <div className="flex items-center justify-between">
                   <Label className="text-base font-semibold">Itens da Compra</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setCompraEditItens([...compraEditItens, { produto_id: "", nome: "", quantidade: 1, preco_custo: 0 }])}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setCompraEditItens([...compraEditItens, { produto_id: "", nome: "", quantidade: 1, preco_custo: 0, aceita_fracionado: false }])}>
                     <Plus className="h-3 w-3 mr-1" /> Adicionar Item
                   </Button>
                 </div>
@@ -2829,7 +2834,7 @@ const Pedidos = () => {
                           <Select value={item.produto_id} onValueChange={(v) => {
                             const prod = compraEditProdutos.find(p => p.produto_id === v);
                             const updated = [...compraEditItens];
-                            updated[idx] = { ...updated[idx], produto_id: v, nome: prod?.nome || "" };
+                            updated[idx] = { ...updated[idx], produto_id: v, nome: prod?.nome || "", aceita_fracionado: prod?.aceita_fracionado ?? false };
                             setCompraEditItens(updated);
                           }}>
                             <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger>
@@ -2838,7 +2843,7 @@ const Pedidos = () => {
                         </div>
                         <div className="w-20 space-y-1">
                           <Label className="text-xs">Qtd</Label>
-                          <Input type="number" step="0.01" className="h-8 text-xs" value={item.quantidade} onChange={(e) => {
+                          <Input type="number" step={item.aceita_fracionado ? "0.1" : "1"} min={item.aceita_fracionado ? "0.1" : "1"} className="h-8 text-xs" value={item.quantidade} onChange={(e) => {
                             const updated = [...compraEditItens];
                             updated[idx] = { ...updated[idx], quantidade: Number(e.target.value) };
                             setCompraEditItens(updated);
@@ -2960,7 +2965,7 @@ const Pedidos = () => {
                         <TableRow key={l.produto_id} className={l.checked ? "bg-primary/5" : ""}>
                           <TableCell><Checkbox checked={l.checked} onCheckedChange={(c) => updateLinha(l.produto_id, "checked", !!c)} /></TableCell>
                           <TableCell className="text-sm">{l.nome}</TableCell>
-                          <TableCell><Input type="number" min="1" className="h-8 text-sm" value={l.quantidade} onChange={(e) => updateLinha(l.produto_id, "quantidade", e.target.value)} /></TableCell>
+                          <TableCell><Input type="number" min={l.aceita_fracionado ? "0.1" : "1"} step={l.aceita_fracionado ? "0.1" : "1"} className="h-8 text-sm" value={l.quantidade} onChange={(e) => updateLinha(l.produto_id, "quantidade", e.target.value)} /></TableCell>
                           <TableCell><Input type="number" step="0.01" className="h-8 text-sm" value={l.preco_custo} onChange={(e) => updateLinha(l.produto_id, "preco_custo", e.target.value)} /></TableCell>
                           <TableCell><Input type="number" step="0.01" className="h-8 text-sm" value={l.preco_venda} onChange={(e) => updateLinha(l.produto_id, "preco_venda", e.target.value)} /></TableCell>
                         </TableRow>
