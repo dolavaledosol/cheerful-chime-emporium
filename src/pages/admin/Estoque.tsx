@@ -1087,6 +1087,47 @@ const Estoque = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ═══════════════════  DIALOG EDITAR MOVIMENTAÇÃO  ═══════════════════ */}
+      <Dialog open={movEditOpen} onOpenChange={setMovEditOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Movimentação</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Tipo *</Label>
+              <Select value={movEditForm.tipo} onValueChange={(v) => setMovEditForm({ ...movEditForm, tipo: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="entrada">Entrada</SelectItem>
+                  <SelectItem value="saida">Saída</SelectItem>
+                  <SelectItem value="transferencia">Transferência</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Quantidade *</Label>
+              <Input type="number" step="0.01" value={movEditForm.quantidade} onChange={(e) => setMovEditForm({ ...movEditForm, quantidade: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Documento</Label>
+              <Input value={movEditForm.documento} onChange={(e) => setMovEditForm({ ...movEditForm, documento: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Observação</Label>
+              <Input value={movEditForm.observacao} onChange={(e) => setMovEditForm({ ...movEditForm, observacao: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter className="flex justify-between sm:justify-between">
+            <Button variant="destructive" onClick={deleteMovEdit} disabled={movEditLoading}>Excluir</Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setMovEditOpen(false)}>Cancelar</Button>
+              <Button onClick={saveMovEdit} disabled={movEditLoading || !movEditForm.tipo || !movEditForm.quantidade}>
+                {movEditLoading ? "Salvando..." : "Salvar"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
