@@ -69,7 +69,7 @@ interface MovimentacaoRow {
 }
 
 const emptyForm = {
-  produto_id: "", local_estoque_id: "", preco: "", preco_promocional: "",
+  produto_id: "", local_estoque_id: "", preco: "", preco_custo: "", preco_promocional: "",
   quantidade_disponivel: "", quantidade_pedida_nao_separada: "0",
 };
 
