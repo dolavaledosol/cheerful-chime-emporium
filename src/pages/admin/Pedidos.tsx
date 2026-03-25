@@ -397,9 +397,10 @@ const Pedidos = () => {
     const custoMap: Record<string, number> = {};
     if (existingEstoque) { for (const e of existingEstoque as any[]) { if (e.preco_custo && !custoMap[e.produto_id]) custoMap[e.produto_id] = e.preco_custo; } }
     if (prods) {
-      setEntradaLinhas(prods.map((p) => ({
+      setEntradaLinhas(prods.map((p: any) => ({
         produto_id: p.produto_id, nome: p.nome, checked: false, quantidade: "1",
         preco_venda: String(p.preco || 0), preco_custo: String(custoMap[p.produto_id] || 0),
+        aceita_fracionado: p.aceita_fracionado ?? false,
       })));
     }
   };
