@@ -327,7 +327,10 @@ const Pedidos = () => {
     const itens = Array.isArray(c.compra_itens) ? c.compra_itens : [];
     // Extract frete from description pattern or default to 0
     const freteItem = itens.find((i: any) => i.nome?.toLowerCase().includes("frete"));
-    setCompraEditItens(itens.filter((i: any) => !i.nome?.toLowerCase().includes("frete")).map((i: any) => ({ produto_id: i.produto_id || "", nome: i.nome || "", quantidade: i.quantidade || 1, preco_custo: i.preco_custo || 0 })));
+    setCompraEditItens(itens.filter((i: any) => !i.nome?.toLowerCase().includes("frete")).map((i: any) => {
+      const prod = prodsRes.data?.find((p: any) => p.produto_id === i.produto_id);
+      return { produto_id: i.produto_id || "", nome: i.nome || "", quantidade: i.quantidade || 1, preco_custo: i.preco_custo || 0, aceita_fracionado: prod?.aceita_fracionado ?? false };
+    }));
     setCompraEdit({
       contas_pagar_id: c.contas_pagar_id, descricao: c.descricao, valor: String(c.valor),
       data_vencimento: c.data_vencimento, data_nf: c.data_nf || "", pago: c.pago, observacao: c.observacao || "",
