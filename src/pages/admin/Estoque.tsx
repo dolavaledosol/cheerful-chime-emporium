@@ -665,6 +665,7 @@ const Estoque = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Estoque</h1>
         <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={openNew} className="gap-2"><Plus className="h-4 w-4" /> Novo</Button>
           <Button onClick={openTransfer} className="gap-2"><ArrowRightLeft className="h-4 w-4" /> Transferir</Button>
         </div>
       </div>
