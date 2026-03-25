@@ -92,6 +92,14 @@ const Produtos = () => {
     return result;
   }, [produtos, search, filterAtivo, filterFamilia, filterFabricante, sortKey, sortDir]);
 
+  const familiasComLabel = useMemo(() => {
+    return familias.map((f) => {
+      const pai = familias.find(p => p.familia_id === f.familia_pai_id);
+      const label = pai ? `${pai.nome} > ${f.nome}` : f.nome;
+      return { ...f, label };
+    }).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  }, [familias]);
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortKey(key); setSortDir("asc"); }
@@ -195,11 +203,9 @@ const Produtos = () => {
           <SelectTrigger className="w-40"><SelectValue placeholder="Família" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas famílias</SelectItem>
-            {familias.map((f) => {
-              const pai = familias.find(p => p.familia_id === f.familia_pai_id);
-              const label = pai ? `${pai.nome} > ${f.nome}` : f.nome;
-              return <SelectItem key={f.familia_id} value={f.familia_id}>{label}</SelectItem>;
-            })}
+            {familiasComLabel.map((f) => (
+              <SelectItem key={f.familia_id} value={f.familia_id}>{f.label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={filterFabricante} onValueChange={setFilterFabricante}>
@@ -283,11 +289,9 @@ const Produtos = () => {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhuma</SelectItem>
-                  {familias.map((f) => {
-                    const pai = familias.find(p => p.familia_id === f.familia_pai_id);
-                    const label = pai ? `${pai.nome} > ${f.nome}` : f.nome;
-                    return <SelectItem key={f.familia_id} value={f.familia_id}>{label}</SelectItem>;
-                  })}
+                  {familiasComLabel.map((f) => (
+                    <SelectItem key={f.familia_id} value={f.familia_id}>{f.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
