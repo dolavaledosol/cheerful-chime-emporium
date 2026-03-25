@@ -2843,7 +2843,7 @@ const Pedidos = () => {
                         </div>
                         <div className="w-20 space-y-1">
                           <Label className="text-xs">Qtd</Label>
-                          <Input type="number" step="0.01" className="h-8 text-xs" value={item.quantidade} onChange={(e) => {
+                          <Input type="number" step={item.aceita_fracionado ? "0.1" : "1"} min={item.aceita_fracionado ? "0.1" : "1"} className="h-8 text-xs" value={item.quantidade} onChange={(e) => {
                             const updated = [...compraEditItens];
                             updated[idx] = { ...updated[idx], quantidade: Number(e.target.value) };
                             setCompraEditItens(updated);
