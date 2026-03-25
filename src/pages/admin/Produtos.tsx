@@ -195,7 +195,11 @@ const Produtos = () => {
           <SelectTrigger className="w-40"><SelectValue placeholder="Família" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas famílias</SelectItem>
-            {familias.map((f) => <SelectItem key={f.familia_id} value={f.familia_id}>{f.nome}</SelectItem>)}
+            {familias.map((f) => {
+              const pai = familias.find(p => p.familia_id === f.familia_pai_id);
+              const label = pai ? `${pai.nome} > ${f.nome}` : f.nome;
+              return <SelectItem key={f.familia_id} value={f.familia_id}>{label}</SelectItem>;
+            })}
           </SelectContent>
         </Select>
         <Select value={filterFabricante} onValueChange={setFilterFabricante}>
