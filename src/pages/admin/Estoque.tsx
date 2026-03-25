@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Search, ArrowRightLeft, Download, Upload, CalendarIcon } from "lucide-react";
+import { Search, ArrowRightLeft, Download, Upload, CalendarIcon, Plus } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import * as XLSX from "xlsx";
@@ -69,7 +69,7 @@ interface MovimentacaoRow {
 }
 
 const emptyForm = {
-  produto_id: "", local_estoque_id: "", preco: "", preco_promocional: "",
+  produto_id: "", local_estoque_id: "", preco: "", preco_custo: "", preco_promocional: "",
   quantidade_disponivel: "", quantidade_pedida_nao_separada: "0",
 };
 
@@ -404,12 +404,18 @@ const Estoque = () => {
       g.familia.toLowerCase().includes(term) || g.produto_id.toLowerCase().includes(term);
   });
 
-  /* ── Edit single record ── */
+  /* ── New / Edit single record ── */
+  const openNew = () => {
+    setEditId(null);
+    setForm(emptyForm);
+    setDialogOpen(true);
+  };
   const openEdit = (e: EstoqueRow) => {
     setEditId(e.estoque_local_id);
     setForm({
       produto_id: e.produto_id, local_estoque_id: e.local_estoque_id,
-      preco: String(e.preco), preco_promocional: e.preco_promocional != null ? String(e.preco_promocional) : "",
+      preco: String(e.preco), preco_custo: e.preco_custo != null ? String(e.preco_custo) : "",
+      preco_promocional: e.preco_promocional != null ? String(e.preco_promocional) : "",
       quantidade_disponivel: String(e.quantidade_disponivel),
       quantidade_pedida_nao_separada: String(e.quantidade_pedida_nao_separada),
     });
@@ -423,7 +429,8 @@ const Estoque = () => {
     setLoading(true);
     const payload = {
       produto_id: form.produto_id, local_estoque_id: form.local_estoque_id,
-      preco: Number(form.preco), preco_promocional: form.preco_promocional ? Number(form.preco_promocional) : null,
+      preco: Number(form.preco), preco_custo: form.preco_custo ? Number(form.preco_custo) : null,
+      preco_promocional: form.preco_promocional ? Number(form.preco_promocional) : null,
       quantidade_disponivel: Number(form.quantidade_disponivel),
       quantidade_pedida_nao_separada: Number(form.quantidade_pedida_nao_separada),
     };
@@ -658,6 +665,7 @@ const Estoque = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Estoque</h1>
         <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={openNew} className="gap-2"><Plus className="h-4 w-4" /> Novo</Button>
           <Button onClick={openTransfer} className="gap-2"><ArrowRightLeft className="h-4 w-4" /> Transferir</Button>
         </div>
       </div>
@@ -891,7 +899,7 @@ const Estoque = () => {
       {/* ── Edit single record dialog ── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Editar Estoque</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editId ? "Editar Estoque" : "Novo Estoque"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Produto *</Label>
@@ -907,8 +915,9 @@ const Estoque = () => {
                 <SelectContent>{locais.map((l) => <SelectItem key={l.local_estoque_id} value={l.local_estoque_id}>{l.nome}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Preço *</Label><Input type="number" step="0.01" value={form.preco} onChange={(e) => setForm({ ...form, preco: e.target.value })} /></div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2"><Label>Preço Custo</Label><Input type="number" step="0.01" value={form.preco_custo} onChange={(e) => setForm({ ...form, preco_custo: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Preço Venda *</Label><Input type="number" step="0.01" value={form.preco} onChange={(e) => setForm({ ...form, preco: e.target.value })} /></div>
               <div className="space-y-2"><Label>Preço Promocional</Label><Input type="number" step="0.01" value={form.preco_promocional} onChange={(e) => setForm({ ...form, preco_promocional: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
