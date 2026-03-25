@@ -2834,7 +2834,7 @@ const Pedidos = () => {
                           <Select value={item.produto_id} onValueChange={(v) => {
                             const prod = compraEditProdutos.find(p => p.produto_id === v);
                             const updated = [...compraEditItens];
-                            updated[idx] = { ...updated[idx], produto_id: v, nome: prod?.nome || "" };
+                            updated[idx] = { ...updated[idx], produto_id: v, nome: prod?.nome || "", aceita_fracionado: prod?.aceita_fracionado ?? false };
                             setCompraEditItens(updated);
                           }}>
                             <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger>
