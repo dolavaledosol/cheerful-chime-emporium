@@ -177,7 +177,7 @@ const Produtos = () => {
   };
 
 
-  const weightUnit = (form.unidade_medida === "g" || form.unidade_medida === "kg") ? form.unidade_medida : "kg";
+  const weightUnit = form.unidade_medida;
 
   return (
     <div className="space-y-4">
