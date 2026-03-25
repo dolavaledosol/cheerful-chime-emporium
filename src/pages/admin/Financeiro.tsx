@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Download, Send, Loader2, AlertTriangle, CalendarIcon } from "lucide-react";
+import { Plus, Search, Download, Send, Loader2, AlertTriangle, CalendarIcon, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -27,13 +27,19 @@ interface FormaPagamento { forma_pagamento_id: string; nome: string; }
 
 interface PhoneOption { cliente_telefone_id: string; telefone: string; pn: string | null; lid: string | null; }
 
+interface CompraItem { produto_id: string; nome: string; quantidade: number; preco_custo: number; }
+
 interface ContaPagar {
   contas_pagar_id: string; descricao: string; valor: number;
   data_vencimento: string; data_pagamento: string | null;
   pago: boolean; observacao: string | null; created_at: string;
-  compra_itens: any | null;
+  compra_itens: CompraItem[] | null;
+  status_compra: string;
+  data_nf: string | null;
+  local_estoque_id: string | null;
   fornecedor_id: string | null; banco_id: string | null; forma_pagamento_id: string | null;
   fornecedor: { nome: string } | null; banco: { nome: string } | null; forma_pagamento: { nome: string } | null;
+  local_estoque: { nome: string } | null;
 }
 
 interface ContaReceber {
@@ -50,6 +56,7 @@ interface ContaReceber {
 const emptyPagar = {
   descricao: "", valor: "", data_vencimento: "", data_pagamento: "",
   pago: false, observacao: "", fornecedor_id: "", banco_id: "", forma_pagamento_id: "",
+  status_compra: "pendente", data_nf: "", local_estoque_id: "",
 };
 const emptyReceber = {
   descricao: "", valor: "", data_vencimento: "", data_recebimento: "",
@@ -65,6 +72,8 @@ const Financeiro = () => {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [bancos, setBancos] = useState<Banco[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
+  const [produtosLookup, setProdutosLookup] = useState<{ produto_id: string; nome: string }[]>([]);
+  const [locaisEstoque, setLocaisEstoque] = useState<{ local_estoque_id: string; nome: string }[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -72,11 +81,15 @@ const Financeiro = () => {
       supabase.from("cliente").select("cliente_id, nome").eq("ativo", true).order("nome"),
       supabase.from("banco").select("banco_id, nome").eq("ativo", true).order("nome"),
       supabase.from("forma_pagamento").select("forma_pagamento_id, nome").eq("ativo", true).order("nome"),
-    ]).then(([f, c, b, fp]) => {
+      supabase.from("produto").select("produto_id, nome").eq("ativo", true).order("nome"),
+      supabase.from("local_estoque").select("local_estoque_id, nome").eq("ativo", true).order("nome"),
+    ]).then(([f, c, b, fp, p, le]) => {
       if (f.data) setFornecedores(f.data);
       if (c.data) setClientes(c.data);
       if (b.data) setBancos(b.data);
       if (fp.data) setFormasPagamento(fp.data);
+      if (p.data) setProdutosLookup(p.data);
+      if (le.data) setLocaisEstoque(le.data);
     });
   }, []);
 
@@ -91,11 +104,12 @@ const Financeiro = () => {
   const [editPagarId, setEditPagarId] = useState<string | null>(null);
   const [formPagar, setFormPagar] = useState(emptyPagar);
   const [loadingPagar, setLoadingPagar] = useState(false);
+  const [compraItens, setCompraItens] = useState<CompraItem[]>([]);
 
   const loadPagar = async () => {
     const { data } = await supabase
       .from("contas_pagar")
-      .select("*, fornecedor(nome), banco(nome), forma_pagamento(nome)")
+      .select("*, fornecedor(nome), banco(nome), forma_pagamento(nome), local_estoque:local_estoque_id(nome)")
       .order("data_vencimento", { ascending: false });
     if (data) setPagar(data as any);
   };
@@ -112,27 +126,40 @@ const Financeiro = () => {
     return matchSearch && matchStatus && matchDate && matchFornecedor;
   });
 
-  const openNewPagar = () => { setEditPagarId(null); setFormPagar(emptyPagar); setDialogPagar(true); };
+  const openNewPagar = () => {
+    setEditPagarId(null);
+    setFormPagar(emptyPagar);
+    setCompraItens([]);
+    setDialogPagar(true);
+  };
   const openEditPagar = (c: ContaPagar) => {
     setEditPagarId(c.contas_pagar_id);
     setFormPagar({
       descricao: c.descricao, valor: String(c.valor), data_vencimento: c.data_vencimento,
       data_pagamento: c.data_pagamento || "", pago: c.pago, observacao: c.observacao || "",
       fornecedor_id: c.fornecedor_id || "", banco_id: c.banco_id || "", forma_pagamento_id: c.forma_pagamento_id || "",
+      status_compra: c.status_compra || "pendente", data_nf: c.data_nf || "", local_estoque_id: c.local_estoque_id || "",
     });
+    setCompraItens(Array.isArray(c.compra_itens) ? c.compra_itens : []);
     setDialogPagar(true);
   };
 
   const savePagar = async () => {
     setLoadingPagar(true);
+    const totalItens = compraItens.reduce((s, i) => s + i.quantidade * i.preco_custo, 0);
+    const valorFinal = compraItens.length > 0 ? totalItens : Number(formPagar.valor);
     const payload = {
-      descricao: formPagar.descricao, valor: Number(formPagar.valor),
+      descricao: formPagar.descricao, valor: valorFinal,
       data_vencimento: formPagar.data_vencimento,
       data_pagamento: formPagar.data_pagamento || null,
       pago: formPagar.pago, observacao: formPagar.observacao || null,
       fornecedor_id: formPagar.fornecedor_id || null,
       banco_id: formPagar.banco_id || null,
       forma_pagamento_id: formPagar.forma_pagamento_id || null,
+      status_compra: formPagar.status_compra,
+      data_nf: formPagar.data_nf || null,
+      local_estoque_id: formPagar.local_estoque_id || null,
+      compra_itens: compraItens.length > 0 ? JSON.parse(JSON.stringify(compraItens)) : null,
     };
     const { error } = editPagarId
       ? await supabase.from("contas_pagar").update(payload).eq("contas_pagar_id", editPagarId).select()
@@ -781,12 +808,12 @@ const Financeiro = () => {
 
       {/* ══════════ DIALOG PAGAR ══════════ */}
       <Dialog open={dialogPagar} onOpenChange={setDialogPagar}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editPagarId ? "Editar Conta a Pagar" : "Nova Conta a Pagar"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2"><Label>Descrição *</Label><Input value={formPagar.descricao} onChange={(e) => setFormPagar({ ...formPagar, descricao: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Valor *</Label><Input type="number" step="0.01" value={formPagar.valor} onChange={(e) => setFormPagar({ ...formPagar, valor: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Valor Total {compraItens.length > 0 ? "(calculado)" : "*"}</Label><Input type="number" step="0.01" value={compraItens.length > 0 ? compraItens.reduce((s, i) => s + i.quantidade * i.preco_custo, 0).toFixed(2) : formPagar.valor} onChange={(e) => setFormPagar({ ...formPagar, valor: e.target.value })} disabled={compraItens.length > 0} /></div>
               <div className="space-y-2"><Label>Vencimento *</Label><Input type="date" value={formPagar.data_vencimento} onChange={(e) => setFormPagar({ ...formPagar, data_vencimento: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -798,14 +825,21 @@ const Financeiro = () => {
                 </Select>
               </div>
               <div className="space-y-2">
+                <Label>Local Estoque</Label>
+                <Select value={formPagar.local_estoque_id} onValueChange={(v) => setFormPagar({ ...formPagar, local_estoque_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>{locaisEstoque.map((l) => <SelectItem key={l.local_estoque_id} value={l.local_estoque_id}>{l.nome}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label>Banco</Label>
                 <Select value={formPagar.banco_id} onValueChange={(v) => setFormPagar({ ...formPagar, banco_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>{bancos.map((b) => <SelectItem key={b.banco_id} value={b.banco_id}>{b.nome}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Forma Pagamento</Label>
                 <Select value={formPagar.forma_pagamento_id} onValueChange={(v) => setFormPagar({ ...formPagar, forma_pagamento_id: v })}>
@@ -813,17 +847,78 @@ const Financeiro = () => {
                   <SelectContent>{formasPagamento.map((fp) => <SelectItem key={fp.forma_pagamento_id} value={fp.forma_pagamento_id}>{fp.nome}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2"><Label>Data NF</Label><Input type="date" value={formPagar.data_nf} onChange={(e) => setFormPagar({ ...formPagar, data_nf: e.target.value })} /></div>
               <div className="space-y-2"><Label>Data Pagamento</Label><Input type="date" value={formPagar.data_pagamento} onChange={(e) => setFormPagar({ ...formPagar, data_pagamento: e.target.value })} /></div>
               <div className="flex items-center gap-2 pt-6"><Switch checked={formPagar.pago} onCheckedChange={(v) => setFormPagar({ ...formPagar, pago: v })} /><Label>Pago</Label></div>
             </div>
             <div className="space-y-2"><Label>Observação</Label><Input value={formPagar.observacao} onChange={(e) => setFormPagar({ ...formPagar, observacao: e.target.value })} /></div>
+
+            {/* ── Itens da Compra ── */}
+            {formPagar.status_compra === "pendente" && (
+              <div className="space-y-3 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">Itens da Compra</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setCompraItens([...compraItens, { produto_id: "", nome: "", quantidade: 1, preco_custo: 0 }])}>
+                    <Plus className="h-3 w-3 mr-1" /> Adicionar Item
+                  </Button>
+                </div>
+                {compraItens.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-2">Nenhum item adicionado</p>
+                ) : (
+                  <div className="space-y-2">
+                    {compraItens.map((item, idx) => (
+                      <div key={idx} className="flex items-end gap-2 border rounded-lg p-2">
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs">Produto</Label>
+                          <Select value={item.produto_id} onValueChange={(v) => {
+                            const prod = produtosLookup.find(p => p.produto_id === v);
+                            const updated = [...compraItens];
+                            updated[idx] = { ...updated[idx], produto_id: v, nome: prod?.nome || "" };
+                            setCompraItens(updated);
+                          }}>
+                            <SelectTrigger className="h-8"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                            <SelectContent>{produtosLookup.map(p => <SelectItem key={p.produto_id} value={p.produto_id}>{p.nome}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </div>
+                        <div className="w-20 space-y-1">
+                          <Label className="text-xs">Qtd</Label>
+                          <Input type="number" step="0.1" min="0.1" className="h-8" value={item.quantidade} onChange={(e) => {
+                            const updated = [...compraItens];
+                            updated[idx] = { ...updated[idx], quantidade: Number(e.target.value) };
+                            setCompraItens(updated);
+                          }} />
+                        </div>
+                        <div className="w-24 space-y-1">
+                          <Label className="text-xs">Custo Un.</Label>
+                          <Input type="number" step="0.01" className="h-8" value={item.preco_custo} onChange={(e) => {
+                            const updated = [...compraItens];
+                            updated[idx] = { ...updated[idx], preco_custo: Number(e.target.value) };
+                            setCompraItens(updated);
+                          }} />
+                        </div>
+                        <div className="w-20 text-right text-sm font-medium pt-5">
+                          R$ {(item.quantidade * item.preco_custo).toFixed(2)}
+                        </div>
+                        <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => {
+                          setCompraItens(compraItens.filter((_, i) => i !== idx));
+                        }}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                    <div className="text-right text-sm font-semibold border-t pt-2">
+                      Total: R$ {compraItens.reduce((s, i) => s + i.quantidade * i.preco_custo, 0).toFixed(2)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogPagar(false)}>Cancelar</Button>
-            <Button onClick={savePagar} disabled={loadingPagar || !formPagar.descricao || !formPagar.valor || !formPagar.data_vencimento}>{loadingPagar ? "Salvando..." : "Salvar"}</Button>
+            <Button onClick={savePagar} disabled={loadingPagar || !formPagar.descricao || (!formPagar.valor && compraItens.length === 0) || !formPagar.data_vencimento}>{loadingPagar ? "Salvando..." : "Salvar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
