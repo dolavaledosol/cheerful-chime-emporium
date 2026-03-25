@@ -92,6 +92,14 @@ const Produtos = () => {
     return result;
   }, [produtos, search, filterAtivo, filterFamilia, filterFabricante, sortKey, sortDir]);
 
+  const familiasComLabel = useMemo(() => {
+    return familias.map((f) => {
+      const pai = familias.find(p => p.familia_id === f.familia_pai_id);
+      const label = pai ? `${pai.nome} > ${f.nome}` : f.nome;
+      return { ...f, label };
+    }).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  }, [familias]);
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortKey(key); setSortDir("asc"); }
