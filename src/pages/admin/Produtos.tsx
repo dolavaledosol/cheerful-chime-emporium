@@ -41,7 +41,7 @@ const emptyForm = {
 
 const Produtos = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [familias, setFamilias] = useState<{ familia_id: string; nome: string }[]>([]);
+  const [familias, setFamilias] = useState<{ familia_id: string; nome: string; familia_pai_id: string | null }[]>([]);
   const [fabricantes, setFabricantes] = useState<{ fabricante_id: string; nome: string }[]>([]);
   const [search, setSearch] = useState("");
   const [filterAtivo, setFilterAtivo] = useState<string>("true");
