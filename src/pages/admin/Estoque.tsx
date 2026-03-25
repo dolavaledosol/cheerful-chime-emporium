@@ -102,6 +102,12 @@ const Estoque = () => {
   const [movDateFrom, setMovDateFrom] = useState<Date>(startOfMonth(new Date()));
   const [movDateTo, setMovDateTo] = useState<Date>(endOfMonth(new Date()));
 
+  /* ── Editar Movimentação state ── */
+  const [movEditOpen, setMovEditOpen] = useState(false);
+  const [movEditLoading, setMovEditLoading] = useState(false);
+  const [movEditId, setMovEditId] = useState<string | null>(null);
+  const [movEditForm, setMovEditForm] = useState({ tipo: "", documento: "", quantidade: "", observacao: "" });
+
   /* ── Conciliação unificada state ── */
   const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
   const [conciliacaoLoading, setConciliacaoLoading] = useState(false);
