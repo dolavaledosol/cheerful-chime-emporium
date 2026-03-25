@@ -304,8 +304,8 @@ const Pedidos = () => {
   const [compraEdit, setCompraEdit] = useState<{ contas_pagar_id: string; descricao: string; valor: string; data_vencimento: string; data_nf: string; pago: boolean; observacao: string; fornecedor_id: string; frete: string; status_compra: string }>({ contas_pagar_id: "", descricao: "", valor: "", data_vencimento: "", data_nf: "", pago: false, observacao: "", fornecedor_id: "", frete: "0", status_compra: "pendente" });
   const [compraEditLoading, setCompraEditLoading] = useState(false);
   const [compraEditFornecedores, setCompraEditFornecedores] = useState<{ fornecedor_id: string; nome: string }[]>([]);
-  const [compraEditItens, setCompraEditItens] = useState<{ produto_id: string; nome: string; quantidade: number; preco_custo: number }[]>([]);
-  const [compraEditProdutos, setCompraEditProdutos] = useState<{ produto_id: string; nome: string }[]>([]);
+  const [compraEditItens, setCompraEditItens] = useState<{ produto_id: string; nome: string; quantidade: number; preco_custo: number; aceita_fracionado: boolean }[]>([]);
+  const [compraEditProdutos, setCompraEditProdutos] = useState<{ produto_id: string; nome: string; aceita_fracionado: boolean }[]>([]);
 
   const loadCompras = async () => {
     const { data } = await supabase
