@@ -864,7 +864,7 @@ const Estoque = () => {
                 {filteredMov.length === 0 ? (
                   <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Nenhuma movimentação encontrada</TableCell></TableRow>
                 ) : filteredMov.map((m) => (
-                  <TableRow key={m.movimentacao_estoque_id}>
+                  <TableRow key={m.movimentacao_estoque_id} className="cursor-pointer hover:bg-muted/50" onClick={() => openMovEdit(m)}>
                     <TableCell className="whitespace-nowrap">{format(new Date(m.created_at), "dd/MM/yyyy HH:mm")}</TableCell>
                     <TableCell>{tipoLabel(m.tipo)}</TableCell>
                     <TableCell className="text-muted-foreground">{m.documento || "—"}</TableCell>
