@@ -105,11 +105,14 @@ const Produtos = () => {
   const openNew = () => { setEditId(null); setForm(emptyForm); setDialogOpen(true); };
 
   const openEdit = (p: Produto) => {
+    const fam = familias.find(f => f.familia_id === p.familia_id);
+    const famPaiId = fam?.familia_pai_id || "";
     setEditId(p.produto_id);
     setForm({
       nome: p.nome,
       descricao: p.descricao || "",
       ativo: p.ativo,
+      familia_pai_id: famPaiId,
       familia_id: p.familia_id || "",
       fabricante_id: p.fabricante_id || "",
       unidade_medida: p.unidade_medida,
