@@ -320,7 +320,7 @@ const Pedidos = () => {
   const openCompraEdit = async (c: ContaPagarCompra) => {
     const [fornsRes, prodsRes] = await Promise.all([
       supabase.from("fornecedor").select("fornecedor_id, nome").eq("ativo", true).order("nome"),
-      supabase.from("produto").select("produto_id, nome").eq("ativo", true).order("nome"),
+      supabase.from("produto").select("produto_id, nome, aceita_fracionado").eq("ativo", true).order("nome"),
     ]);
     if (fornsRes.data) setCompraEditFornecedores(fornsRes.data);
     if (prodsRes.data) setCompraEditProdutos(prodsRes.data);
