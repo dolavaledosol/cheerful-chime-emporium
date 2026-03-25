@@ -2567,10 +2567,10 @@ const Pedidos = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Input type="number" min={i.aceita_fracionado ? "0.1" : "1"} step={i.aceita_fracionado ? "0.1" : "1"} className="h-8 w-20 text-sm text-center" value={i.quantidade}
+                          <Input type="number" min={i.aceita_fracionado ? "0.001" : "1"} step={i.aceita_fracionado ? "0.001" : "1"} className="h-8 w-20 text-sm text-center" value={i.quantidade}
                             onChange={(e) => {
                               const val = i.aceita_fracionado
-                                ? Math.max(0.1, Math.round((parseFloat(e.target.value) || 0.1) * 10) / 10)
+                                ? Math.max(0.001, Math.round((parseFloat(e.target.value) || 0.001) * 1000) / 1000)
                                 : Math.max(1, parseInt(e.target.value) || 1);
                               setNewOrderItems(prev => prev.map(item => item.produto_id === i.produto_id ? { ...item, quantidade: val } : item));
                             }} />
