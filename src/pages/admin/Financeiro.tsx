@@ -24,16 +24,24 @@ interface Fornecedor { fornecedor_id: string; nome: string; }
 interface Cliente { cliente_id: string; nome: string; }
 interface Banco { banco_id: string; nome: string; }
 interface FormaPagamento { forma_pagamento_id: string; nome: string; }
+interface ProdutoOption { produto_id: string; nome: string; }
+interface LocalEstoque { local_estoque_id: string; nome: string; }
 
 interface PhoneOption { cliente_telefone_id: string; telefone: string; pn: string | null; lid: string | null; }
+
+interface CompraItem { produto_id: string; nome: string; quantidade: number; preco_custo: number; }
 
 interface ContaPagar {
   contas_pagar_id: string; descricao: string; valor: number;
   data_vencimento: string; data_pagamento: string | null;
   pago: boolean; observacao: string | null; created_at: string;
-  compra_itens: any | null;
+  compra_itens: CompraItem[] | null;
+  status_compra: string;
+  data_nf: string | null;
+  local_estoque_id: string | null;
   fornecedor_id: string | null; banco_id: string | null; forma_pagamento_id: string | null;
   fornecedor: { nome: string } | null; banco: { nome: string } | null; forma_pagamento: { nome: string } | null;
+  local_estoque: { nome: string } | null;
 }
 
 interface ContaReceber {
