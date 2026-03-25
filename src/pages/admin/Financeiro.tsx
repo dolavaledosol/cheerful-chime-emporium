@@ -58,6 +58,7 @@ interface ContaReceber {
 const emptyPagar = {
   descricao: "", valor: "", data_vencimento: "", data_pagamento: "",
   pago: false, observacao: "", fornecedor_id: "", banco_id: "", forma_pagamento_id: "",
+  status_compra: "pendente", data_nf: "", local_estoque_id: "",
 };
 const emptyReceber = {
   descricao: "", valor: "", data_vencimento: "", data_recebimento: "",
