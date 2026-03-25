@@ -277,30 +277,19 @@ const Produtos = () => {
               <Label>Descrição</Label>
               <Textarea value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} rows={3} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Família pai</Label>
-                <Select value={form.familia_pai_id || "none"} onValueChange={(v) => setForm({ ...form, familia_pai_id: v === "none" ? "" : v, familia_id: "" })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhuma</SelectItem>
-                    {familias.filter((f) => !f.familia_pai_id).map((f) => <SelectItem key={f.familia_id} value={f.familia_id}>{f.nome}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Família</Label>
-                <Select value={form.familia_id || "none"} onValueChange={(v) => setForm({ ...form, familia_id: v === "none" ? "" : v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhuma</SelectItem>
-                    {form.familia_pai_id
-                      ? familias.filter((f) => f.familia_pai_id === form.familia_pai_id).map((f) => <SelectItem key={f.familia_id} value={f.familia_id}>{f.nome}</SelectItem>)
-                      : familias.map((f) => <SelectItem key={f.familia_id} value={f.familia_id}>{f.nome}</SelectItem>)
-                    }
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label>Família</Label>
+              <Select value={form.familia_id || "none"} onValueChange={(v) => setForm({ ...form, familia_id: v === "none" ? "" : v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  {familias.map((f) => {
+                    const pai = familias.find(p => p.familia_id === f.familia_pai_id);
+                    const label = pai ? `${pai.nome} > ${f.nome}` : f.nome;
+                    return <SelectItem key={f.familia_id} value={f.familia_id}>{label}</SelectItem>;
+                  })}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Fabricante</Label>
