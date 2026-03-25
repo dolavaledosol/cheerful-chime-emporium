@@ -234,7 +234,9 @@ const Produtos = () => {
                    </button>
                  </TableCell>
                  <TableCell className="font-medium">{p.nome}</TableCell>
-                 <TableCell className="hidden md:table-cell text-muted-foreground">{p.familia?.nome || "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground">
+                    {p.familia ? (p.familia.pai ? `${p.familia.pai.nome} > ${p.familia.nome}` : p.familia.nome) : "—"}
+                  </TableCell>
                  <TableCell className="hidden md:table-cell text-muted-foreground">{p.fabricante?.nome || "—"}</TableCell>
                  <TableCell className="hidden sm:table-cell font-medium">R$ {p.preco?.toFixed(2) || "0.00"}</TableCell>
                  <TableCell className="hidden sm:table-cell">
