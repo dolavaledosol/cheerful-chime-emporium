@@ -922,7 +922,7 @@ const Financeiro = () => {
           ); })()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogPagar(false)}>Cancelar</Button>
-            <Button onClick={savePagar} disabled={loadingPagar || formPagar.pago || !formPagar.descricao || (!formPagar.valor && compraItens.length === 0) || !formPagar.data_vencimento}>{loadingPagar ? "Salvando..." : "Salvar"}</Button>
+            <Button onClick={savePagar} disabled={loadingPagar || !formPagar.descricao || (!formPagar.valor && compraItens.length === 0) || !formPagar.data_vencimento}>{loadingPagar ? "Salvando..." : "Salvar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
