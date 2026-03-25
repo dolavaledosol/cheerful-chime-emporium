@@ -2567,10 +2567,10 @@ const Pedidos = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Input type="number" min={i.aceita_fracionado ? "0.1" : "1"} step={i.aceita_fracionado ? "0.1" : "1"} className="h-8 w-20 text-sm text-center" value={i.quantidade}
+                          <Input type="number" min={i.aceita_fracionado ? "0.001" : "1"} step={i.aceita_fracionado ? "0.001" : "1"} className="h-8 w-20 text-sm text-center" value={i.quantidade}
                             onChange={(e) => {
                               const val = i.aceita_fracionado
-                                ? Math.max(0.1, Math.round((parseFloat(e.target.value) || 0.1) * 10) / 10)
+                                ? Math.max(0.001, Math.round((parseFloat(e.target.value) || 0.001) * 1000) / 1000)
                                 : Math.max(1, parseInt(e.target.value) || 1);
                               setNewOrderItems(prev => prev.map(item => item.produto_id === i.produto_id ? { ...item, quantidade: val } : item));
                             }} />
@@ -2843,7 +2843,7 @@ const Pedidos = () => {
                         </div>
                         <div className="w-20 space-y-1">
                           <Label className="text-xs">Qtd</Label>
-                          <Input type="number" step={item.aceita_fracionado ? "0.1" : "1"} min={item.aceita_fracionado ? "0.1" : "1"} className="h-8 text-xs" value={item.quantidade} onChange={(e) => {
+                          <Input type="number" step={item.aceita_fracionado ? "0.001" : "1"} min={item.aceita_fracionado ? "0.001" : "1"} className="h-8 text-xs" value={item.quantidade} onChange={(e) => {
                             const updated = [...compraEditItens];
                             updated[idx] = { ...updated[idx], quantidade: Number(e.target.value) };
                             setCompraEditItens(updated);
@@ -2965,7 +2965,7 @@ const Pedidos = () => {
                         <TableRow key={l.produto_id} className={l.checked ? "bg-primary/5" : ""}>
                           <TableCell><Checkbox checked={l.checked} onCheckedChange={(c) => updateLinha(l.produto_id, "checked", !!c)} /></TableCell>
                           <TableCell className="text-sm">{l.nome}</TableCell>
-                          <TableCell><Input type="number" min={l.aceita_fracionado ? "0.1" : "1"} step={l.aceita_fracionado ? "0.1" : "1"} className="h-8 text-sm" value={l.quantidade} onChange={(e) => updateLinha(l.produto_id, "quantidade", e.target.value)} /></TableCell>
+                          <TableCell><Input type="number" min={l.aceita_fracionado ? "0.001" : "1"} step={l.aceita_fracionado ? "0.001" : "1"} className="h-8 text-sm" value={l.quantidade} onChange={(e) => updateLinha(l.produto_id, "quantidade", e.target.value)} /></TableCell>
                           <TableCell><Input type="number" step="0.01" className="h-8 text-sm" value={l.preco_custo} onChange={(e) => updateLinha(l.produto_id, "preco_custo", e.target.value)} /></TableCell>
                           <TableCell><Input type="number" step="0.01" className="h-8 text-sm" value={l.preco_venda} onChange={(e) => updateLinha(l.produto_id, "preco_venda", e.target.value)} /></TableCell>
                         </TableRow>
