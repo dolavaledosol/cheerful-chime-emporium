@@ -141,7 +141,7 @@ const Estoque = () => {
     const to = dateTo || movDateTo;
     let query = supabase
       .from("movimentacao_estoque")
-      .select("movimentacao_estoque_id, tipo, documento, quantidade, created_at, usuario_id, produto(produto_id, nome, peso_liquido, unidade_medida, fabricante(nome), familia(nome)), local_estoque:local_estoque_id(nome), local_estoque_destino:local_estoque_destino_id(nome)")
+      .select("movimentacao_estoque_id, tipo, documento, quantidade, observacao, created_at, usuario_id, produto(produto_id, nome, peso_liquido, unidade_medida, fabricante(nome), familia(nome)), local_estoque:local_estoque_id(nome), local_estoque_destino:local_estoque_destino_id(nome)")
       .order("created_at", { ascending: false })
       .limit(500);
     if (from) query = query.gte("created_at", from.toISOString());
