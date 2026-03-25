@@ -2965,7 +2965,7 @@ const Pedidos = () => {
                         <TableRow key={l.produto_id} className={l.checked ? "bg-primary/5" : ""}>
                           <TableCell><Checkbox checked={l.checked} onCheckedChange={(c) => updateLinha(l.produto_id, "checked", !!c)} /></TableCell>
                           <TableCell className="text-sm">{l.nome}</TableCell>
-                          <TableCell><Input type="number" min="1" className="h-8 text-sm" value={l.quantidade} onChange={(e) => updateLinha(l.produto_id, "quantidade", e.target.value)} /></TableCell>
+                          <TableCell><Input type="number" min={l.aceita_fracionado ? "0.1" : "1"} step={l.aceita_fracionado ? "0.1" : "1"} className="h-8 text-sm" value={l.quantidade} onChange={(e) => updateLinha(l.produto_id, "quantidade", e.target.value)} /></TableCell>
                           <TableCell><Input type="number" step="0.01" className="h-8 text-sm" value={l.preco_custo} onChange={(e) => updateLinha(l.produto_id, "preco_custo", e.target.value)} /></TableCell>
                           <TableCell><Input type="number" step="0.01" className="h-8 text-sm" value={l.preco_venda} onChange={(e) => updateLinha(l.produto_id, "preco_venda", e.target.value)} /></TableCell>
                         </TableRow>
