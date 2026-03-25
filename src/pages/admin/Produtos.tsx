@@ -57,7 +57,7 @@ const Produtos = () => {
 
   const load = async () => {
     const [prodRes, famRes, fabRes] = await Promise.all([
-      supabase.from("produto").select("*, familia:familia_id(nome), fabricante:fabricante_id(nome)").order("nome"),
+      supabase.from("produto").select("*, familia:familia_id(nome, pai:familia_pai_id(nome)), fabricante:fabricante_id(nome)").order("nome"),
       supabase.from("familia").select("familia_id, nome, familia_pai_id").eq("ativo", true).order("nome"),
       supabase.from("fabricante").select("fabricante_id, nome").eq("ativo", true).order("nome"),
     ]);
