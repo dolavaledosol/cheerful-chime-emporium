@@ -161,7 +161,7 @@ const Financeiro = () => {
       status_compra: formPagar.status_compra,
       data_nf: formPagar.data_nf || null,
       local_estoque_id: formPagar.local_estoque_id || null,
-      compra_itens: compraItens.length > 0 ? compraItens : null,
+      compra_itens: compraItens.length > 0 ? JSON.parse(JSON.stringify(compraItens)) : null,
     };
     const { error } = editPagarId
       ? await supabase.from("contas_pagar").update(payload).eq("contas_pagar_id", editPagarId).select()
