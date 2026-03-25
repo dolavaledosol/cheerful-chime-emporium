@@ -309,7 +309,17 @@ const Produtos = () => {
               <Label>Preço (R$)</Label>
               <Input type="number" step="0.01" min="0" value={form.preco} onChange={(e) => setForm({ ...form, preco: e.target.value })} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Unidade de peso</Label>
+                <Select value={form.unidade_medida} onValueChange={(v) => setForm({ ...form, unidade_medida: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="kg">kg</SelectItem>
+                    <SelectItem value="g">g</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label>Peso bruto ({weightUnit})</Label>
                 <Input type="number" step="0.001" value={form.peso_bruto} onChange={(e) => setForm({ ...form, peso_bruto: e.target.value })} />
