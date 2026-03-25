@@ -24,8 +24,6 @@ interface Fornecedor { fornecedor_id: string; nome: string; }
 interface Cliente { cliente_id: string; nome: string; }
 interface Banco { banco_id: string; nome: string; }
 interface FormaPagamento { forma_pagamento_id: string; nome: string; }
-interface ProdutoOption { produto_id: string; nome: string; }
-interface LocalEstoque { local_estoque_id: string; nome: string; }
 
 interface PhoneOption { cliente_telefone_id: string; telefone: string; pn: string | null; lid: string | null; }
 
