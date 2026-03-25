@@ -59,6 +59,7 @@ interface MovimentacaoRow {
   tipo: string;
   documento: string | null;
   quantidade: number;
+  observacao: string | null;
   created_at: string;
   usuario_id: string | null;
   usuario_nome?: string;
@@ -102,6 +103,12 @@ const Estoque = () => {
   const [movDateFrom, setMovDateFrom] = useState<Date>(startOfMonth(new Date()));
   const [movDateTo, setMovDateTo] = useState<Date>(endOfMonth(new Date()));
 
+  /* ── Editar Movimentação state ── */
+  const [movEditOpen, setMovEditOpen] = useState(false);
+  const [movEditLoading, setMovEditLoading] = useState(false);
+  const [movEditId, setMovEditId] = useState<string | null>(null);
+  const [movEditForm, setMovEditForm] = useState({ tipo: "", documento: "", quantidade: "", observacao: "" });
+
   /* ── Conciliação unificada state ── */
   const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
   const [conciliacaoLoading, setConciliacaoLoading] = useState(false);
@@ -133,7 +140,7 @@ const Estoque = () => {
     const to = dateTo || movDateTo;
     let query = supabase
       .from("movimentacao_estoque")
-      .select("movimentacao_estoque_id, tipo, documento, quantidade, created_at, usuario_id, produto(produto_id, nome, peso_liquido, unidade_medida, fabricante(nome), familia(nome)), local_estoque:local_estoque_id(nome), local_estoque_destino:local_estoque_destino_id(nome)")
+      .select("movimentacao_estoque_id, tipo, documento, quantidade, observacao, created_at, usuario_id, produto(produto_id, nome, peso_liquido, unidade_medida, fabricante(nome), familia(nome)), local_estoque:local_estoque_id(nome), local_estoque_destino:local_estoque_destino_id(nome)")
       .order("created_at", { ascending: false })
       .limit(500);
     if (from) query = query.gte("created_at", from.toISOString());
@@ -606,6 +613,46 @@ const Estoque = () => {
     }
   };
 
+  /* ── Editar Movimentação ── */
+  const openMovEdit = (m: MovimentacaoRow) => {
+    setMovEditId(m.movimentacao_estoque_id);
+    setMovEditForm({
+      tipo: m.tipo,
+      documento: m.documento || "",
+      quantidade: String(m.quantidade),
+      observacao: m.observacao || "",
+    });
+    setMovEditOpen(true);
+  };
+
+  const saveMovEdit = async () => {
+    if (!movEditId) return;
+    setMovEditLoading(true);
+    const { error } = await supabase.from("movimentacao_estoque").update({
+      tipo: movEditForm.tipo,
+      documento: movEditForm.documento || null,
+      quantidade: Number(movEditForm.quantidade),
+      observacao: movEditForm.observacao || null,
+    }).eq("movimentacao_estoque_id", movEditId);
+    setMovEditLoading(false);
+    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Movimentação atualizada" });
+    setMovEditOpen(false);
+    loadMovimentacoes();
+  };
+
+  const deleteMovEdit = async () => {
+    if (!movEditId) return;
+    if (!window.confirm("Excluir esta movimentação?")) return;
+    setMovEditLoading(true);
+    const { error } = await supabase.from("movimentacao_estoque").delete().eq("movimentacao_estoque_id", movEditId);
+    setMovEditLoading(false);
+    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Movimentação excluída" });
+    setMovEditOpen(false);
+    loadMovimentacoes();
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -816,7 +863,7 @@ const Estoque = () => {
                 {filteredMov.length === 0 ? (
                   <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Nenhuma movimentação encontrada</TableCell></TableRow>
                 ) : filteredMov.map((m) => (
-                  <TableRow key={m.movimentacao_estoque_id}>
+                  <TableRow key={m.movimentacao_estoque_id} className="cursor-pointer hover:bg-muted/50" onClick={() => openMovEdit(m)}>
                     <TableCell className="whitespace-nowrap">{format(new Date(m.created_at), "dd/MM/yyyy HH:mm")}</TableCell>
                     <TableCell>{tipoLabel(m.tipo)}</TableCell>
                     <TableCell className="text-muted-foreground">{m.documento || "—"}</TableCell>
@@ -1036,6 +1083,47 @@ const Estoque = () => {
             <Button onClick={saveConciliacao} disabled={conciliacaoLoading || conciliacaoLinhas.filter((l) => l.diferenca_estoque !== 0 || l.diferenca_pedidos !== 0).length === 0}>
               {conciliacaoLoading ? "Aplicando..." : "Aplicar Conciliação"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══════════════════  DIALOG EDITAR MOVIMENTAÇÃO  ═══════════════════ */}
+      <Dialog open={movEditOpen} onOpenChange={setMovEditOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Movimentação</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Tipo *</Label>
+              <Select value={movEditForm.tipo} onValueChange={(v) => setMovEditForm({ ...movEditForm, tipo: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="entrada">Entrada</SelectItem>
+                  <SelectItem value="saida">Saída</SelectItem>
+                  <SelectItem value="transferencia">Transferência</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Quantidade *</Label>
+              <Input type="number" step="0.01" value={movEditForm.quantidade} onChange={(e) => setMovEditForm({ ...movEditForm, quantidade: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Documento</Label>
+              <Input value={movEditForm.documento} onChange={(e) => setMovEditForm({ ...movEditForm, documento: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Observação</Label>
+              <Input value={movEditForm.observacao} onChange={(e) => setMovEditForm({ ...movEditForm, observacao: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter className="flex justify-between sm:justify-between">
+            <Button variant="destructive" onClick={deleteMovEdit} disabled={movEditLoading}>Excluir</Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setMovEditOpen(false)}>Cancelar</Button>
+              <Button onClick={saveMovEdit} disabled={movEditLoading || !movEditForm.tipo || !movEditForm.quantidade}>
+                {movEditLoading ? "Salvando..." : "Salvar"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
