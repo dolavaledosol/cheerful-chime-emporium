@@ -2819,7 +2819,7 @@ const Pedidos = () => {
               <div className="space-y-3 border-t pt-4">
                 <div className="flex items-center justify-between">
                   <Label className="text-base font-semibold">Itens da Compra</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setCompraEditItens([...compraEditItens, { produto_id: "", nome: "", quantidade: 1, preco_custo: 0 }])}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setCompraEditItens([...compraEditItens, { produto_id: "", nome: "", quantidade: 1, preco_custo: 0, aceita_fracionado: false }])}>
                     <Plus className="h-3 w-3 mr-1" /> Adicionar Item
                   </Button>
                 </div>
