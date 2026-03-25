@@ -837,15 +837,15 @@ const Financeiro = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Banco</Label>
-                <Select value={formPagar.banco_id} onValueChange={(v) => setFormPagar({ ...formPagar, banco_id: v })} disabled={isPago}>
+              <Label>Banco</Label>
+                <Select value={formPagar.banco_id} onValueChange={(v) => setFormPagar({ ...formPagar, banco_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>{bancos.map((b) => <SelectItem key={b.banco_id} value={b.banco_id}>{b.nome}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Forma Pagamento</Label>
-                <Select value={formPagar.forma_pagamento_id} onValueChange={(v) => setFormPagar({ ...formPagar, forma_pagamento_id: v })} disabled={isPago}>
+                <Select value={formPagar.forma_pagamento_id} onValueChange={(v) => setFormPagar({ ...formPagar, forma_pagamento_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>{formasPagamento.map((fp) => <SelectItem key={fp.forma_pagamento_id} value={fp.forma_pagamento_id}>{fp.nome}</SelectItem>)}</SelectContent>
                 </Select>
@@ -853,8 +853,8 @@ const Financeiro = () => {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2"><Label>Data NF</Label><Input type="date" value={formPagar.data_nf} onChange={(e) => setFormPagar({ ...formPagar, data_nf: e.target.value })} disabled={isPago} /></div>
-              <div className="space-y-2"><Label>Data Pagamento</Label><Input type="date" value={formPagar.data_pagamento} onChange={(e) => setFormPagar({ ...formPagar, data_pagamento: e.target.value })} disabled={isPago} /></div>
-              <div className="flex items-center gap-2 pt-6"><Switch checked={formPagar.pago} onCheckedChange={(v) => setFormPagar({ ...formPagar, pago: v })} disabled={isPago} /><Label>Pago</Label></div>
+              <div className="space-y-2"><Label>Data Pagamento</Label><Input type="date" value={formPagar.data_pagamento} onChange={(e) => setFormPagar({ ...formPagar, data_pagamento: e.target.value })} /></div>
+              <div className="flex items-center gap-2 pt-6"><Switch checked={formPagar.pago} onCheckedChange={(v) => setFormPagar({ ...formPagar, pago: v })} /><Label>Pago</Label></div>
             </div>
             <div className="space-y-2"><Label>Observação</Label><Input value={formPagar.observacao} onChange={(e) => setFormPagar({ ...formPagar, observacao: e.target.value })} disabled={isPago} /></div>
 
@@ -922,7 +922,7 @@ const Financeiro = () => {
           ); })()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogPagar(false)}>Cancelar</Button>
-            <Button onClick={savePagar} disabled={loadingPagar || formPagar.pago || !formPagar.descricao || (!formPagar.valor && compraItens.length === 0) || !formPagar.data_vencimento}>{loadingPagar ? "Salvando..." : "Salvar"}</Button>
+            <Button onClick={savePagar} disabled={loadingPagar || !formPagar.descricao || (!formPagar.valor && compraItens.length === 0) || !formPagar.data_vencimento}>{loadingPagar ? "Salvando..." : "Salvar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
