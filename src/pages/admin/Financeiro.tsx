@@ -810,9 +810,9 @@ const Financeiro = () => {
       <Dialog open={dialogPagar} onOpenChange={setDialogPagar}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editPagarId ? "Editar Conta a Pagar" : "Nova Conta a Pagar"}</DialogTitle></DialogHeader>
-          {(() => { const isPago = formPagar.pago; const temItens = compraItens.length > 0; return (
+          {(() => { const isRecebido = formPagar.status_compra === "recebido"; const isPago = formPagar.pago || isRecebido; const temItens = compraItens.length > 0; return (
           <div className="space-y-4">
-            {isPago && <div className="text-sm text-muted-foreground bg-muted rounded-lg p-3 text-center">Conta paga — edição bloqueada</div>}
+            {isPago && <div className="text-sm text-muted-foreground bg-muted rounded-lg p-3 text-center">{isRecebido ? "Compra recebida — edição bloqueada" : "Conta paga — edição bloqueada"}</div>}
             <div className="space-y-2"><Label>Descrição *</Label><Input value={formPagar.descricao} onChange={(e) => setFormPagar({ ...formPagar, descricao: e.target.value })} disabled={isPago} /></div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Valor Total {temItens ? "(calculado)" : "*"}</Label><Input type="number" step="0.01" value={temItens ? compraItens.reduce((s, i) => s + i.quantidade * i.preco_custo, 0).toFixed(2) : formPagar.valor} onChange={(e) => setFormPagar({ ...formPagar, valor: e.target.value })} disabled={temItens || isPago} /></div>
