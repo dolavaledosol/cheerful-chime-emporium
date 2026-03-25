@@ -110,6 +110,7 @@ const Financeiro = () => {
     const { data } = await supabase
       .from("contas_pagar")
       .select("*, fornecedor(nome), banco(nome), forma_pagamento(nome), local_estoque:local_estoque_id(nome)")
+      .neq("status_compra", "pendente")
       .order("data_vencimento", { ascending: false });
     if (data) setPagar(data as any);
   };
