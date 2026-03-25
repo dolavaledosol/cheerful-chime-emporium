@@ -810,12 +810,12 @@ const Financeiro = () => {
 
       {/* ══════════ DIALOG PAGAR ══════════ */}
       <Dialog open={dialogPagar} onOpenChange={setDialogPagar}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editPagarId ? "Editar Conta a Pagar" : "Nova Conta a Pagar"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2"><Label>Descrição *</Label><Input value={formPagar.descricao} onChange={(e) => setFormPagar({ ...formPagar, descricao: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Valor *</Label><Input type="number" step="0.01" value={formPagar.valor} onChange={(e) => setFormPagar({ ...formPagar, valor: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Valor Total {compraItens.length > 0 ? "(calculado)" : "*"}</Label><Input type="number" step="0.01" value={compraItens.length > 0 ? compraItens.reduce((s, i) => s + i.quantidade * i.preco_custo, 0).toFixed(2) : formPagar.valor} onChange={(e) => setFormPagar({ ...formPagar, valor: e.target.value })} disabled={compraItens.length > 0} /></div>
               <div className="space-y-2"><Label>Vencimento *</Label><Input type="date" value={formPagar.data_vencimento} onChange={(e) => setFormPagar({ ...formPagar, data_vencimento: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -827,14 +827,21 @@ const Financeiro = () => {
                 </Select>
               </div>
               <div className="space-y-2">
+                <Label>Local Estoque</Label>
+                <Select value={formPagar.local_estoque_id} onValueChange={(v) => setFormPagar({ ...formPagar, local_estoque_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>{locaisEstoque.map((l) => <SelectItem key={l.local_estoque_id} value={l.local_estoque_id}>{l.nome}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label>Banco</Label>
                 <Select value={formPagar.banco_id} onValueChange={(v) => setFormPagar({ ...formPagar, banco_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>{bancos.map((b) => <SelectItem key={b.banco_id} value={b.banco_id}>{b.nome}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Forma Pagamento</Label>
                 <Select value={formPagar.forma_pagamento_id} onValueChange={(v) => setFormPagar({ ...formPagar, forma_pagamento_id: v })}>
@@ -842,17 +849,78 @@ const Financeiro = () => {
                   <SelectContent>{formasPagamento.map((fp) => <SelectItem key={fp.forma_pagamento_id} value={fp.forma_pagamento_id}>{fp.nome}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2"><Label>Data NF</Label><Input type="date" value={formPagar.data_nf} onChange={(e) => setFormPagar({ ...formPagar, data_nf: e.target.value })} /></div>
               <div className="space-y-2"><Label>Data Pagamento</Label><Input type="date" value={formPagar.data_pagamento} onChange={(e) => setFormPagar({ ...formPagar, data_pagamento: e.target.value })} /></div>
               <div className="flex items-center gap-2 pt-6"><Switch checked={formPagar.pago} onCheckedChange={(v) => setFormPagar({ ...formPagar, pago: v })} /><Label>Pago</Label></div>
             </div>
             <div className="space-y-2"><Label>Observação</Label><Input value={formPagar.observacao} onChange={(e) => setFormPagar({ ...formPagar, observacao: e.target.value })} /></div>
+
+            {/* ── Itens da Compra ── */}
+            {formPagar.status_compra === "pendente" && (
+              <div className="space-y-3 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">Itens da Compra</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setCompraItens([...compraItens, { produto_id: "", nome: "", quantidade: 1, preco_custo: 0 }])}>
+                    <Plus className="h-3 w-3 mr-1" /> Adicionar Item
+                  </Button>
+                </div>
+                {compraItens.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-2">Nenhum item adicionado</p>
+                ) : (
+                  <div className="space-y-2">
+                    {compraItens.map((item, idx) => (
+                      <div key={idx} className="flex items-end gap-2 border rounded-lg p-2">
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs">Produto</Label>
+                          <Select value={item.produto_id} onValueChange={(v) => {
+                            const prod = produtosLookup.find(p => p.produto_id === v);
+                            const updated = [...compraItens];
+                            updated[idx] = { ...updated[idx], produto_id: v, nome: prod?.nome || "" };
+                            setCompraItens(updated);
+                          }}>
+                            <SelectTrigger className="h-8"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                            <SelectContent>{produtosLookup.map(p => <SelectItem key={p.produto_id} value={p.produto_id}>{p.nome}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </div>
+                        <div className="w-20 space-y-1">
+                          <Label className="text-xs">Qtd</Label>
+                          <Input type="number" step="0.1" min="0.1" className="h-8" value={item.quantidade} onChange={(e) => {
+                            const updated = [...compraItens];
+                            updated[idx] = { ...updated[idx], quantidade: Number(e.target.value) };
+                            setCompraItens(updated);
+                          }} />
+                        </div>
+                        <div className="w-24 space-y-1">
+                          <Label className="text-xs">Custo Un.</Label>
+                          <Input type="number" step="0.01" className="h-8" value={item.preco_custo} onChange={(e) => {
+                            const updated = [...compraItens];
+                            updated[idx] = { ...updated[idx], preco_custo: Number(e.target.value) };
+                            setCompraItens(updated);
+                          }} />
+                        </div>
+                        <div className="w-20 text-right text-sm font-medium pt-5">
+                          R$ {(item.quantidade * item.preco_custo).toFixed(2)}
+                        </div>
+                        <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => {
+                          setCompraItens(compraItens.filter((_, i) => i !== idx));
+                        }}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                    <div className="text-right text-sm font-semibold border-t pt-2">
+                      Total: R$ {compraItens.reduce((s, i) => s + i.quantidade * i.preco_custo, 0).toFixed(2)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogPagar(false)}>Cancelar</Button>
-            <Button onClick={savePagar} disabled={loadingPagar || !formPagar.descricao || !formPagar.valor || !formPagar.data_vencimento}>{loadingPagar ? "Salvando..." : "Salvar"}</Button>
+            <Button onClick={savePagar} disabled={loadingPagar || !formPagar.descricao || (!formPagar.valor && compraItens.length === 0) || !formPagar.data_vencimento}>{loadingPagar ? "Salvando..." : "Salvar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
