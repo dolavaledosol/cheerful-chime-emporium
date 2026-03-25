@@ -26,7 +26,7 @@ interface Produto {
   preco: number;
   aceita_fracionado: boolean;
   destacar: boolean;
-  familia?: { nome: string } | null;
+  familia?: { nome: string; pai: { nome: string } | null } | null;
   fabricante?: { nome: string } | null;
 }
 
@@ -57,7 +57,7 @@ const Produtos = () => {
 
   const load = async () => {
     const [prodRes, famRes, fabRes] = await Promise.all([
-      supabase.from("produto").select("*, familia:familia_id(nome), fabricante:fabricante_id(nome)").order("nome"),
+      supabase.from("produto").select("*, familia:familia_id(nome, pai:familia_pai_id(nome)), fabricante:fabricante_id(nome)").order("nome"),
       supabase.from("familia").select("familia_id, nome, familia_pai_id").eq("ativo", true).order("nome"),
       supabase.from("fabricante").select("fabricante_id, nome").eq("ativo", true).order("nome"),
     ]);
@@ -234,7 +234,9 @@ const Produtos = () => {
                    </button>
                  </TableCell>
                  <TableCell className="font-medium">{p.nome}</TableCell>
-                 <TableCell className="hidden md:table-cell text-muted-foreground">{p.familia?.nome || "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground">
+                    {p.familia ? (p.familia.pai ? `${p.familia.pai.nome} > ${p.familia.nome}` : p.familia.nome) : "—"}
+                  </TableCell>
                  <TableCell className="hidden md:table-cell text-muted-foreground">{p.fabricante?.nome || "—"}</TableCell>
                  <TableCell className="hidden sm:table-cell font-medium">R$ {p.preco?.toFixed(2) || "0.00"}</TableCell>
                  <TableCell className="hidden sm:table-cell">
