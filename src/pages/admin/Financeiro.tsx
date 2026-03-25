@@ -810,23 +810,25 @@ const Financeiro = () => {
       <Dialog open={dialogPagar} onOpenChange={setDialogPagar}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editPagarId ? "Editar Conta a Pagar" : "Nova Conta a Pagar"}</DialogTitle></DialogHeader>
+          {(() => { const isPago = formPagar.pago; const temItens = compraItens.length > 0; return (
           <div className="space-y-4">
-            <div className="space-y-2"><Label>Descrição *</Label><Input value={formPagar.descricao} onChange={(e) => setFormPagar({ ...formPagar, descricao: e.target.value })} /></div>
+            {isPago && <div className="text-sm text-muted-foreground bg-muted rounded-lg p-3 text-center">Conta paga — edição bloqueada</div>}
+            <div className="space-y-2"><Label>Descrição *</Label><Input value={formPagar.descricao} onChange={(e) => setFormPagar({ ...formPagar, descricao: e.target.value })} disabled={isPago} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Valor Total {compraItens.length > 0 ? "(calculado)" : "*"}</Label><Input type="number" step="0.01" value={compraItens.length > 0 ? compraItens.reduce((s, i) => s + i.quantidade * i.preco_custo, 0).toFixed(2) : formPagar.valor} onChange={(e) => setFormPagar({ ...formPagar, valor: e.target.value })} disabled={compraItens.length > 0} /></div>
-              <div className="space-y-2"><Label>Vencimento *</Label><Input type="date" value={formPagar.data_vencimento} onChange={(e) => setFormPagar({ ...formPagar, data_vencimento: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Valor Total {temItens ? "(calculado)" : "*"}</Label><Input type="number" step="0.01" value={temItens ? compraItens.reduce((s, i) => s + i.quantidade * i.preco_custo, 0).toFixed(2) : formPagar.valor} onChange={(e) => setFormPagar({ ...formPagar, valor: e.target.value })} disabled={temItens || isPago} /></div>
+              <div className="space-y-2"><Label>Vencimento *</Label><Input type="date" value={formPagar.data_vencimento} onChange={(e) => setFormPagar({ ...formPagar, data_vencimento: e.target.value })} disabled={isPago} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Fornecedor</Label>
-                <Select value={formPagar.fornecedor_id} onValueChange={(v) => setFormPagar({ ...formPagar, fornecedor_id: v })}>
+                <Select value={formPagar.fornecedor_id} onValueChange={(v) => setFormPagar({ ...formPagar, fornecedor_id: v })} disabled={isPago || temItens}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>{fornecedores.map((f) => <SelectItem key={f.fornecedor_id} value={f.fornecedor_id}>{f.nome}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Local Estoque</Label>
-                <Select value={formPagar.local_estoque_id} onValueChange={(v) => setFormPagar({ ...formPagar, local_estoque_id: v })}>
+                <Select value={formPagar.local_estoque_id} onValueChange={(v) => setFormPagar({ ...formPagar, local_estoque_id: v })} disabled={isPago}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>{locaisEstoque.map((l) => <SelectItem key={l.local_estoque_id} value={l.local_estoque_id}>{l.nome}</SelectItem>)}</SelectContent>
                 </Select>
@@ -835,25 +837,25 @@ const Financeiro = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Banco</Label>
-                <Select value={formPagar.banco_id} onValueChange={(v) => setFormPagar({ ...formPagar, banco_id: v })}>
+                <Select value={formPagar.banco_id} onValueChange={(v) => setFormPagar({ ...formPagar, banco_id: v })} disabled={isPago}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>{bancos.map((b) => <SelectItem key={b.banco_id} value={b.banco_id}>{b.nome}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Forma Pagamento</Label>
-                <Select value={formPagar.forma_pagamento_id} onValueChange={(v) => setFormPagar({ ...formPagar, forma_pagamento_id: v })}>
+                <Select value={formPagar.forma_pagamento_id} onValueChange={(v) => setFormPagar({ ...formPagar, forma_pagamento_id: v })} disabled={isPago}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>{formasPagamento.map((fp) => <SelectItem key={fp.forma_pagamento_id} value={fp.forma_pagamento_id}>{fp.nome}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2"><Label>Data NF</Label><Input type="date" value={formPagar.data_nf} onChange={(e) => setFormPagar({ ...formPagar, data_nf: e.target.value })} /></div>
-              <div className="space-y-2"><Label>Data Pagamento</Label><Input type="date" value={formPagar.data_pagamento} onChange={(e) => setFormPagar({ ...formPagar, data_pagamento: e.target.value })} /></div>
-              <div className="flex items-center gap-2 pt-6"><Switch checked={formPagar.pago} onCheckedChange={(v) => setFormPagar({ ...formPagar, pago: v })} /><Label>Pago</Label></div>
+              <div className="space-y-2"><Label>Data NF</Label><Input type="date" value={formPagar.data_nf} onChange={(e) => setFormPagar({ ...formPagar, data_nf: e.target.value })} disabled={isPago} /></div>
+              <div className="space-y-2"><Label>Data Pagamento</Label><Input type="date" value={formPagar.data_pagamento} onChange={(e) => setFormPagar({ ...formPagar, data_pagamento: e.target.value })} disabled={isPago} /></div>
+              <div className="flex items-center gap-2 pt-6"><Switch checked={formPagar.pago} onCheckedChange={(v) => setFormPagar({ ...formPagar, pago: v })} disabled={isPago} /><Label>Pago</Label></div>
             </div>
-            <div className="space-y-2"><Label>Observação</Label><Input value={formPagar.observacao} onChange={(e) => setFormPagar({ ...formPagar, observacao: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Observação</Label><Input value={formPagar.observacao} onChange={(e) => setFormPagar({ ...formPagar, observacao: e.target.value })} disabled={isPago} /></div>
 
             {/* ── Itens da Compra ── */}
             {formPagar.status_compra === "pendente" && (
