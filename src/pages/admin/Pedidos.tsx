@@ -300,9 +300,11 @@ const Pedidos = () => {
 
   /* ── Compra edit state ── */
   const [compraEditOpen, setCompraEditOpen] = useState(false);
-  const [compraEdit, setCompraEdit] = useState<{ contas_pagar_id: string; descricao: string; valor: string; data_vencimento: string; data_nf: string; pago: boolean; observacao: string; fornecedor_id: string }>({ contas_pagar_id: "", descricao: "", valor: "", data_vencimento: "", data_nf: "", pago: false, observacao: "", fornecedor_id: "" });
+  const [compraEdit, setCompraEdit] = useState<{ contas_pagar_id: string; descricao: string; valor: string; data_vencimento: string; data_nf: string; pago: boolean; observacao: string; fornecedor_id: string; frete: string; status_compra: string }>({ contas_pagar_id: "", descricao: "", valor: "", data_vencimento: "", data_nf: "", pago: false, observacao: "", fornecedor_id: "", frete: "0", status_compra: "pendente" });
   const [compraEditLoading, setCompraEditLoading] = useState(false);
   const [compraEditFornecedores, setCompraEditFornecedores] = useState<{ fornecedor_id: string; nome: string }[]>([]);
+  const [compraEditItens, setCompraEditItens] = useState<{ produto_id: string; nome: string; quantidade: number; preco_custo: number }[]>([]);
+  const [compraEditProdutos, setCompraEditProdutos] = useState<{ produto_id: string; nome: string }[]>([]);
 
   const loadCompras = async () => {
     const { data } = await supabase
@@ -315,24 +317,36 @@ const Pedidos = () => {
   useEffect(() => { loadCompras(); }, []);
 
   const openCompraEdit = async (c: ContaPagarCompra) => {
-    const { data: forns } = await supabase.from("fornecedor").select("fornecedor_id, nome").eq("ativo", true).order("nome");
-    if (forns) setCompraEditFornecedores(forns);
+    const [fornsRes, prodsRes] = await Promise.all([
+      supabase.from("fornecedor").select("fornecedor_id, nome").eq("ativo", true).order("nome"),
+      supabase.from("produto").select("produto_id, nome").eq("ativo", true).order("nome"),
+    ]);
+    if (fornsRes.data) setCompraEditFornecedores(fornsRes.data);
+    if (prodsRes.data) setCompraEditProdutos(prodsRes.data);
+    const itens = Array.isArray(c.compra_itens) ? c.compra_itens : [];
+    // Extract frete from description pattern or default to 0
+    const freteItem = itens.find((i: any) => i.nome?.toLowerCase().includes("frete"));
+    setCompraEditItens(itens.filter((i: any) => !i.nome?.toLowerCase().includes("frete")).map((i: any) => ({ produto_id: i.produto_id || "", nome: i.nome || "", quantidade: i.quantidade || 1, preco_custo: i.preco_custo || 0 })));
     setCompraEdit({
       contas_pagar_id: c.contas_pagar_id, descricao: c.descricao, valor: String(c.valor),
       data_vencimento: c.data_vencimento, data_nf: c.data_nf || "", pago: c.pago, observacao: c.observacao || "",
-      fornecedor_id: c.fornecedor_id || "",
+      fornecedor_id: c.fornecedor_id || "", frete: "0", status_compra: c.status_compra || "pendente",
     });
     setCompraEditOpen(true);
   };
 
   const saveCompraEdit = async () => {
     setCompraEditLoading(true);
+    const totalItens = compraEditItens.reduce((s, i) => s + i.quantidade * i.preco_custo, 0);
+    const frete = Number(compraEdit.frete) || 0;
+    const valorFinal = compraEditItens.length > 0 ? totalItens + frete : Number(compraEdit.valor);
     const { error } = await supabase.from("contas_pagar").update({
-      descricao: compraEdit.descricao, valor: Number(compraEdit.valor),
+      descricao: compraEdit.descricao, valor: valorFinal,
       data_vencimento: compraEdit.data_vencimento, data_nf: compraEdit.data_nf || null, pago: compraEdit.pago,
       observacao: compraEdit.observacao || null,
       fornecedor_id: compraEdit.fornecedor_id || null,
       data_pagamento: compraEdit.pago ? (new Date().toISOString().slice(0, 10)) : null,
+      compra_itens: compraEditItens.length > 0 ? JSON.parse(JSON.stringify(compraEditItens)) : null,
     }).eq("contas_pagar_id", compraEdit.contas_pagar_id);
     setCompraEditLoading(false);
     if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
@@ -2730,14 +2744,21 @@ const Pedidos = () => {
 
       {/* ── Compra Edit dialog ── */}
       <Dialog open={compraEditOpen} onOpenChange={setCompraEditOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Editar Compra</DialogTitle></DialogHeader>
+          {(() => {
+            const currentCompra = compras.find(c => c.contas_pagar_id === compraEdit.contas_pagar_id);
+            const currentSt = compraEdit.status_compra || "pendente";
+            const isRecebido = currentSt === "recebido";
+            const isPago = currentSt === "pago" || compraEdit.pago || isRecebido;
+            const temItens = compraEditItens.length > 0;
+            const totalItens = compraEditItens.reduce((s, i) => s + i.quantidade * i.preco_custo, 0);
+            const frete = Number(compraEdit.frete) || 0;
+            return (
           <div className="space-y-4">
+            {isPago && <div className="text-sm text-muted-foreground bg-muted rounded-lg p-3 text-center">{isRecebido ? "Compra recebida — edição bloqueada" : "Compra paga — edição bloqueada"}</div>}
             {/* Status buttons */}
-            {compraEdit.contas_pagar_id && (() => {
-              const currentCompra = compras.find(c => c.contas_pagar_id === compraEdit.contas_pagar_id);
-              if (!currentCompra) return null;
-              const currentSt = currentCompra.status_compra || "pendente";
+            {currentCompra && (() => {
               const allowed = getAllowedCompraStatuses(currentSt);
               return (
                 <div className="space-y-2">
@@ -2760,37 +2781,100 @@ const Pedidos = () => {
 
             <div className="space-y-2">
               <Label>Descrição *</Label>
-              <Input value={compraEdit.descricao} onChange={(e) => setCompraEdit({ ...compraEdit, descricao: e.target.value })} />
+              <Input value={compraEdit.descricao} onChange={(e) => setCompraEdit({ ...compraEdit, descricao: e.target.value })} disabled={isPago} />
             </div>
             <div className="space-y-2">
               <Label>Fornecedor</Label>
-              <Select value={compraEdit.fornecedor_id} onValueChange={(v) => setCompraEdit({ ...compraEdit, fornecedor_id: v })}>
+              <Select value={compraEdit.fornecedor_id} onValueChange={(v) => setCompraEdit({ ...compraEdit, fornecedor_id: v })} disabled={isPago || temItens}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>{compraEditFornecedores.map((f) => <SelectItem key={f.fornecedor_id} value={f.fornecedor_id}>{f.nome}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label>Valor (R$) *</Label>
-                <Input type="number" step="0.01" value={compraEdit.valor} onChange={(e) => setCompraEdit({ ...compraEdit, valor: e.target.value })} />
+                <Label>Valor Total {temItens ? "(calculado)" : "(R$) *"}</Label>
+                <Input type="number" step="0.01" value={temItens ? (totalItens + frete).toFixed(2) : compraEdit.valor} onChange={(e) => setCompraEdit({ ...compraEdit, valor: e.target.value })} disabled={temItens || isPago} />
               </div>
               <div className="space-y-2">
                 <Label>Data NF</Label>
-                <Input type="date" value={compraEdit.data_nf} onChange={(e) => setCompraEdit({ ...compraEdit, data_nf: e.target.value })} />
+                <Input type="date" value={compraEdit.data_nf} onChange={(e) => setCompraEdit({ ...compraEdit, data_nf: e.target.value })} disabled={isPago} />
               </div>
               <div className="space-y-2">
                 <Label>Vencimento *</Label>
-                <Input type="date" value={compraEdit.data_vencimento} onChange={(e) => setCompraEdit({ ...compraEdit, data_vencimento: e.target.value })} />
+                <Input type="date" value={compraEdit.data_vencimento} onChange={(e) => setCompraEdit({ ...compraEdit, data_vencimento: e.target.value })} disabled={isPago} />
               </div>
             </div>
             <div className="space-y-2">
               <Label>Observação</Label>
-              <Input value={compraEdit.observacao} onChange={(e) => setCompraEdit({ ...compraEdit, observacao: e.target.value })} />
+              <Input value={compraEdit.observacao} onChange={(e) => setCompraEdit({ ...compraEdit, observacao: e.target.value })} disabled={isPago} />
             </div>
 
-            {/* Show items if available */}
-            {(() => {
-              const currentCompra = compras.find(c => c.contas_pagar_id === compraEdit.contas_pagar_id);
+            {/* ── Itens da Compra ── */}
+            {currentSt === "pendente" && (
+              <div className="space-y-3 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">Itens da Compra</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setCompraEditItens([...compraEditItens, { produto_id: "", nome: "", quantidade: 1, preco_custo: 0 }])}>
+                    <Plus className="h-3 w-3 mr-1" /> Adicionar Item
+                  </Button>
+                </div>
+                {compraEditItens.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-2">Nenhum item adicionado</p>
+                ) : (
+                  <div className="space-y-2">
+                    {compraEditItens.map((item, idx) => (
+                      <div key={idx} className="flex items-end gap-2 border rounded-lg p-2">
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs">Produto</Label>
+                          <Select value={item.produto_id} onValueChange={(v) => {
+                            const prod = compraEditProdutos.find(p => p.produto_id === v);
+                            const updated = [...compraEditItens];
+                            updated[idx] = { ...updated[idx], produto_id: v, nome: prod?.nome || "" };
+                            setCompraEditItens(updated);
+                          }}>
+                            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                            <SelectContent>{compraEditProdutos.map(p => <SelectItem key={p.produto_id} value={p.produto_id}>{p.nome}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </div>
+                        <div className="w-20 space-y-1">
+                          <Label className="text-xs">Qtd</Label>
+                          <Input type="number" step="0.01" className="h-8 text-xs" value={item.quantidade} onChange={(e) => {
+                            const updated = [...compraEditItens];
+                            updated[idx] = { ...updated[idx], quantidade: Number(e.target.value) };
+                            setCompraEditItens(updated);
+                          }} />
+                        </div>
+                        <div className="w-24 space-y-1">
+                          <Label className="text-xs">Custo Un.</Label>
+                          <Input type="number" step="0.01" className="h-8 text-xs" value={item.preco_custo} onChange={(e) => {
+                            const updated = [...compraEditItens];
+                            updated[idx] = { ...updated[idx], preco_custo: Number(e.target.value) };
+                            setCompraEditItens(updated);
+                          }} />
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCompraEditItens(compraEditItens.filter((_, i) => i !== idx))}>
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="space-y-1 w-32">
+                        <Label className="text-xs">Frete (R$)</Label>
+                        <Input type="number" step="0.01" className="h-8 text-xs" value={compraEdit.frete} onChange={(e) => setCompraEdit({ ...compraEdit, frete: e.target.value })} />
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Itens: R$ {totalItens.toFixed(2)}</p>
+                        {frete > 0 && <p className="text-xs text-muted-foreground">Frete: R$ {frete.toFixed(2)}</p>}
+                        <p className="text-sm font-semibold">Total: R$ {(totalItens + frete).toFixed(2)}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Show items read-only for non-pendente */}
+            {currentSt !== "pendente" && (() => {
               const itens = currentCompra?.compra_itens;
               if (!itens || itens.length === 0) return null;
               return (
@@ -2814,9 +2898,11 @@ const Pedidos = () => {
               );
             })()}
           </div>
+            );
+          })()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setCompraEditOpen(false)}>Cancelar</Button>
-            <Button onClick={saveCompraEdit} disabled={compraEditLoading || !compraEdit.descricao || !compraEdit.valor}>
+            <Button onClick={saveCompraEdit} disabled={compraEditLoading || !compraEdit.descricao || (compraEditItens.length === 0 && !compraEdit.valor) || compraEdit.pago || compraEdit.status_compra === "recebido" || compraEdit.status_compra === "pago"}>
               {compraEditLoading ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
