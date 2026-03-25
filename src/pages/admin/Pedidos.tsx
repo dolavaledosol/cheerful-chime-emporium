@@ -392,7 +392,7 @@ const Pedidos = () => {
     const { data: links } = await supabase.from("fornecedor_produto").select("produto_id").eq("fornecedor_id", fornecedorId);
     if (!links || links.length === 0) { setEntradaLinhas([]); return; }
     const prodIds = links.map((l) => l.produto_id);
-    const { data: prods } = await supabase.from("produto").select("produto_id, nome, preco").in("produto_id", prodIds).eq("ativo", true).order("nome");
+    const { data: prods } = await supabase.from("produto").select("produto_id, nome, preco, aceita_fracionado").in("produto_id", prodIds).eq("ativo", true).order("nome");
     const { data: existingEstoque } = await supabase.from("estoque_local").select("produto_id, preco_custo").in("produto_id", prodIds);
     const custoMap: Record<string, number> = {};
     if (existingEstoque) { for (const e of existingEstoque as any[]) { if (e.preco_custo && !custoMap[e.produto_id]) custoMap[e.produto_id] = e.preco_custo; } }
