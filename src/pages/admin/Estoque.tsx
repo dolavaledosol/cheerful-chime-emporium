@@ -404,12 +404,18 @@ const Estoque = () => {
       g.familia.toLowerCase().includes(term) || g.produto_id.toLowerCase().includes(term);
   });
 
-  /* ── Edit single record ── */
+  /* ── New / Edit single record ── */
+  const openNew = () => {
+    setEditId(null);
+    setForm(emptyForm);
+    setDialogOpen(true);
+  };
   const openEdit = (e: EstoqueRow) => {
     setEditId(e.estoque_local_id);
     setForm({
       produto_id: e.produto_id, local_estoque_id: e.local_estoque_id,
-      preco: String(e.preco), preco_promocional: e.preco_promocional != null ? String(e.preco_promocional) : "",
+      preco: String(e.preco), preco_custo: e.preco_custo != null ? String(e.preco_custo) : "",
+      preco_promocional: e.preco_promocional != null ? String(e.preco_promocional) : "",
       quantidade_disponivel: String(e.quantidade_disponivel),
       quantidade_pedida_nao_separada: String(e.quantidade_pedida_nao_separada),
     });
@@ -423,7 +429,8 @@ const Estoque = () => {
     setLoading(true);
     const payload = {
       produto_id: form.produto_id, local_estoque_id: form.local_estoque_id,
-      preco: Number(form.preco), preco_promocional: form.preco_promocional ? Number(form.preco_promocional) : null,
+      preco: Number(form.preco), preco_custo: form.preco_custo ? Number(form.preco_custo) : null,
+      preco_promocional: form.preco_promocional ? Number(form.preco_promocional) : null,
       quantidade_disponivel: Number(form.quantidade_disponivel),
       quantidade_pedida_nao_separada: Number(form.quantidade_pedida_nao_separada),
     };
