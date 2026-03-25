@@ -74,6 +74,8 @@ const Financeiro = () => {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [bancos, setBancos] = useState<Banco[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
+  const [produtosLookup, setProdutosLookup] = useState<{ produto_id: string; nome: string }[]>([]);
+  const [locaisEstoque, setLocaisEstoque] = useState<{ local_estoque_id: string; nome: string }[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -81,11 +83,15 @@ const Financeiro = () => {
       supabase.from("cliente").select("cliente_id, nome").eq("ativo", true).order("nome"),
       supabase.from("banco").select("banco_id, nome").eq("ativo", true).order("nome"),
       supabase.from("forma_pagamento").select("forma_pagamento_id, nome").eq("ativo", true).order("nome"),
-    ]).then(([f, c, b, fp]) => {
+      supabase.from("produto").select("produto_id, nome").eq("ativo", true).order("nome"),
+      supabase.from("local_estoque").select("local_estoque_id, nome").eq("ativo", true).order("nome"),
+    ]).then(([f, c, b, fp, p, le]) => {
       if (f.data) setFornecedores(f.data);
       if (c.data) setClientes(c.data);
       if (b.data) setBancos(b.data);
       if (fp.data) setFormasPagamento(fp.data);
+      if (p.data) setProdutosLookup(p.data);
+      if (le.data) setLocaisEstoque(le.data);
     });
   }, []);
 
@@ -100,6 +106,7 @@ const Financeiro = () => {
   const [editPagarId, setEditPagarId] = useState<string | null>(null);
   const [formPagar, setFormPagar] = useState(emptyPagar);
   const [loadingPagar, setLoadingPagar] = useState(false);
+  const [compraItens, setCompraItens] = useState<CompraItem[]>([]);
 
   const loadPagar = async () => {
     const { data } = await supabase
