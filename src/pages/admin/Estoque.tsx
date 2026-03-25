@@ -60,6 +60,7 @@ interface MovimentacaoRow {
   tipo: string;
   documento: string | null;
   quantidade: number;
+  observacao: string | null;
   created_at: string;
   usuario_id: string | null;
   usuario_nome?: string;
